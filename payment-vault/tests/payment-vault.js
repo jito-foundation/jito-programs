@@ -1,276 +1,137 @@
 const anchor = require( '@project-serum/anchor' )
-const { TOKEN_PROGRAM_ID, Token } = require( '@solana/spl-token' )
 const assert = require( 'assert' )
-const { SystemProgram, SYSVAR_RENT_PUBKEY } = anchor.web3
+const { SystemProgram, SYSVAR_RENT_PUBKEY, Transaction } = anchor.web3
 
-// TODO(seg): add tests for expected Unauthorized errors specifically the `auth_config_account` access_constrol attr
+const CONFIG_ACCOUNT_LEN = 8 + 32
+
 describe( 'tests payment_vault', () => {
-  const provider = anchor.Provider.env()
-  anchor.setProvider( provider )
-  const paymentVaultProg = anchor.workspace.PaymentVault
-  const initializerKeys = anchor.web3.Keypair.generate()
-  const mintAuthority = anchor.web3.Keypair.generate()
+    const provider = anchor.Provider.local(
+      undefined,
+      { commitment: 'confirmed', preflightCommitment: 'confirmed' },
+    )
+    anchor.setProvider( provider )
+    const paymentVaultProg = anchor.workspace.PaymentVault
+    const initializerKeys = anchor.web3.Keypair.generate()
+    const globalKeyPairStore = {}
+    let configAccount, configAccountBump
+    before( async () => {
+        const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
+            [Buffer.from( 'CONFIG_ACCOUNT', 'utf8' )],
+            paymentVaultProg.programId,
+        )
+        configAccount = _configAccount
+        configAccountBump = _configAccountBump
 
-  let configAccount, configAccountBump, feeAccount, feeAccountBump, tipAccount, tipAccountBump, mint
-  before( async () => {
-    const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
-        [Buffer.from( 'GOKU_CONFIG_ACCOUNT_SEED', 'utf8' )],
-        paymentVaultProg.programId,
-    )
-    configAccount = _configAccount
-    configAccountBump = _configAccountBump
-
-    const [_feeAccount, _feeAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
-        [Buffer.from( 'VEGETA_FEE_ACCOUNT_SEED', 'utf8' )],
-        paymentVaultProg.programId,
-    )
-    feeAccount = _feeAccount
-    feeAccountBump = _feeAccountBump
-
-    const [_tipAccount, _tipAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
-        [Buffer.from( 'RYU_TIP_ACCOUNT_SEED', 'utf8' )],
-        paymentVaultProg.programId,
-    )
-    tipAccount = _tipAccount
-    tipAccountBump = _tipAccountBump
-
-    await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(
-            initializerKeys.publicKey, 100000000000000
-        ),
-        'confirmed',
-    )
-    mint = await Token.createMint(
-        provider.connection,
-        initializerKeys,
-        mintAuthority.publicKey,
-        null,
-        12,
-        TOKEN_PROGRAM_ID,
-    )
-  })
-
-  it( '#initialize fails with bad seed for config account', async () => {
-    const keys = anchor.web3.Keypair.generate()
-    const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
-        [keys.publicKey.toBuffer()],
-        paymentVaultProg.programId,
-    )
-    const args = {
-      feeBps: new anchor.BN(10),
-      configAccountBump: _configAccountBump,
-      feeAccountBump,
-      tipAccountBump,
-    }
-    try {
-      await paymentVaultProg.rpc.initialize(
-          args,
-          {
-            accounts: {
-              feeAccount,
-              tipAccount,
-              config: _configAccount,
-              mint: mint.publicKey,
-              payer: initializerKeys.publicKey,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              systemProgram: SystemProgram.programId,
-              rent: SYSVAR_RENT_PUBKEY,
+        await provider.connection.confirmTransaction(
+            await provider.connection.requestAirdrop(
+                initializerKeys.publicKey, 100000000000000
+            ),
+            'confirmed',
+        )
+    })
+    it( '#initialize happy path', async () => {
+        const args = {
+          configAccountBump,
+        }
+        await paymentVaultProg.rpc.initialize(
+            args,
+            {
+              accounts: {
+                config: configAccount,
+                initialFundingAccount: initializerKeys.publicKey,
+                payer: initializerKeys.publicKey,
+                systemProgram: SystemProgram.programId,
+              },
+              signers: [initializerKeys],
             },
-            signers: [initializerKeys],
-          },
-      )
-      assert(false )
-    } catch ( e ) {
-      assert( e.logs )
-      const errLog = e
-          .logs
-          .find( log =>
-              log.includes( 'Could not create program address with signer seeds: Provided seeds do not result in a valid address' )
-          )
-      assert( errLog )
-    }
-  })
-
-  it( '#initialize fails with poorly derived tip_account addr', async () => {
-    const keys = anchor.web3.Keypair.generate()
-    await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(
-            keys.publicKey, 100000000000000
-        ),
-        'confirmed',
-    )
-    const _tipAccount = await mint.createAccount( keys.publicKey )
-    const badTipAccountBump = 77
-    const args = {
-      feeBps: new anchor.BN(10),
-      configAccountBump,
-      feeAccountBump,
-      tipAccountBump: badTipAccountBump,
-    }
-    try {
-      await paymentVaultProg.rpc.initialize(
-          args,
-          {
-            accounts: {
-              feeAccount,
-              tipAccount: _tipAccount,
-              mint: mint.publicKey,
-              config: configAccount,
-              payer: keys.publicKey,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              systemProgram: SystemProgram.programId,
-              rent: SYSVAR_RENT_PUBKEY,
+        )
+        const configState = await paymentVaultProg.account.config.fetch( configAccount )
+        assert.equal( configState.registeredFundingAccount.toString(), initializerKeys.publicKey.toString() )
+    })
+    it( '#register_funding_account with no funds succeeds', async () => {
+        let configState = await paymentVaultProg.account.config.fetch( configAccount )
+        const oldFundingAccount = configState.registeredFundingAccount
+        const newFundingAccount = anchor.web3.Keypair.generate()
+        globalKeyPairStore[ newFundingAccount.publicKey ] = newFundingAccount
+        await paymentVaultProg.rpc.registerFundingAccount(
+            {
+              accounts: {
+                oldFundingAccount,
+                newFundingAccount: newFundingAccount.publicKey,
+                config: configAccount,
+                rent: SYSVAR_RENT_PUBKEY,
+                signer: initializerKeys.publicKey,
+              },
+              signers: [initializerKeys],
             },
-            signers: [keys],
-          },
-      )
-      assert(false )
-    } catch ( e ) {
-      const errLog = e
-          .logs
-          .find( log =>
-              log.includes( 'Could not create program address with signer seeds: Provided seeds do not result in a valid address' )
+        )
+        const minRentExempt = await paymentVaultProg.provider.connection.getMinimumBalanceForRentExemption( CONFIG_ACCOUNT_LEN )
+        const configInfo = await paymentVaultProg.provider.connection.getAccountInfo( configAccount )
+        assert.equal( configInfo.lamports, minRentExempt )
+        configState = await paymentVaultProg.account.config.fetch( configAccount )
+        assert.equal( configState.registeredFundingAccount.toString(), newFundingAccount.publicKey.toString())
+    })
+    it( '#claim_funds `constraint = registered_funding_account.key() == config.registered_funding_account`', async () => {
+        try {
+          const wrongFundingAccount = anchor.web3.Keypair.generate().publicKey
+          await paymentVaultProg.rpc.claimFunds(
+              {
+                  accounts: {
+                      claimer: initializerKeys.publicKey,
+                      config: configAccount,
+                      registeredFundingAccount: wrongFundingAccount,
+                      rent: SYSVAR_RENT_PUBKEY,
+                  },
+                  signers: [initializerKeys],
+              },
           )
-      assert( errLog )
-    }
-  })
-
-  it( '#initialize happy path', async () => {
-    const args = {
-      feeBps: new anchor.BN(10),
-      configAccountBump,
-      feeAccountBump,
-      tipAccountBump,
-    }
-    await paymentVaultProg.rpc.initialize(
-        args,
-        {
-          accounts: {
-            feeAccount,
-            tipAccount,
-            mint: mint.publicKey,
-            config: configAccount,
-            payer: initializerKeys.publicKey,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            systemProgram: SystemProgram.programId,
-            rent: SYSVAR_RENT_PUBKEY,
-          },
-          signers: [initializerKeys],
-        },
-    )
-
-    const configState = await paymentVaultProg.account.config.fetch( configAccount )
-    assert.equal( configState.feeAccountPk.toString(), feeAccount.toString())
-    assert.equal( configState.feeBps.toString(), args.feeBps.toString())
-    assert.equal( configState.tipAccountPk.toString(), tipAccount.toString())
-    const mintInfo = await mint.getMintInfo()
-    assert.equal( configState.decimals, mintInfo.decimals )
-
-    // check Config account is the new owner of tipAccount
-    const tipAccInfo = await mint.getAccountInfo( tipAccount )
-    assert.equal( tipAccInfo.owner.toString(), configAccount.toString())
-    // check feeAccount owner is untouched
-    const feeAccInfo = await mint.getAccountInfo( feeAccount )
-    assert.equal( feeAccInfo.owner.toString(), configAccount.toString())
-  })
-
-  it( '#initialize fails to init config_account twice', async () => {
-    const args = {
-      feeBps: new anchor.BN(10),
-      configAccountBump,
-      feeAccountBump,
-      tipAccountBump,
-    }
-    try {
-      await paymentVaultProg.rpc.initialize(
-          args,
-          {
-            accounts: {
-              feeAccount,
-              tipAccount,
-              mint: mint.publicKey,
-              config: configAccount,
-              payer: initializerKeys.publicKey,
-              tokenProgram: TOKEN_PROGRAM_ID,
-              systemProgram: SystemProgram.programId,
-              rent: SYSVAR_RENT_PUBKEY,
+          assert( false )
+        } catch ( e ) {
+          assert.equal( e.msg, 'A raw constraint was violated' )
+        }
+    })
+    it( '#claim_funding moves funds to correct account', async () => {
+        const claimer = anchor.web3.Keypair.generate()
+        const searcherKP = anchor.web3.Keypair.generate()
+        const airDrop = 100000000000000
+        await provider.connection.confirmTransaction(
+            await provider.connection.requestAirdrop(
+                searcherKP.publicKey, airDrop
+            ),
+            'confirmed',
+        )
+        const tipAmount = airDrop / 2
+        const tipTx = new Transaction()
+        tipTx.add(
+            SystemProgram.transfer({
+                fromPubkey: searcherKP.publicKey,
+                toPubkey: configAccount,
+                lamports: tipAmount,
+            })
+        )
+        await anchor.web3.sendAndConfirmTransaction(
+            paymentVaultProg.provider.connection,
+            tipTx,
+            [ searcherKP ],
+        )
+        let configState = await paymentVaultProg.account.config.fetch( configAccount )
+        const registeredFundingAccount = configState.registeredFundingAccount
+        await paymentVaultProg.rpc.claimFunds(
+            {
+                accounts: {
+                    registeredFundingAccount,
+                    claimer: claimer.publicKey,
+                    config: configAccount,
+                    rent: SYSVAR_RENT_PUBKEY,
+                },
+              signers: [ claimer ],
             },
-            signers: [initializerKeys],
-          },
-      )
-      assert( false )
-    } catch ( e ) {
-      assert( e.logs )
-      const errLog = e
-          .logs
-          .find( log =>
-              log.includes( 'already in us' )
-          )
-      assert( errLog )
-    }
-  })
-
-  it( '#claim_tips happy path', async () => {
-    const searcherKeys = anchor.web3.Keypair.generate()
-    await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(
-            searcherKeys.publicKey, 100000000000000
-        ),
-        'confirmed',
-    )
-    // mint tokens to searcher
-    const searcherTokenAcc = await mint.createAccount( searcherKeys.publicKey )
-    const initialSearcherBal = 100000000
-    await mint.mintTo( searcherTokenAcc, mintAuthority, [], initialSearcherBal )
-    // xfer tokens from searcher to tip_account
-    const tippedAmount = initialSearcherBal / 2
-    mint.transfer( searcherTokenAcc, tipAccount, searcherKeys, [], tippedAmount )
-    // set up validator account
-    const validatorKeys = anchor.web3.Keypair.generate()
-    await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(
-            validatorKeys.publicKey, 100000000000000
-        ),
-        'confirmed',
-    )
-    const validatorTokenAccount = await mint.createAccount( validatorKeys.publicKey )
-    // sanity check
-    assert.equal( mint.getAccountInfo( validatorTokenAccount ).amount || 0, 0 )
-    const args = {
-      configBump: configAccountBump,
-    }
-    const configState = await paymentVaultProg.account.config.fetch( configAccount )
-    await paymentVaultProg.rpc.claimTips(
-        args,
-        {
-          accounts: {
-            config: configAccount,
-            tokenProgram: TOKEN_PROGRAM_ID,
-            tipAccount,
-            feeAccount,
-            validatorTokenAccount,
-            validator: validatorKeys.publicKey,
-          },
-          signers: [validatorKeys],
-        },
-    )
-    const feeRate = configState.feeBps / 10000
-    const validatorBalance = ( await mint.getAccountInfo( validatorTokenAccount )).amount
-    assert.equal( validatorBalance.toString(), (tippedAmount - ( tippedAmount * feeRate )).toString())
-    const feeAccountBalance = ( await mint.getAccountInfo( feeAccount )).amount
-    assert.equal( feeAccountBalance.toString(), ( tippedAmount * feeRate ).toString())
-  })
-
-  // TODO(seg)
-  // it( '#claim_tips constraint[tip_account.key() == config.tip_account_pk]', async () => {
-  //   assert.fail()
-  // })
-  //
-  // it( '#claim_tips constraint[validator_token_account.owner == *validator_token_account_owner.key]', async () => {
-  //   assert.fail()
-  // })
-  //
-  // it( '#claim_tips constraint[*claim_authority.key == vault_account.claim_authority_pk]', async () => {
-  //   assert.fail()
-  // })
+        )
+        const minRentExempt = await paymentVaultProg.provider.connection.getMinimumBalanceForRentExemption( CONFIG_ACCOUNT_LEN )
+        configInfo = await paymentVaultProg.provider.connection.getAccountInfo( configAccount )
+        // check that account is still rent exempt
+        assert.equal( configInfo.lamports, minRentExempt )
+        const fundingInfo = await paymentVaultProg.provider.connection.getAccountInfo( registeredFundingAccount )
+        assert.equal( fundingInfo.lamports, tipAmount )
+    })
 })
