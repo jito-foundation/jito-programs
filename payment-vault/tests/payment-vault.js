@@ -44,7 +44,20 @@ describe( 'tests payment_vault', () => {
         )
         configAccount = _configAccount
         configAccountBump = _configAccountBump
-
+        console.log('lets crete')
+        const tx = new Transaction()
+        tx.add(
+            SystemProgram.createAccountWithSeed({
+                fromPubkey: searcherKP.publicKey,
+                toPubkey: configAccount,
+                lamports: tipAmount,
+            })
+        )
+        await anchor.web3.sendAndConfirmTransaction(
+            paymentVaultProg.provider.connection,
+            tipTx,
+            [ searcherKP ],
+        )
         await provider.connection.confirmTransaction(
             await provider.connection.requestAirdrop(
                 initializerKeys.publicKey, 100000000000000
