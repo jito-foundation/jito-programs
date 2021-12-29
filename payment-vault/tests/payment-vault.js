@@ -5,6 +5,7 @@ const { SystemProgram, Transaction } = anchor.web3
 const CONFIG_ACCOUNT_LEN = 8 + 32
 const MEV_PAYMENT_ACCOUNT_LEN = 8
 
+const configAccountSeed = 'CONFIG_ACCOUNT'
 const mevSeed1 = 'MEV_ACCOUNT_1'
 const mevSeed2 = 'MEV_ACCOUNT_2'
 const mevSeed3 = 'MEV_ACCOUNT_3'
@@ -45,7 +46,6 @@ describe( 'tests payment_vault', () => {
     anchor.setProvider( provider )
     const paymentVaultProg = anchor.workspace.PaymentVault
     const initializerKeys = anchor.web3.Keypair.generate()
-    const globalKeyPairStore = {}
     let configAccount, configAccountBump,
         mevPaymentAccount1, mevBump1,
         mevPaymentAccount2, mevBump2,
@@ -57,7 +57,7 @@ describe( 'tests payment_vault', () => {
         mevPaymentAccount8, mevBump8
     before( async () => {
         const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( 'CONFIG_ACCOUNT', 'utf8' )],
+            [Buffer.from( configAccountSeed, 'utf8' )],
             paymentVaultProg.programId,
         )
         configAccount = _configAccount
@@ -145,14 +145,6 @@ describe( 'tests payment_vault', () => {
                 mevBump6,
                 mevBump7,
                 mevBump8,
-                mevSeed1,
-                mevSeed2,
-                mevSeed3,
-                mevSeed4,
-                mevSeed5,
-                mevSeed6,
-                mevSeed7,
-                mevSeed8,
             },
             {
               accounts: {
@@ -179,7 +171,6 @@ describe( 'tests payment_vault', () => {
         let configState = await paymentVaultProg.account.config.fetch( configAccount )
         const oldTipClaimer = configState.tipClaimer
         const newTipClaimer = anchor.web3.Keypair.generate()
-        globalKeyPairStore[ newTipClaimer.publicKey ] = newTipClaimer
         await paymentVaultProg.rpc.setTipClaimer(
             {
               accounts: {
@@ -255,9 +246,10 @@ describe( 'tests payment_vault', () => {
                     mevPaymentAccount7,
                     mevPaymentAccount8,
                 },
-              signers: [ claimer ],
+                signers: [ claimer ],
             },
         )
+
         await assertRentExemptAccounts()
         const tipClaimerLamportsAfter =
             ( await paymentVaultProg.provider.connection.getAccountInfo( tipClaimer )).lamports

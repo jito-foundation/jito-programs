@@ -1,11 +1,24 @@
-#![feature(in_band_lifetimes)]
+// #![feature(in_band_lifetimes)]
 
 use anchor_lang::prelude::*;
 use std::mem::size_of;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
+/// We've decided to hardcode the seeds, effectively meaning
+/// the following PDAs owned by this program are singleton.
+/// This ensures that `initialize` can only be invoked once,
+/// otherwise the tx would fail since the accounts would have
+/// already been initialized on subsequent calls.
 const CONFIG_ACCOUNT_SEED: &'static [u8] = b"CONFIG_ACCOUNT";
+const MEV_ACCOUNT_SEED_1: &'static [u8] = b"MEV_ACCOUNT_1";
+const MEV_ACCOUNT_SEED_2: &'static [u8] = b"MEV_ACCOUNT_2";
+const MEV_ACCOUNT_SEED_3: &'static [u8] = b"MEV_ACCOUNT_3";
+const MEV_ACCOUNT_SEED_4: &'static [u8] = b"MEV_ACCOUNT_4";
+const MEV_ACCOUNT_SEED_5: &'static [u8] = b"MEV_ACCOUNT_5";
+const MEV_ACCOUNT_SEED_6: &'static [u8] = b"MEV_ACCOUNT_6";
+const MEV_ACCOUNT_SEED_7: &'static [u8] = b"MEV_ACCOUNT_7";
+const MEV_ACCOUNT_SEED_8: &'static [u8] = b"MEV_ACCOUNT_8";
 
 #[program]
 pub mod payment_vault {
@@ -18,7 +31,6 @@ pub mod payment_vault {
         Ok(())
     }
 
-    #[access_control(check_config_account(&ctx.accounts.config, ctx.program_id))]
     /// Validators should call this at the end of the slot or prior to rotation.
     /// If this isn't called before the next leader rotation, tips will be transferred
     /// in set_tip_claimer before claimer is updated.
@@ -35,16 +47,12 @@ pub mod payment_vault {
         Ok(())
     }
 
-    #[access_control(check_config_account(&ctx.accounts.config, ctx.program_id))]
-    /// Validator should include this at top of block, at beginning of rotation.
+    /// Validator should invoke this instruction at the top of every block in-case
+    /// they're on a fork on the first few blocks.
     pub fn set_tip_claimer(ctx: Context<SetTipClaimer>) -> ProgramResult {
         let total_tips = MevPaymentAccount::debit_accounts(ctx.accounts.get_mev_accounts())?;
 
         if total_tips > 0 {
-            msg!(
-                "transferring {} lamports to previous tip_claimer",
-                total_tips
-            );
             **ctx.accounts.old_tip_claimer.try_borrow_mut_lamports()? += total_tips;
             emit!(TipsClaimed {
                 by: ctx.accounts.signer.key(),
@@ -65,27 +73,11 @@ pub mod payment_vault {
     }
 }
 
-fn check_config_account(cfg: &Account<Config>, prog_id: &Pubkey) -> ProgramResult {
-    let (pda, _bump) = Pubkey::find_program_address(&[&CONFIG_ACCOUNT_SEED], prog_id);
-    let info = cfg.to_account_info();
-    if *info.key != pda || info.owner != prog_id {
-        return Err(ErrorCode::Unauthorized.into());
-    }
-    Ok(())
-}
-
 /// instructions
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct InitArgs {
-    pub mev_seed_1: String,
-    pub mev_seed_2: String,
-    pub mev_seed_3: String,
-    pub mev_seed_4: String,
-    pub mev_seed_5: String,
-    pub mev_seed_6: String,
-    pub mev_seed_7: String,
-    pub mev_seed_8: String,
+    pub config_account_bump: u8,
     pub mev_bump_1: u8,
     pub mev_bump_2: u8,
     pub mev_bump_3: u8,
@@ -94,7 +86,6 @@ pub struct InitArgs {
     pub mev_bump_6: u8,
     pub mev_bump_7: u8,
     pub mev_bump_8: u8,
-    pub config_account_bump: u8,
 }
 
 #[derive(Accounts)]
@@ -110,7 +101,7 @@ pub struct Initialize<'info> {
     pub config: Account<'info, Config>,
     #[account(
         init,
-        seeds = [args.mev_seed_1.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_1],
         bump = args.mev_bump_1,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -118,7 +109,7 @@ pub struct Initialize<'info> {
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
         init,
-        seeds = [args.mev_seed_2.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_2],
         bump = args.mev_bump_2,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -126,7 +117,7 @@ pub struct Initialize<'info> {
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
         init,
-        seeds = [args.mev_seed_3.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_3],
         bump = args.mev_bump_3,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -134,7 +125,7 @@ pub struct Initialize<'info> {
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
         init,
-        seeds = [args.mev_seed_4.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_4],
         bump = args.mev_bump_4,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -142,7 +133,7 @@ pub struct Initialize<'info> {
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
         init,
-        seeds = [args.mev_seed_5.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_5],
         bump = args.mev_bump_5,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -150,7 +141,7 @@ pub struct Initialize<'info> {
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
         init,
-        seeds = [args.mev_seed_6.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_6],
         bump = args.mev_bump_6,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -158,7 +149,7 @@ pub struct Initialize<'info> {
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
         init,
-        seeds = [args.mev_seed_7.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_7],
         bump = args.mev_bump_7,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -166,7 +157,7 @@ pub struct Initialize<'info> {
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
         init,
-        seeds = [args.mev_seed_8.as_bytes()],
+        seeds = [MEV_ACCOUNT_SEED_8],
         bump = args.mev_bump_8,
         payer = payer,
         space = MevPaymentAccount::LEN,
@@ -206,7 +197,7 @@ pub struct ClaimTips<'info> {
     pub claimer: Signer<'info>,
 }
 
-impl ClaimTips<'info> {
+impl<'info> ClaimTips<'info> {
     fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
         let mut accs = Vec::new();
         accs.push(self.mev_payment_account_1.to_account_info());
@@ -252,7 +243,7 @@ pub struct SetTipClaimer<'info> {
     pub signer: Signer<'info>,
 }
 
-impl SetTipClaimer<'info> {
+impl<'info> SetTipClaimer<'info> {
     fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
         let mut accs = Vec::new();
         accs.push(self.mev_payment_account_1.to_account_info());
@@ -288,7 +279,7 @@ impl MevPaymentAccount {
     // add one byte for header
     pub const LEN: usize = 8 + size_of::<Self>();
 
-    fn debit_accounts(accs: Vec<AccountInfo>) -> Result<u64> {
+    fn debit_accounts(accs: Vec<AccountInfo>) -> Result<u64, ProgramError> {
         let mut total_tips = 0;
         for acc in accs {
             total_tips += Self::debit(acc)?;
@@ -297,7 +288,7 @@ impl MevPaymentAccount {
         Ok(total_tips)
     }
 
-    fn debit(acc: AccountInfo) -> Result<u64> {
+    fn debit(acc: AccountInfo) -> Result<u64, ProgramError> {
         let tips = Self::calc_tips(acc.lamports())?;
         if tips > 0 {
             **acc.try_borrow_mut_lamports()? -= tips;
@@ -305,17 +296,11 @@ impl MevPaymentAccount {
         Ok(tips)
     }
 
-    fn calc_tips(total_balance: u64) -> Result<u64> {
+    fn calc_tips(total_balance: u64) -> Result<u64, ProgramError> {
         let rent = Rent::get()?;
         let min_rent = rent.minimum_balance(Self::LEN);
         Ok(total_balance - min_rent)
     }
-}
-
-#[error]
-pub enum ErrorCode {
-    #[msg("unauthorized instruction call")]
-    Unauthorized,
 }
 
 /// events
