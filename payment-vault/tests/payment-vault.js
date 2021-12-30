@@ -2,7 +2,7 @@ const anchor = require( '@project-serum/anchor' )
 const assert = require( 'assert' )
 const { SystemProgram, Transaction } = anchor.web3
 
-const CONFIG_ACCOUNT_LEN = 8 + 32
+const CONFIG_ACCOUNT_LEN = 8 + 40
 const MEV_PAYMENT_ACCOUNT_LEN = 8
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
@@ -40,8 +40,8 @@ describe( 'tests payment_vault', () => {
         )
     }
     const provider = anchor.Provider.local(
-      undefined,
-      { commitment: 'confirmed', preflightCommitment: 'confirmed' },
+        undefined,
+        { commitment: 'confirmed', preflightCommitment: 'confirmed' },
     )
     anchor.setProvider( provider )
     const paymentVaultProg = anchor.workspace.PaymentVault
@@ -147,21 +147,21 @@ describe( 'tests payment_vault', () => {
                 mevBump8,
             },
             {
-              accounts: {
-                  config: configAccount,
-                  initialTipClaimer: initializerKeys.publicKey,
-                  payer: initializerKeys.publicKey,
-                  systemProgram: SystemProgram.programId,
-                  mevPaymentAccount1,
-                  mevPaymentAccount2,
-                  mevPaymentAccount3,
-                  mevPaymentAccount4,
-                  mevPaymentAccount5,
-                  mevPaymentAccount6,
-                  mevPaymentAccount7,
-                  mevPaymentAccount8,
-              },
-              signers: [initializerKeys],
+                accounts: {
+                    config: configAccount,
+                    initialTipClaimer: initializerKeys.publicKey,
+                    payer: initializerKeys.publicKey,
+                    systemProgram: SystemProgram.programId,
+                    mevPaymentAccount1,
+                    mevPaymentAccount2,
+                    mevPaymentAccount3,
+                    mevPaymentAccount4,
+                    mevPaymentAccount5,
+                    mevPaymentAccount6,
+                    mevPaymentAccount7,
+                    mevPaymentAccount8,
+                },
+                signers: [initializerKeys],
             },
         )
         const configState = await paymentVaultProg.account.config.fetch( configAccount )
@@ -173,21 +173,21 @@ describe( 'tests payment_vault', () => {
         const newTipClaimer = anchor.web3.Keypair.generate()
         await paymentVaultProg.rpc.setTipClaimer(
             {
-              accounts: {
-                  oldTipClaimer,
-                  newTipClaimer: newTipClaimer.publicKey,
-                  config: configAccount,
-                  signer: initializerKeys.publicKey,
-                  mevPaymentAccount1,
-                  mevPaymentAccount2,
-                  mevPaymentAccount3,
-                  mevPaymentAccount4,
-                  mevPaymentAccount5,
-                  mevPaymentAccount6,
-                  mevPaymentAccount7,
-                  mevPaymentAccount8,
-              },
-              signers: [initializerKeys],
+                accounts: {
+                    oldTipClaimer,
+                    newTipClaimer: newTipClaimer.publicKey,
+                    config: configAccount,
+                    signer: initializerKeys.publicKey,
+                    mevPaymentAccount1,
+                    mevPaymentAccount2,
+                    mevPaymentAccount3,
+                    mevPaymentAccount4,
+                    mevPaymentAccount5,
+                    mevPaymentAccount6,
+                    mevPaymentAccount7,
+                    mevPaymentAccount8,
+                },
+                signers: [initializerKeys],
             },
         )
         await assertRentExemptAccounts()
@@ -196,28 +196,28 @@ describe( 'tests payment_vault', () => {
     })
     it( '#claim_tips `constraint = tip_claimer.key() == config.tip_claimer`', async () => {
         try {
-          const wrongTipClaimer = anchor.web3.Keypair.generate().publicKey
-          await paymentVaultProg.rpc.claimTips(
-              {
-                  accounts: {
-                      claimer: initializerKeys.publicKey,
-                      config: configAccount,
-                      tipClaimer: wrongTipClaimer,
-                      mevPaymentAccount1,
-                      mevPaymentAccount2,
-                      mevPaymentAccount3,
-                      mevPaymentAccount4,
-                      mevPaymentAccount5,
-                      mevPaymentAccount6,
-                      mevPaymentAccount7,
-                      mevPaymentAccount8,
-                  },
-                  signers: [initializerKeys],
-              },
-          )
-          assert( false )
+            const wrongTipClaimer = anchor.web3.Keypair.generate().publicKey
+            await paymentVaultProg.rpc.claimTips(
+                {
+                    accounts: {
+                        claimer: initializerKeys.publicKey,
+                        config: configAccount,
+                        tipClaimer: wrongTipClaimer,
+                        mevPaymentAccount1,
+                        mevPaymentAccount2,
+                        mevPaymentAccount3,
+                        mevPaymentAccount4,
+                        mevPaymentAccount5,
+                        mevPaymentAccount6,
+                        mevPaymentAccount7,
+                        mevPaymentAccount8,
+                    },
+                    signers: [initializerKeys],
+                },
+            )
+            assert( false )
         } catch ( e ) {
-          assert.equal( e.msg, 'A raw constraint was violated' )
+            assert.equal( e.msg, 'A raw constraint was violated' )
         }
     })
     it( '#claim_tips moves funds to correct account', async () => {
