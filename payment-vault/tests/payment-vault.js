@@ -2,7 +2,7 @@ const anchor = require( '@project-serum/anchor' )
 const assert = require( 'assert' )
 const { SystemProgram, Transaction } = anchor.web3
 
-const CONFIG_ACCOUNT_LEN = 8 + 32
+const CONFIG_ACCOUNT_LEN = 8 + 40
 const MEV_PAYMENT_ACCOUNT_LEN = 8
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
