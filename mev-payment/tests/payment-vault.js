@@ -15,7 +15,7 @@ const mevSeed6 = 'MEV_ACCOUNT_6'
 const mevSeed7 = 'MEV_ACCOUNT_7'
 const mevSeed8 = 'MEV_ACCOUNT_8'
 
-describe( 'tests payment_vault', () => {
+describe( 'tests mev_payment', () => {
     const sendTip = async ( accountToTip, tipAmount ) => {
         const searcherKP = anchor.web3.Keypair.generate()
         const airDrop = tipAmount * 2
@@ -34,7 +34,7 @@ describe( 'tests payment_vault', () => {
             })
         )
         await anchor.web3.sendAndConfirmTransaction(
-            paymentVaultProg.provider.connection,
+            mevPaymentProg.provider.connection,
             tipTx,
             [ searcherKP ],
         )
@@ -44,7 +44,7 @@ describe( 'tests payment_vault', () => {
         { commitment: 'confirmed', preflightCommitment: 'confirmed' },
     )
     anchor.setProvider( provider )
-    const paymentVaultProg = anchor.workspace.PaymentVault
+    const mevPaymentProg = anchor.workspace.MevPayment
     const initializerKeys = anchor.web3.Keypair.generate()
     let configAccount, configAccountBump,
         mevPaymentAccount1, mevBump1,
@@ -58,55 +58,55 @@ describe( 'tests payment_vault', () => {
     before( async () => {
         const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( configAccountSeed, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         configAccount = _configAccount
         configAccountBump = _configAccountBump
         const [_mevPaymentAccount1, _mevBump1] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed1, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount1 = _mevPaymentAccount1
         mevBump1 = _mevBump1
         const [_mevPaymentAccount2, _mevBump2] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed2, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount2 = _mevPaymentAccount2
         mevBump2 = _mevBump2
         const [_mevPaymentAccount3, _mevBump3] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed3, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount3 = _mevPaymentAccount3
         mevBump3 = _mevBump3
         const [_mevPaymentAccount4, _mevBump4] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed4, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount4 = _mevPaymentAccount4
         mevBump4 = _mevBump4
         const [_mevPaymentAccount5, _mevBump5] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed5, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount5 = _mevPaymentAccount5
         mevBump5 = _mevBump5
         const [_mevPaymentAccount6, _mevBump6] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed6, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount6 = _mevPaymentAccount6
         mevBump6 = _mevBump6
         const [_mevPaymentAccount7, _mevBump7] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed7, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount7 = _mevPaymentAccount7
         mevBump7 = _mevBump7
         const [_mevPaymentAccount8, _mevBump8] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( mevSeed8, 'utf8' )],
-            paymentVaultProg.programId,
+            mevPaymentProg.programId,
         )
         mevPaymentAccount8 = _mevPaymentAccount8
         mevBump8 = _mevBump8
@@ -121,20 +121,20 @@ describe( 'tests payment_vault', () => {
 
     // utility function asserting all expected rent exempt accounts are indeed exempt
     const assertRentExemptAccounts = async () => {
-        let minRentExempt = await paymentVaultProg.provider.connection.getMinimumBalanceForRentExemption( CONFIG_ACCOUNT_LEN )
-        let accInfo = await paymentVaultProg.provider.connection.getAccountInfo( configAccount )
+        let minRentExempt = await mevPaymentProg.provider.connection.getMinimumBalanceForRentExemption( CONFIG_ACCOUNT_LEN )
+        let accInfo = await mevPaymentProg.provider.connection.getAccountInfo( configAccount )
         assert.equal( accInfo.lamports, minRentExempt )
 
-        minRentExempt = await paymentVaultProg.provider.connection.getMinimumBalanceForRentExemption( MEV_PAYMENT_ACCOUNT_LEN )
-        accInfo = await paymentVaultProg.provider.connection.getAccountInfo( mevPaymentAccount1 )
+        minRentExempt = await mevPaymentProg.provider.connection.getMinimumBalanceForRentExemption( MEV_PAYMENT_ACCOUNT_LEN )
+        accInfo = await mevPaymentProg.provider.connection.getAccountInfo( mevPaymentAccount1 )
         assert.equal( accInfo.lamports, minRentExempt )
 
-        minRentExempt = await paymentVaultProg.provider.connection.getMinimumBalanceForRentExemption( MEV_PAYMENT_ACCOUNT_LEN )
-        accInfo = await paymentVaultProg.provider.connection.getAccountInfo( mevPaymentAccount2 )
+        minRentExempt = await mevPaymentProg.provider.connection.getMinimumBalanceForRentExemption( MEV_PAYMENT_ACCOUNT_LEN )
+        accInfo = await mevPaymentProg.provider.connection.getAccountInfo( mevPaymentAccount2 )
         assert.equal( accInfo.lamports, minRentExempt )
     }
     it( '#initialize happy path', async () => {
-        await paymentVaultProg.rpc.initialize(
+        await mevPaymentProg.rpc.initialize(
             {
                 configAccountBump,
                 mevBump1,
@@ -164,14 +164,14 @@ describe( 'tests payment_vault', () => {
                 signers: [initializerKeys],
             },
         )
-        const configState = await paymentVaultProg.account.config.fetch( configAccount )
+        const configState = await mevPaymentProg.account.config.fetch( configAccount )
         assert.equal( configState.tipClaimer.toString(), initializerKeys.publicKey.toString() )
     })
     it( '#set_tip_claimer with 0 total tips succeeds', async () => {
-        let configState = await paymentVaultProg.account.config.fetch( configAccount )
+        let configState = await mevPaymentProg.account.config.fetch( configAccount )
         const oldTipClaimer = configState.tipClaimer
         const newTipClaimer = anchor.web3.Keypair.generate()
-        await paymentVaultProg.rpc.setTipClaimer(
+        await mevPaymentProg.rpc.setTipClaimer(
             {
                 accounts: {
                     oldTipClaimer,
@@ -191,13 +191,13 @@ describe( 'tests payment_vault', () => {
             },
         )
         await assertRentExemptAccounts()
-        configState = await paymentVaultProg.account.config.fetch( configAccount )
+        configState = await mevPaymentProg.account.config.fetch( configAccount )
         assert.equal( configState.tipClaimer.toString(), newTipClaimer.publicKey.toString())
     })
     it( '#claim_tips `constraint = tip_claimer.key() == config.tip_claimer`', async () => {
         try {
             const wrongTipClaimer = anchor.web3.Keypair.generate().publicKey
-            await paymentVaultProg.rpc.claimTips(
+            await mevPaymentProg.rpc.claimTips(
                 {
                     accounts: {
                         claimer: initializerKeys.publicKey,
@@ -227,11 +227,11 @@ describe( 'tests payment_vault', () => {
         await sendTip( mevPaymentAccount2, tipAmount )
         const totalTip = tipAmount * 2
 
-        let configState = await paymentVaultProg.account.config.fetch( configAccount )
+        let configState = await mevPaymentProg.account.config.fetch( configAccount )
         const tipClaimer = configState.tipClaimer
         const tipClaimerLamportsBefore =
-            (( await paymentVaultProg.provider.connection.getAccountInfo( tipClaimer )) || { lamports: 0 }).lamports
-        await paymentVaultProg.rpc.claimTips(
+            (( await mevPaymentProg.provider.connection.getAccountInfo( tipClaimer )) || { lamports: 0 }).lamports
+        await mevPaymentProg.rpc.claimTips(
             {
                 accounts: {
                     tipClaimer,
@@ -252,7 +252,7 @@ describe( 'tests payment_vault', () => {
 
         await assertRentExemptAccounts()
         const tipClaimerLamportsAfter =
-            ( await paymentVaultProg.provider.connection.getAccountInfo( tipClaimer )).lamports
+            ( await mevPaymentProg.provider.connection.getAccountInfo( tipClaimer )).lamports
         assert.equal( tipClaimerLamportsAfter - tipClaimerLamportsBefore, totalTip )
     })
     it( '#set_tip_claimer transfers funds to previous tip_claimer', async () => {
@@ -261,13 +261,13 @@ describe( 'tests payment_vault', () => {
         await sendTip( mevPaymentAccount2, tipAmount )
         const totalTip = tipAmount * 2
 
-        let configState = await paymentVaultProg.account.config.fetch( configAccount )
+        let configState = await mevPaymentProg.account.config.fetch( configAccount )
         const oldTipClaimer = configState.tipClaimer
         const oldTipClaimerBalanceBefore =
-            ( await paymentVaultProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
+            ( await mevPaymentProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
         const newTipClaimer = anchor.web3.Keypair.generate()
         const newLeader = anchor.web3.Keypair.generate()
-        await paymentVaultProg.rpc.setTipClaimer(
+        await mevPaymentProg.rpc.setTipClaimer(
             {
                 accounts: {
                     oldTipClaimer,
@@ -288,7 +288,7 @@ describe( 'tests payment_vault', () => {
         )
         await assertRentExemptAccounts()
         const oldTipClaimerBalanceAfter =
-            ( await paymentVaultProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
+            ( await mevPaymentProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
         assert.equal( oldTipClaimerBalanceAfter, totalTip + oldTipClaimerBalanceBefore )
     })
 })

@@ -21,7 +21,7 @@ const MEV_ACCOUNT_SEED_7: &'static [u8] = b"MEV_ACCOUNT_7";
 const MEV_ACCOUNT_SEED_8: &'static [u8] = b"MEV_ACCOUNT_8";
 
 #[program]
-pub mod payment_vault {
+pub mod mev_payment {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, args: InitArgs) -> ProgramResult {
