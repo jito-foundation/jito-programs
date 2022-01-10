@@ -1,7 +1,5 @@
-#[features]
-#seeds = false
-
 [programs.localnet]
+tip_distribution = "Bqw8hzRC4CQro7rrmssXSepUjZ4yysYqg7UHZN3dkDRJ"
 tip_payment = "Ek3SBXmGDvyvCGPYb98du8CNNjTomyiuc1wh7dMBw8gk"
 
 [registry]
@@ -12,5 +10,8 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "mocha -t 1000000 tests/" #"yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/"
-#mocha -t 1000000 tests/
+test = "mocha -t 1000000 tests/"
+
+[test.validator]
+slots_per_epoch = "32"
+ticks_per_slot = "1"

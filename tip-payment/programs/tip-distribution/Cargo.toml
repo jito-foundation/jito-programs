@@ -1,22 +1,18 @@
 [package]
-name = "tip-payment"
+name = "tip-distribution"
 version = "0.1.0"
-description = "Tip Payment Program"
+description = "Tip distribution program, responsible for distributing funds to entitled parties."
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "tip_payment"
+name = "tip_distribution"
 
 [features]
 no-entrypoint = []
 no-idl = []
-no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
-
-[profile.release]
-overflow-checks = true
 
 [dependencies]
 anchor-lang = "0.24.2"
