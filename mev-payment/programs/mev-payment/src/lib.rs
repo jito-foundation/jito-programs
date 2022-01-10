@@ -1,5 +1,3 @@
-// #![feature(in_band_lifetimes)]
-
 use anchor_lang::prelude::*;
 use std::mem::size_of;
 
@@ -26,6 +24,8 @@ pub mod mev_payment {
 
     pub fn initialize(ctx: Context<Initialize>, args: InitArgs) -> ProgramResult {
         let cfg = &mut ctx.accounts.config;
+        // This must be set to some value otherwise the `mut` attribute in a subsequent `set_tip_claimer`
+        // call will fail since an uninitialized account cannot have data written to it.
         cfg.tip_claimer = ctx.accounts.initial_tip_claimer.key();
         cfg.mev_bump_1 = args.mev_bump_1;
         cfg.mev_bump_2 = args.mev_bump_2;
