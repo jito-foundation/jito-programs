@@ -720,6 +720,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "mev-distribution"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+]
+
+[[package]]
 name = "mev-payment"
 version = "0.1.0"
 dependencies = [

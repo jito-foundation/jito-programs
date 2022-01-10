@@ -9,16 +9,16 @@ declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 /// This ensures that `initialize` can only be invoked once,
 /// otherwise the tx would fail since the accounts would have
 /// already been initialized on subsequent calls.
-const CONFIG_ACCOUNT_SEED: &'static [u8] = b"CONFIG_ACCOUNT";
-const MEV_ACCOUNT_SEED_1: &'static [u8] = b"MEV_ACCOUNT_1";
-const MEV_ACCOUNT_SEED_2: &'static [u8] = b"MEV_ACCOUNT_2";
-const MEV_ACCOUNT_SEED_3: &'static [u8] = b"MEV_ACCOUNT_3";
-const MEV_ACCOUNT_SEED_4: &'static [u8] = b"MEV_ACCOUNT_4";
-const MEV_ACCOUNT_SEED_5: &'static [u8] = b"MEV_ACCOUNT_5";
-const MEV_ACCOUNT_SEED_6: &'static [u8] = b"MEV_ACCOUNT_6";
-const MEV_ACCOUNT_SEED_7: &'static [u8] = b"MEV_ACCOUNT_7";
-const MEV_ACCOUNT_SEED_8: &'static [u8] = b"MEV_ACCOUNT_8";
-const VALIDATOR_META_SEED: &'static [u8] = b"VALIDATOR_META";
+const CONFIG_ACCOUNT_SEED: &[u8] = b"CONFIG_ACCOUNT";
+const MEV_ACCOUNT_SEED_1: &[u8] = b"MEV_ACCOUNT_1";
+const MEV_ACCOUNT_SEED_2: &[u8] = b"MEV_ACCOUNT_2";
+const MEV_ACCOUNT_SEED_3: &[u8] = b"MEV_ACCOUNT_3";
+const MEV_ACCOUNT_SEED_4: &[u8] = b"MEV_ACCOUNT_4";
+const MEV_ACCOUNT_SEED_5: &[u8] = b"MEV_ACCOUNT_5";
+const MEV_ACCOUNT_SEED_6: &[u8] = b"MEV_ACCOUNT_6";
+const MEV_ACCOUNT_SEED_7: &[u8] = b"MEV_ACCOUNT_7";
+const MEV_ACCOUNT_SEED_8: &[u8] = b"MEV_ACCOUNT_8";
+const VALIDATOR_META_SEED: &[u8] = b"VALIDATOR_META";
 
 #[program]
 pub mod mev_payment {
@@ -68,7 +68,7 @@ pub mod mev_payment {
         meta.backend_url = url.clone();
 
         emit!(ValidatorBackendUrlUpdated {
-            url: url,
+            url,
             validator: ctx.accounts.validator.key(),
         });
 
@@ -329,17 +329,16 @@ pub struct SetBackendUrl<'info> {
 
 impl<'info> ClaimTips<'info> {
     fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
-        let mut accs = Vec::new();
-        accs.push(self.mev_payment_account_1.to_account_info());
-        accs.push(self.mev_payment_account_2.to_account_info());
-        accs.push(self.mev_payment_account_3.to_account_info());
-        accs.push(self.mev_payment_account_4.to_account_info());
-        accs.push(self.mev_payment_account_5.to_account_info());
-        accs.push(self.mev_payment_account_6.to_account_info());
-        accs.push(self.mev_payment_account_7.to_account_info());
-        accs.push(self.mev_payment_account_8.to_account_info());
-
-        accs
+        vec![
+            self.mev_payment_account_1.to_account_info(),
+            self.mev_payment_account_2.to_account_info(),
+            self.mev_payment_account_3.to_account_info(),
+            self.mev_payment_account_4.to_account_info(),
+            self.mev_payment_account_5.to_account_info(),
+            self.mev_payment_account_6.to_account_info(),
+            self.mev_payment_account_7.to_account_info(),
+            self.mev_payment_account_8.to_account_info(),
+        ]
     }
 }
 
@@ -407,17 +406,16 @@ pub struct SetTipClaimer<'info> {
 
 impl<'info> SetTipClaimer<'info> {
     fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
-        let mut accs = Vec::new();
-        accs.push(self.mev_payment_account_1.to_account_info());
-        accs.push(self.mev_payment_account_2.to_account_info());
-        accs.push(self.mev_payment_account_3.to_account_info());
-        accs.push(self.mev_payment_account_4.to_account_info());
-        accs.push(self.mev_payment_account_5.to_account_info());
-        accs.push(self.mev_payment_account_6.to_account_info());
-        accs.push(self.mev_payment_account_7.to_account_info());
-        accs.push(self.mev_payment_account_8.to_account_info());
-
-        accs
+        vec![
+            self.mev_payment_account_1.to_account_info(),
+            self.mev_payment_account_2.to_account_info(),
+            self.mev_payment_account_3.to_account_info(),
+            self.mev_payment_account_4.to_account_info(),
+            self.mev_payment_account_5.to_account_info(),
+            self.mev_payment_account_6.to_account_info(),
+            self.mev_payment_account_7.to_account_info(),
+            self.mev_payment_account_8.to_account_info(),
+        ]
     }
 }
 

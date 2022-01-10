@@ -1,5 +1,6 @@
 [programs.localnet]
 mev_payment = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+mev_distribution = "BsnxG8jiKuQxUegpkgcGx3EHs6GD7KrZJjBy53a1Ybaa"
 
 [registry]
 url = "https://anchor.projectserum.com"
