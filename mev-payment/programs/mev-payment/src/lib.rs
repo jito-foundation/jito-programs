@@ -1,5 +1,6 @@
-use anchor_lang::prelude::*;
 use std::mem::size_of;
+
+use anchor_lang::prelude::*;
 
 declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
 
@@ -17,6 +18,7 @@ const MEV_ACCOUNT_SEED_5: &'static [u8] = b"MEV_ACCOUNT_5";
 const MEV_ACCOUNT_SEED_6: &'static [u8] = b"MEV_ACCOUNT_6";
 const MEV_ACCOUNT_SEED_7: &'static [u8] = b"MEV_ACCOUNT_7";
 const MEV_ACCOUNT_SEED_8: &'static [u8] = b"MEV_ACCOUNT_8";
+const VALIDATOR_META_SEED: &'static [u8] = b"VALIDATOR_META";
 
 #[program]
 pub mod mev_payment {
@@ -35,6 +37,40 @@ pub mod mev_payment {
         cfg.mev_bump_6 = args.mev_bump_6;
         cfg.mev_bump_7 = args.mev_bump_7;
         cfg.mev_bump_8 = args.mev_bump_8;
+
+        Ok(())
+    }
+
+    pub fn init_validator_meta(
+        ctx: Context<InitValidatorMeta>,
+        backend_url: String,
+        // should be at least the size of backend_url
+        _extra_space: u32,
+        bump: u8,
+    ) -> ProgramResult {
+        let meta = &mut ctx.accounts.meta;
+        meta.backend_url = backend_url;
+        meta.bump = bump;
+
+        Ok(())
+    }
+
+    pub fn close_validator_meta_account(ctx: Context<CloseValidatorMetaAccount>) -> ProgramResult {
+        emit!(ValidatorMetaAccountClosed {
+            validator: ctx.accounts.validator.key(),
+        });
+
+        Ok(())
+    }
+
+    pub fn set_backend_url(ctx: Context<SetBackendUrl>, url: String) -> ProgramResult {
+        let meta = &mut ctx.accounts.meta;
+        meta.backend_url = url.clone();
+
+        emit!(ValidatorBackendUrlUpdated {
+            url: url,
+            validator: ctx.accounts.validator.key(),
+        });
 
         Ok(())
     }
@@ -112,7 +148,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_1],
         bump = args.mev_bump_1,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
@@ -120,7 +156,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_2],
         bump = args.mev_bump_2,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
@@ -128,7 +164,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_3],
         bump = args.mev_bump_3,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
@@ -136,7 +172,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_4],
         bump = args.mev_bump_4,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
@@ -144,7 +180,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_5],
         bump = args.mev_bump_5,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
@@ -152,7 +188,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_6],
         bump = args.mev_bump_6,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
@@ -160,7 +196,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_7],
         bump = args.mev_bump_7,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
@@ -168,7 +204,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_8],
         bump = args.mev_bump_8,
         payer = payer,
-        space = MevPaymentAccount::LEN,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     pub initial_tip_claimer: AccountInfo<'info>,
@@ -235,6 +271,46 @@ pub struct ClaimTips<'info> {
     pub tip_claimer: AccountInfo<'info>,
     #[account(mut)]
     pub claimer: Signer<'info>,
+}
+
+#[derive(Accounts)]
+#[instruction(_backend_url: String, extra_space: u32, bump: u8)]
+pub struct InitValidatorMeta<'info> {
+    #[account(
+        init,
+        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+        bump = bump,
+        payer = validator,
+        space = ValidatorMeta::SIZE + extra_space as usize,
+    )]
+    pub meta: Account<'info, ValidatorMeta>,
+    #[account(mut)]
+    pub validator: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct CloseValidatorMetaAccount<'info> {
+    #[account(
+        mut,
+        close = validator,
+        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+        bump = meta.bump,
+    )]
+    pub meta: Account<'info, ValidatorMeta>,
+    #[account(mut)]
+    pub validator: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct SetBackendUrl<'info> {
+    #[account(
+        mut,
+        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+        bump = meta.bump,
+    )]
+    pub meta: Account<'info, ValidatorMeta>,
+    pub validator: Signer<'info>,
 }
 
 impl<'info> ClaimTips<'info> {
@@ -356,9 +432,11 @@ pub struct Config {
 #[derive(Default)]
 pub struct MevPaymentAccount {}
 
+pub const HEADER: usize = 8;
+
 impl MevPaymentAccount {
-    // add one byte for header
-    pub const LEN: usize = 8 + size_of::<Self>();
+    // add 8 bytes for header
+    pub const SIZE: usize = HEADER + size_of::<Self>();
 
     fn debit_accounts(accs: Vec<AccountInfo>) -> Result<u64, ProgramError> {
         let mut total_tips = 0;
@@ -379,9 +457,23 @@ impl MevPaymentAccount {
 
     fn calc_tips(total_balance: u64) -> Result<u64, ProgramError> {
         let rent = Rent::get()?;
-        let min_rent = rent.minimum_balance(Self::LEN);
+        let min_rent = rent.minimum_balance(Self::SIZE);
         Ok(total_balance - min_rent)
     }
+}
+
+/// Searchers will need to connect to `backend_url` to stream txs and submit bundles.
+/// This may be JITO's hosted backend or custom infrastructure.
+#[account]
+#[derive(Default)]
+pub struct ValidatorMeta {
+    pub backend_url: String,
+    pub bump: u8,
+}
+
+impl ValidatorMeta {
+    // subtract size_of::<String>() to allow user to supply the program with extra space needed
+    pub const SIZE: usize = HEADER + size_of::<Self>() - size_of::<String>();
 }
 
 /// events
@@ -397,4 +489,15 @@ pub struct TipsClaimed {
 pub struct TipClaimerUpdated {
     new_tip_claimer: Pubkey,
     old_tip_claimer: Pubkey,
+}
+
+#[event]
+pub struct ValidatorBackendUrlUpdated {
+    url: String,
+    validator: Pubkey,
+}
+
+#[event]
+pub struct ValidatorMetaAccountClosed {
+    validator: Pubkey,
 }

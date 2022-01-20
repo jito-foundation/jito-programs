@@ -14,6 +14,14 @@ const mevSeed5 = 'MEV_ACCOUNT_5'
 const mevSeed6 = 'MEV_ACCOUNT_6'
 const mevSeed7 = 'MEV_ACCOUNT_7'
 const mevSeed8 = 'MEV_ACCOUNT_8'
+const validatorMetaSeed = 'VALIDATOR_META'
+
+const provider = anchor.Provider.local(
+    undefined,
+    { commitment: 'confirmed', preflightCommitment: 'confirmed' },
+)
+anchor.setProvider( provider )
+const mevPaymentProg = anchor.workspace.MevPayment
 
 describe( 'tests mev_payment', () => {
     const sendTip = async ( accountToTip, tipAmount ) => {
@@ -39,12 +47,6 @@ describe( 'tests mev_payment', () => {
             [ searcherKP ],
         )
     }
-    const provider = anchor.Provider.local(
-        undefined,
-        { commitment: 'confirmed', preflightCommitment: 'confirmed' },
-    )
-    anchor.setProvider( provider )
-    const mevPaymentProg = anchor.workspace.MevPayment
     const initializerKeys = anchor.web3.Keypair.generate()
     let configAccount, configAccountBump,
         mevPaymentAccount1, mevBump1,
@@ -291,4 +293,232 @@ describe( 'tests mev_payment', () => {
             ( await mevPaymentProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
         assert.equal( oldTipClaimerBalanceAfter, totalTip + oldTipClaimerBalanceBefore )
     })
+    it( '#init_validator_meta happy path', async () => {
+        // given
+        const {
+            validator,
+            meta,
+            metaBump,
+        } = await setup_initValidatorMeta()
+        const backendUrl = 'eu.jito.wtf/mempool'
+        const extraSpace = backendUrl.length
+
+        // then
+        try {
+            await call_initValidatorMeta({
+                validator,
+                backendUrl,
+                meta,
+                metaBump,
+                extraSpace,
+                systemProgram: SystemProgram.programId,
+            })
+        } catch ( e ) {
+            assert.fail( 'unexpected exception: ' + e )
+        }
+
+        // expect
+        const created = ( await mevPaymentProg.provider.connection.getAccountInfo( meta )) != null
+        assert( created )
+        const validatorMeta = await mevPaymentProg.account.validatorMeta.fetch( meta )
+        assert.equal( validatorMeta.bump, metaBump )
+        assert.equal( validatorMeta.backendUrl, backendUrl )
+    })
+    it( '#set_backend_url fails due low pre-allocated space', async () => {
+        // given
+        const backendUrl = 'eu.jito.wtf/mempool'
+        const extraSpace = backendUrl.length
+        const { validator, meta } =
+            await setup_setBackendUrl({
+                extraSpace,
+                backendUrl,
+                systemProgram: SystemProgram.programId,
+            })
+
+        // then
+        const newUrl = backendUrl + "/bundles"
+        try {
+            await call_setBackendUrl({ backendUrl: newUrl, validator, meta })
+            assert.fail( 'expected exception to be thrown' )
+        } catch ( e ) {
+            console.log( 'eeee', e)
+            assert.equal( e.msg, 'Failed to serialize the account' )
+        }
+    })
+    it( '#set_backend_url happy path', async () => {
+        // given
+        const backendUrl = 'eu.jito.wtf/mempool'
+        const extraSpace = backendUrl.length + 1280
+        const { validator, meta, metaBump } =
+            await setup_setBackendUrl({
+                extraSpace,
+                backendUrl,
+                systemProgram: SystemProgram.programId,
+            })
+
+        // then
+        const newUrl = backendUrl + "/bundles"
+        try {
+            await call_setBackendUrl({ backendUrl: newUrl, validator, meta })
+        } catch ( e ) {
+            assert.fail( 'unexpected exception: ' + e )
+        }
+
+        // expect
+        const validatorMeta = await mevPaymentProg.account.validatorMeta.fetch( meta )
+        assert.equal( validatorMeta.bump, metaBump )
+        assert.equal( validatorMeta.backendUrl, newUrl )
+    })
+    it( '#close_validator_meta_account happy path', async () => {
+        // given
+        const backendUrl = 'eu.jito.wtf/mempool'
+        const extraSpace = backendUrl.length
+        const { validator, meta, metaBump } =
+            await setup_closeValidatorMetaAccount({
+                extraSpace,
+                backendUrl,
+                systemProgram: SystemProgram.programId,
+            })
+
+        // then
+        try {
+            await call_closeValidatorMetaAccount({ validator, meta })
+        } catch ( e ) {
+            assert.fail( 'unexpected exception: ' + e )
+        }
+
+        // expect
+        const closed = ( await mevPaymentProg.provider.connection.getAccountInfo( meta )) == null
+        assert( closed )
+    })
+    it( '#re-init happy path', async () => {
+        // given
+        let backendUrl = 'eu.jito.wtf/mempool'
+        let extraSpace = backendUrl.length
+        const { validator, meta, metaBump } =
+            await setup_closeValidatorMetaAccount({
+                extraSpace,
+                backendUrl,
+                systemProgram: SystemProgram.programId,
+            })
+        // close account
+        await call_closeValidatorMetaAccount({ validator, meta })
+
+        // then re-init
+        backendUrl = backendUrl + '/bundles'
+        extraSpace = backendUrl.length
+        try {
+            await call_initValidatorMeta({
+                validator,
+                backendUrl,
+                meta,
+                metaBump,
+                extraSpace,
+                systemProgram: SystemProgram.programId,
+            })
+        } catch ( e ) {
+            assert.fail( 'unexpected exception: ' + e )
+        }
+
+        // expect
+        const validatorMeta = await mevPaymentProg.account.validatorMeta.fetch( meta )
+        assert.equal( validatorMeta.bump, metaBump )
+        assert.equal( validatorMeta.backendUrl, backendUrl )
+    })
 })
+
+
+// utils
+
+const setup_initValidatorMeta = async () => {
+    const validator = anchor.web3.Keypair.generate()
+    await provider.connection.confirmTransaction(
+        await provider.connection.requestAirdrop(
+            validator.publicKey, 10000000000000
+        ),
+        'confirmed',
+    )
+    const [meta, metaBump] = await anchor.web3.PublicKey.findProgramAddress(
+        [Buffer.from( validatorMetaSeed, 'utf8' ), validator.publicKey.toBuffer()],
+        mevPaymentProg.programId,
+    )
+
+    return {
+        validator,
+        meta,
+        metaBump,
+    }
+}
+
+const call_initValidatorMeta = async ({ backendUrl, extraSpace, metaBump, validator, meta, systemProgram }) => {
+    return await mevPaymentProg.rpc.initValidatorMeta(
+        backendUrl,
+        extraSpace,
+        metaBump,
+        {
+            accounts: {
+                validator: validator.publicKey,
+                systemProgram,
+                meta,
+            },
+            signers: [validator],
+        },
+    )
+}
+
+const call_setBackendUrl = async ({ backendUrl, validator, meta }) => {
+    return await mevPaymentProg.rpc.setBackendUrl(
+        backendUrl,
+        {
+            accounts: {
+                validator: validator.publicKey,
+                meta,
+            },
+            signers: [validator],
+        },
+    )
+}
+
+const setup_setBackendUrl = async ({ extraSpace, backendUrl, systemProgram }) => {
+    return await initValidatorMeta({ backendUrl, extraSpace, systemProgram })
+}
+
+const setup_closeValidatorMetaAccount = async ({ extraSpace, backendUrl, systemProgram }) => {
+    return await initValidatorMeta({ backendUrl, extraSpace, systemProgram })
+}
+
+const call_closeValidatorMetaAccount = async ({ validator, meta }) => {
+    return await mevPaymentProg.rpc.closeValidatorMetaAccount(
+        {
+            accounts: {
+                validator: validator.publicKey,
+                meta,
+            },
+            signers: [validator],
+        },
+    )
+}
+
+// helper function that initializes a ValidatorMeta account
+const initValidatorMeta = async ({ backendUrl, extraSpace, systemProgram }) => {
+    const {
+        validator,
+        meta,
+        metaBump,
+    } = await setup_initValidatorMeta()
+
+    await call_initValidatorMeta({
+        validator,
+        backendUrl,
+        meta,
+        metaBump,
+        extraSpace,
+        systemProgram,
+    })
+
+    return {
+        validator,
+        meta,
+        metaBump,
+    }
+}
