@@ -15,6 +15,15 @@ const mevSeed6 = 'MEV_ACCOUNT_6'
 const mevSeed7 = 'MEV_ACCOUNT_7'
 const mevSeed8 = 'MEV_ACCOUNT_8'
 const validatorMetaSeed = 'VALIDATOR_META'
+let configAccount, configAccountBump,
+    mevPaymentAccount1, mevBump1,
+    mevPaymentAccount2, mevBump2,
+    mevPaymentAccount3, mevBump3,
+    mevPaymentAccount4, mevBump4,
+    mevPaymentAccount5, mevBump5,
+    mevPaymentAccount6, mevBump6,
+    mevPaymentAccount7, mevBump7,
+    mevPaymentAccount8, mevBump8
 
 const provider = anchor.Provider.local(
     undefined,
@@ -48,15 +57,6 @@ describe( 'tests mev_payment', () => {
         )
     }
     const initializerKeys = anchor.web3.Keypair.generate()
-    let configAccount, configAccountBump,
-        mevPaymentAccount1, mevBump1,
-        mevPaymentAccount2, mevBump2,
-        mevPaymentAccount3, mevBump3,
-        mevPaymentAccount4, mevBump4,
-        mevPaymentAccount5, mevBump5,
-        mevPaymentAccount6, mevBump6,
-        mevPaymentAccount7, mevBump7,
-        mevPaymentAccount8, mevBump8
     before( async () => {
         const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( configAccountSeed, 'utf8' )],
@@ -196,15 +196,43 @@ describe( 'tests mev_payment', () => {
         configState = await mevPaymentProg.account.config.fetch( configAccount )
         assert.equal( configState.tipClaimer.toString(), newTipClaimer.publicKey.toString())
     })
-    it( '#claim_tips `constraint = tip_claimer.key() == config.tip_claimer`', async () => {
+    it( '#set_tip_claimer `constraint = old_tip_claimer.key() == config.tip_claimer`', async () => {
+        const badOldTipClaimer = anchor.web3.Keypair.generate().publicKey
+        const newTipClaimer = anchor.web3.Keypair.generate()
         try {
-            const wrongTipClaimer = anchor.web3.Keypair.generate().publicKey
+            await mevPaymentProg.rpc.setTipClaimer(
+                {
+                    accounts: {
+                        oldTipClaimer: badOldTipClaimer,
+                        newTipClaimer: newTipClaimer.publicKey,
+                        config: configAccount,
+                        signer: initializerKeys.publicKey,
+                        mevPaymentAccount1,
+                        mevPaymentAccount2,
+                        mevPaymentAccount3,
+                        mevPaymentAccount4,
+                        mevPaymentAccount5,
+                        mevPaymentAccount6,
+                        mevPaymentAccount7,
+                        mevPaymentAccount8,
+                    },
+                    signers: [initializerKeys],
+                },
+            )
+            assert.fail( 'expected exception to be thrown' )
+        } catch ( e ) {
+            assert.equal( e.msg, 'A raw constraint was violated' )
+        }
+    })
+    it( '#claim_tips `constraint = tip_claimer.key() == config.tip_claimer`', async () => {
+        const badTipClaimer = anchor.web3.Keypair.generate().publicKey
+        try {
             await mevPaymentProg.rpc.claimTips(
                 {
                     accounts: {
                         claimer: initializerKeys.publicKey,
                         config: configAccount,
-                        tipClaimer: wrongTipClaimer,
+                        tipClaimer: badTipClaimer,
                         mevPaymentAccount1,
                         mevPaymentAccount2,
                         mevPaymentAccount3,
@@ -220,6 +248,30 @@ describe( 'tests mev_payment', () => {
             assert( false )
         } catch ( err ) {
             assertErr({ err, msg: 'A raw constraint was violated' })
+        }
+    })
+    it( '#claim_tips with bad mevPaymentAccountN', async () => {
+        const configState = await mevPaymentProg.account.config.fetch( configAccount )
+        const tipClaimer = configState.tipClaimer
+        for ( let i = 0; i < 8; i++ ) {
+            let accounts = await getBadMevPaymentAccounts( i )
+            accounts = {
+                ...accounts,
+                claimer: initializerKeys.publicKey,
+                config: configAccount,
+                tipClaimer,
+            }
+            try {
+                await mevPaymentProg.rpc.claimTips(
+                    {
+                        accounts,
+                        signers: [initializerKeys],
+                    },
+                )
+                assert( false )
+            } catch ( e ) {
+                assert.equal( e.msg, 'The given account is owned by a different program than expected' )
+            }
         }
     })
     it( '#claim_tips moves funds to correct account', async () => {
@@ -525,4 +577,68 @@ const initValidatorMeta = async ({ backendUrl, extraSpace, systemProgram }) => {
 const assertErr = ({ err, msg }) => {
     assert( !!err && !!err.msg )
     assert.equal( err.msg, msg )
+}
+
+const getBadMevPaymentAccounts = async ( n ) => {
+    const badMevPaymentAccount = anchor.web3.Keypair.generate().publicKey
+    await provider.connection.confirmTransaction(
+        await provider.connection.requestAirdrop(
+            badMevPaymentAccount, 100000000000
+        ),
+        'confirmed',
+    )
+    let accs = {
+        mevPaymentAccount1,
+        mevPaymentAccount2,
+        mevPaymentAccount3,
+        mevPaymentAccount4,
+        mevPaymentAccount5,
+        mevPaymentAccount6,
+        mevPaymentAccount7,
+        mevPaymentAccount8,
+    }
+    switch ( n + 1 ) {
+        case 1:
+            return {
+                ...accs,
+                mevPaymentAccount1: badMevPaymentAccount,
+            }
+        case 2:
+            return {
+                ...accs,
+                mevPaymentAccount2: badMevPaymentAccount,
+            }
+        case 3:
+            return {
+                ...accs,
+                mevPaymentAccount3: badMevPaymentAccount,
+            }
+        case 4:
+            return {
+                ...accs,
+                mevPaymentAccount4: badMevPaymentAccount,
+            }
+        case 5:
+            return {
+                ...accs,
+                mevPaymentAccount5: badMevPaymentAccount,
+            }
+        case 6:
+            return {
+                ...accs,
+                mevPaymentAccount6: badMevPaymentAccount,
+            }
+        case 7:
+            return {
+                ...accs,
+                mevPaymentAccount7: badMevPaymentAccount,
+            }
+        case 8:
+            return {
+                ...accs,
+                mevPaymentAccount8: badMevPaymentAccount,
+            }
+        default:
+            return undefined
+    }
 }
