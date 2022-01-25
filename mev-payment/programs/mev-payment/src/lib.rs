@@ -80,7 +80,14 @@ pub mod mev_payment {
     /// in set_tip_claimer before claimer is updated.
     pub fn claim_tips(ctx: Context<ClaimTips>) -> ProgramResult {
         let total_tips = MevPaymentAccount::debit_accounts(ctx.accounts.get_mev_accounts())?;
-        **ctx.accounts.tip_claimer.try_borrow_mut_lamports()? += total_tips;
+        let pre_lamports = ctx.accounts.tip_claimer.lamports();
+        **ctx.accounts.tip_claimer.try_borrow_mut_lamports()? =
+            pre_lamports.checked_add(total_tips).expect(&*format!(
+                "claim_tips overflow: [tip_claimer: {}, pre_lamports: {}, total_tips: {}]",
+                ctx.accounts.tip_claimer.key(),
+                pre_lamports,
+                total_tips,
+            ));
 
         emit!(TipsClaimed {
             by: ctx.accounts.claimer.key(),
@@ -97,7 +104,14 @@ pub mod mev_payment {
         let total_tips = MevPaymentAccount::debit_accounts(ctx.accounts.get_mev_accounts())?;
 
         if total_tips > 0 {
-            **ctx.accounts.old_tip_claimer.try_borrow_mut_lamports()? += total_tips;
+            let pre_lamports = ctx.accounts.old_tip_claimer.lamports();
+            **ctx.accounts.old_tip_claimer.try_borrow_mut_lamports()? =
+                pre_lamports.checked_add(total_tips).expect(&*format!(
+                    "set_tip_claimer overflow: [old_tip_claimer: {}, pre_lamports: {}, total_tips: {}]",
+                    ctx.accounts.old_tip_claimer.key(),
+                    pre_lamports,
+                    total_tips,
+                ));
             emit!(TipsClaimed {
                 by: ctx.accounts.signer.key(),
                 to: ctx.accounts.old_tip_claimer.key(),
@@ -439,18 +453,28 @@ impl MevPaymentAccount {
     pub const SIZE: usize = HEADER + size_of::<Self>();
 
     fn debit_accounts(accs: Vec<AccountInfo>) -> Result<u64, ProgramError> {
-        let mut total_tips = 0;
+        let mut total_tips: u64 = 0;
         for acc in accs {
-            total_tips += Self::debit(acc)?;
+            total_tips = total_tips.checked_add(Self::debit(&acc)?).expect(&*format!(
+                "debit_accounts overflow: [account: {}, amount: {}]",
+                acc.key(),
+                acc.lamports(),
+            ));
         }
 
         Ok(total_tips)
     }
 
-    fn debit(acc: AccountInfo) -> Result<u64, ProgramError> {
+    fn debit(acc: &AccountInfo) -> Result<u64, ProgramError> {
         let tips = Self::calc_tips(acc.lamports())?;
         if tips > 0 {
-            **acc.try_borrow_mut_lamports()? -= tips;
+            let pre_lamports = acc.lamports();
+            **acc.try_borrow_mut_lamports()? = pre_lamports.checked_sub(tips).expect(&*format!(
+                "debit account overflow: [account: {}, pre_lamports: {}, tips: {}]",
+                acc.key(),
+                pre_lamports,
+                tips,
+            ));
         }
         Ok(tips)
     }
@@ -458,7 +482,11 @@ impl MevPaymentAccount {
     fn calc_tips(total_balance: u64) -> Result<u64, ProgramError> {
         let rent = Rent::get()?;
         let min_rent = rent.minimum_balance(Self::SIZE);
-        Ok(total_balance - min_rent)
+
+        Ok(total_balance.checked_sub(min_rent).expect(&*format!(
+            "calc_tips overflow: [total_balance: {}, min_rent: {}]",
+            total_balance, min_rent,
+        )))
     }
 }
 

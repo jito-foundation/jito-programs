@@ -1,0 +1,56 @@
+name: Build
+on:
+  push:
+    branches:
+      - master
+      - gh-actions
+  pull_request:
+    branches:
+      - master
+env:
+  SOLANA_CLI_VERSION: 1.9.4
+  NODE_VERSION: 17.0.1
+jobs:
+  build-and-test:
+    name: Build and test programs
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/setup/
+      - uses: ./.github/actions/setup-solana/
+      - uses: actions/cache@v2
+        name: Cache Cargo registry + index
+        id: cache-anchor
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./target/
+          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.20.1 anchor-cli --locked --force
+      - run: cd mev-payment && yarn
+      - run: yarn global add mocha@^9.0.3
+      - name: test
+        working-directory: ./mev-payment
+        run: anchor test
+      - uses: reinismu/clippy-check@master
+        with:
+          working-directory: ./mev-payment/programs
+          token: ${{ secrets.GITHUB_TOKEN }}
+  soteria:
+    needs: build-and-test
+    name: Runs soteria analysis
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/setup/
+      - uses: ./.github/actions/setup-solana/
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+      - run: cd ./mev-payment && sh -c "$(curl -k https://supercompiler.xyz/install)" && cargo build-bpf
+      - run: cd ./mev-payment && ./soteria-linux-develop/bin/soteria -analyzeAll .

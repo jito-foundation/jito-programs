@@ -2,12 +2,14 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
-if [ "$USER" = "lucasbruder" ]; then
-  HOST=jito@100.100.182.81
+if [ -f .env ]; then
+  # Load Environment Variables
+  export $(cat .env | grep -v '#' | awk '/=/ {print $1}')
 else
-  HOST=jito@94.130.200.9
+  echo "Missing .env file"
+  exit 0
 fi
 
-echo "Syncing to host: $HOST"
+echo "Syncing to host: $BUILD_SERVER"
 
-rsync -avh --delete --exclude=".anchor" --exclude="test-ledger" --exclude=".git" --exclude="target" --exclude="node_modules" $SCRIPT_DIR $HOST:~/
+rsync -avh --delete --exclude=".anchor" --exclude="test-ledger" --exclude=".git" --exclude="target" --exclude="node_modules" $SCRIPT_DIR $BUILD_SERVER:~/

@@ -218,8 +218,8 @@ describe( 'tests mev_payment', () => {
                 },
             )
             assert( false )
-        } catch ( e ) {
-            assert.equal( e.msg, 'A raw constraint was violated' )
+        } catch ( err ) {
+            assertErr({ err, msg: 'A raw constraint was violated' })
         }
     })
     it( '#claim_tips moves funds to correct account', async () => {
@@ -340,9 +340,8 @@ describe( 'tests mev_payment', () => {
         try {
             await call_setBackendUrl({ backendUrl: newUrl, validator, meta })
             assert.fail( 'expected exception to be thrown' )
-        } catch ( e ) {
-            console.log( 'eeee', e)
-            assert.equal( e.msg, 'Failed to serialize the account' )
+        } catch ( err ) {
+            assertErr({ err, msg: 'Failed to serialize the account' })
         }
     })
     it( '#set_backend_url happy path', async () => {
@@ -521,4 +520,9 @@ const initValidatorMeta = async ({ backendUrl, extraSpace, systemProgram }) => {
         meta,
         metaBump,
     }
+}
+
+const assertErr = ({ err, msg }) => {
+    assert( !!err && !!err.msg )
+    assert.equal( err.msg, msg )
 }
