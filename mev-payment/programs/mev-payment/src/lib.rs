@@ -22,7 +22,6 @@ const VALIDATOR_META_SEED: &'static [u8] = b"VALIDATOR_META";
 
 pub const HEADER: usize = 8;
 
-
 #[program]
 pub mod mev_payment {
     use super::*;
@@ -153,75 +152,75 @@ pub struct InitArgs {
 pub struct Initialize<'info> {
     /// singleton account
     #[account(
-    init,
-    seeds = [CONFIG_ACCOUNT_SEED],
-    bump,
-    payer = payer,
-    space = Config::SIZE
+        init,
+        seeds = [CONFIG_ACCOUNT_SEED],
+        bump,
+        payer = payer,
+        space = Config::SIZE
     )]
     pub config: Account<'info, Config>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_1],
-    bump,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_1],
+        bump,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_2],
-    bump,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_2],
+        bump,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_3],
-    bump,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_3],
+        bump,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_4],
-    bump,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_4],
+        bump,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_5],
-    bump,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_5],
+        bump,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_6],
-    bump ,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_6],
+        bump ,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_7],
-    bump,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_7],
+        bump,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
-    init,
-    seeds = [MEV_ACCOUNT_SEED_8],
-    bump,
-    payer = payer,
-    space = MevPaymentAccount::SIZE,
+        init,
+        seeds = [MEV_ACCOUNT_SEED_8],
+        bump,
+        payer = payer,
+        space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     pub system_program: Program<'info, System>,
@@ -232,55 +231,55 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct ClaimTips<'info> {
     #[account(
-    constraint = config.tip_claimer == tip_claimer.key(),
+        constraint = config.tip_claimer == tip_claimer.key(),
     )]
     pub config: Account<'info, Config>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_1],
-    bump = config.mev_bump_1
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_1],
+        bump = config.mev_bump_1
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_2],
-    bump = config.mev_bump_2
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_2],
+        bump = config.mev_bump_2
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_3],
-    bump = config.mev_bump_3
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_3],
+        bump = config.mev_bump_3
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_4],
-    bump = config.mev_bump_4
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_4],
+        bump = config.mev_bump_4
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_5],
-    bump = config.mev_bump_5
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_5],
+        bump = config.mev_bump_5
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_6],
-    bump = config.mev_bump_6
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_6],
+        bump = config.mev_bump_6
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_7],
-    bump = config.mev_bump_7
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_7],
+        bump = config.mev_bump_7
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_8],
-    bump = config.mev_bump_8
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_8],
+        bump = config.mev_bump_8
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     /// CHECK: this is the account that is configured to receive tips, which is constantly rotating and
@@ -295,11 +294,11 @@ pub struct ClaimTips<'info> {
 #[instruction(_backend_url: String, extra_space: u32, bump: u8)]
 pub struct InitValidatorMeta<'info> {
     #[account(
-    init,
-    seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-    bump,
-    payer = validator,
-    space = ValidatorMeta::SIZE + extra_space as usize,
+        init,
+        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+        bump,
+        payer = validator,
+        space = ValidatorMeta::SIZE + extra_space as usize,
     )]
     pub meta: Account<'info, ValidatorMeta>,
     #[account(mut)]
@@ -310,10 +309,10 @@ pub struct InitValidatorMeta<'info> {
 #[derive(Accounts)]
 pub struct CloseValidatorMetaAccount<'info> {
     #[account(
-    mut,
-    close = validator,
-    seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-    bump = meta.bump,
+        mut,
+        close = validator,
+        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+        bump = meta.bump,
     )]
     pub meta: Account<'info, ValidatorMeta>,
     #[account(mut)]
@@ -323,9 +322,9 @@ pub struct CloseValidatorMetaAccount<'info> {
 #[derive(Accounts)]
 pub struct SetBackendUrl<'info> {
     #[account(
-    mut,
-    seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-    bump = meta.bump,
+        mut,
+        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+        bump = meta.bump,
     )]
     pub meta: Account<'info, ValidatorMeta>,
     pub validator: Signer<'info>,
@@ -350,8 +349,8 @@ impl<'info> ClaimTips<'info> {
 #[derive(Accounts)]
 pub struct ChangeTipReceiver<'info> {
     #[account(
-    mut,
-    constraint = old_tip_claimer.key() == config.tip_claimer,
+        mut,
+        constraint = old_tip_claimer.key() == config.tip_claimer,
     )]
     pub config: Account<'info, Config>,
 
@@ -363,51 +362,51 @@ pub struct ChangeTipReceiver<'info> {
     /// CHECK: any new account is allowed as a tip claimer.
     pub new_tip_claimer: AccountInfo<'info>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_1],
-    bump = config.mev_bump_1
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_1],
+        bump = config.mev_bump_1
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_2],
-    bump = config.mev_bump_2
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_2],
+        bump = config.mev_bump_2
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_3],
-    bump = config.mev_bump_3
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_3],
+        bump = config.mev_bump_3
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_4],
-    bump = config.mev_bump_4
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_4],
+        bump = config.mev_bump_4
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_5],
-    bump = config.mev_bump_5
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_5],
+        bump = config.mev_bump_5
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_6],
-    bump = config.mev_bump_6
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_6],
+        bump = config.mev_bump_6
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_7],
-    bump = config.mev_bump_7
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_7],
+        bump = config.mev_bump_7
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
-    mut,
-    seeds = [MEV_ACCOUNT_SEED_8],
-    bump = config.mev_bump_8
+        mut,
+        seeds = [MEV_ACCOUNT_SEED_8],
+        bump = config.mev_bump_8
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     #[account(mut)]
@@ -462,7 +461,6 @@ pub struct MevPaymentAccount {
     bump: u8,
 }
 
-
 impl MevPaymentAccount {
     // add 8 bytes for header
     pub const SIZE: usize = HEADER + size_of::<Self>();
@@ -470,11 +468,13 @@ impl MevPaymentAccount {
     fn drain_accounts(accs: Vec<AccountInfo>) -> Result<u64> {
         let mut total_tips: u64 = 0;
         for acc in accs {
-            total_tips = total_tips.checked_add(Self::drain_account(&acc)?).expect(&*format!(
-                "debit_accounts overflow: [account: {}, amount: {}]",
-                acc.key(),
-                acc.lamports(),
-            ));
+            total_tips = total_tips
+                .checked_add(Self::drain_account(&acc)?)
+                .expect(&*format!(
+                    "debit_accounts overflow: [account: {}, amount: {}]",
+                    acc.key(),
+                    acc.lamports(),
+                ));
         }
 
         Ok(total_tips)
