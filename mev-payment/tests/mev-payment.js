@@ -173,7 +173,7 @@ describe( 'tests mev_payment', () => {
         let configState = await mevPaymentProg.account.config.fetch( configAccount )
         const oldTipClaimer = configState.tipClaimer
         const newTipClaimer = anchor.web3.Keypair.generate()
-        await mevPaymentProg.rpc.setTipClaimer(
+        await mevPaymentProg.rpc.changeTipReceiver(
             {
                 accounts: {
                     oldTipClaimer,
@@ -200,7 +200,7 @@ describe( 'tests mev_payment', () => {
         const badOldTipClaimer = anchor.web3.Keypair.generate().publicKey
         const newTipClaimer = anchor.web3.Keypair.generate()
         try {
-            await mevPaymentProg.rpc.setTipClaimer(
+            await mevPaymentProg.rpc.changeTipReceiver(
                 {
                     accounts: {
                         oldTipClaimer: badOldTipClaimer,
@@ -321,7 +321,7 @@ describe( 'tests mev_payment', () => {
             ( await mevPaymentProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
         const newTipClaimer = anchor.web3.Keypair.generate()
         const newLeader = anchor.web3.Keypair.generate()
-        await mevPaymentProg.rpc.setTipClaimer(
+        await mevPaymentProg.rpc.changeTipReceiver(
             {
                 accounts: {
                     oldTipClaimer,
