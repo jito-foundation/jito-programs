@@ -20,15 +20,18 @@ const MEV_ACCOUNT_SEED_7: &'static [u8] = b"MEV_ACCOUNT_7";
 const MEV_ACCOUNT_SEED_8: &'static [u8] = b"MEV_ACCOUNT_8";
 const VALIDATOR_META_SEED: &'static [u8] = b"VALIDATOR_META";
 
+pub const HEADER: usize = 8;
+
+
 #[program]
 pub mod mev_payment {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, args: InitArgs) -> ProgramResult {
+    pub fn initialize(ctx: Context<Initialize>, args: InitArgs) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
         // This must be set to some value otherwise the `mut` attribute in a subsequent `set_tip_claimer`
         // call will fail since an uninitialized account cannot have data written to it.
-        cfg.tip_claimer = ctx.accounts.initial_tip_claimer.key();
+        cfg.tip_claimer = ctx.accounts.payer.key();
         cfg.mev_bump_1 = args.mev_bump_1;
         cfg.mev_bump_2 = args.mev_bump_2;
         cfg.mev_bump_3 = args.mev_bump_3;
@@ -47,7 +50,7 @@ pub mod mev_payment {
         // should be at least the size of backend_url
         _extra_space: u32,
         bump: u8,
-    ) -> ProgramResult {
+    ) -> Result<()> {
         let meta = &mut ctx.accounts.meta;
         meta.backend_url = backend_url;
         meta.bump = bump;
@@ -55,7 +58,7 @@ pub mod mev_payment {
         Ok(())
     }
 
-    pub fn close_validator_meta_account(ctx: Context<CloseValidatorMetaAccount>) -> ProgramResult {
+    pub fn close_validator_meta_account(ctx: Context<CloseValidatorMetaAccount>) -> Result<()> {
         emit!(ValidatorMetaAccountClosed {
             validator: ctx.accounts.validator.key(),
         });
@@ -63,7 +66,7 @@ pub mod mev_payment {
         Ok(())
     }
 
-    pub fn set_backend_url(ctx: Context<SetBackendUrl>, url: String) -> ProgramResult {
+    pub fn set_backend_url(ctx: Context<SetBackendUrl>, url: String) -> Result<()> {
         let meta = &mut ctx.accounts.meta;
         meta.backend_url = url.clone();
 
@@ -78,8 +81,8 @@ pub mod mev_payment {
     /// Validators should call this at the end of the slot or prior to rotation.
     /// If this isn't called before the next leader rotation, tips will be transferred
     /// in set_tip_claimer before claimer is updated.
-    pub fn claim_tips(ctx: Context<ClaimTips>) -> ProgramResult {
-        let total_tips = MevPaymentAccount::debit_accounts(ctx.accounts.get_mev_accounts())?;
+    pub fn claim_tips(ctx: Context<ClaimTips>) -> Result<()> {
+        let total_tips = MevPaymentAccount::drain_accounts(ctx.accounts.get_mev_accounts())?;
         let pre_lamports = ctx.accounts.tip_claimer.lamports();
         **ctx.accounts.tip_claimer.try_borrow_mut_lamports()? =
             pre_lamports.checked_add(total_tips).expect(&*format!(
@@ -100,8 +103,8 @@ pub mod mev_payment {
 
     /// Validator should invoke this instruction at the top of every block in-case
     /// they're on a fork on the first few blocks.
-    pub fn set_tip_claimer(ctx: Context<SetTipClaimer>) -> ProgramResult {
-        let total_tips = MevPaymentAccount::debit_accounts(ctx.accounts.get_mev_accounts())?;
+    pub fn change_tip_receiver(ctx: Context<ChangeTipReceiver>) -> Result<()> {
+        let total_tips = MevPaymentAccount::drain_accounts(ctx.accounts.get_mev_accounts())?;
 
         if total_tips > 0 {
             let pre_lamports = ctx.accounts.old_tip_claimer.lamports();
@@ -132,7 +135,6 @@ pub mod mev_payment {
 }
 
 /// instructions
-
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct InitArgs {
     pub config_account_bump: u8,
@@ -151,77 +153,77 @@ pub struct InitArgs {
 pub struct Initialize<'info> {
     /// singleton account
     #[account(
-        init,
-        seeds = [CONFIG_ACCOUNT_SEED],
-        bump = args.config_account_bump,
-        payer = payer,
+    init,
+    seeds = [CONFIG_ACCOUNT_SEED],
+    bump,
+    payer = payer,
+    space = Config::SIZE
     )]
     pub config: Account<'info, Config>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_1],
-        bump = args.mev_bump_1,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_1],
+    bump,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_2],
-        bump = args.mev_bump_2,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_2],
+    bump,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_3],
-        bump = args.mev_bump_3,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_3],
+    bump,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_4],
-        bump = args.mev_bump_4,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_4],
+    bump,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_5],
-        bump = args.mev_bump_5,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_5],
+    bump,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_6],
-        bump = args.mev_bump_6,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_6],
+    bump ,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_7],
-        bump = args.mev_bump_7,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_7],
+    bump,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
-        init,
-        seeds = [MEV_ACCOUNT_SEED_8],
-        bump = args.mev_bump_8,
-        payer = payer,
-        space = MevPaymentAccount::SIZE,
+    init,
+    seeds = [MEV_ACCOUNT_SEED_8],
+    bump,
+    payer = payer,
+    space = MevPaymentAccount::SIZE,
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
-    pub initial_tip_claimer: AccountInfo<'info>,
     pub system_program: Program<'info, System>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -230,57 +232,59 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct ClaimTips<'info> {
     #[account(
-        constraint = config.tip_claimer == tip_claimer.key(),
+    constraint = config.tip_claimer == tip_claimer.key(),
     )]
     pub config: Account<'info, Config>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_1],
-        bump = config.mev_bump_1
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_1],
+    bump = config.mev_bump_1
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_2],
-        bump = config.mev_bump_2
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_2],
+    bump = config.mev_bump_2
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_3],
-        bump = config.mev_bump_3
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_3],
+    bump = config.mev_bump_3
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_4],
-        bump = config.mev_bump_4
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_4],
+    bump = config.mev_bump_4
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_5],
-        bump = config.mev_bump_5
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_5],
+    bump = config.mev_bump_5
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_6],
-        bump = config.mev_bump_6
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_6],
+    bump = config.mev_bump_6
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_7],
-        bump = config.mev_bump_7
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_7],
+    bump = config.mev_bump_7
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_8],
-        bump = config.mev_bump_8
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_8],
+    bump = config.mev_bump_8
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
+    /// CHECK: this is the account that is configured to receive tips, which is constantly rotating and
+    /// can be an account with a private key to a PDA owned by some other program.
     #[account(mut)]
     pub tip_claimer: AccountInfo<'info>,
     #[account(mut)]
@@ -291,11 +295,11 @@ pub struct ClaimTips<'info> {
 #[instruction(_backend_url: String, extra_space: u32, bump: u8)]
 pub struct InitValidatorMeta<'info> {
     #[account(
-        init,
-        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-        bump = bump,
-        payer = validator,
-        space = ValidatorMeta::SIZE + extra_space as usize,
+    init,
+    seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+    bump,
+    payer = validator,
+    space = ValidatorMeta::SIZE + extra_space as usize,
     )]
     pub meta: Account<'info, ValidatorMeta>,
     #[account(mut)]
@@ -306,10 +310,10 @@ pub struct InitValidatorMeta<'info> {
 #[derive(Accounts)]
 pub struct CloseValidatorMetaAccount<'info> {
     #[account(
-        mut,
-        close = validator,
-        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-        bump = meta.bump,
+    mut,
+    close = validator,
+    seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+    bump = meta.bump,
     )]
     pub meta: Account<'info, ValidatorMeta>,
     #[account(mut)]
@@ -319,9 +323,9 @@ pub struct CloseValidatorMetaAccount<'info> {
 #[derive(Accounts)]
 pub struct SetBackendUrl<'info> {
     #[account(
-        mut,
-        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-        bump = meta.bump,
+    mut,
+    seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
+    bump = meta.bump,
     )]
     pub meta: Account<'info, ValidatorMeta>,
     pub validator: Signer<'info>,
@@ -344,68 +348,73 @@ impl<'info> ClaimTips<'info> {
 }
 
 #[derive(Accounts)]
-pub struct SetTipClaimer<'info> {
+pub struct ChangeTipReceiver<'info> {
     #[account(
-        mut,
-        constraint = old_tip_claimer.key() == config.tip_claimer,
+    mut,
+    constraint = old_tip_claimer.key() == config.tip_claimer,
     )]
     pub config: Account<'info, Config>,
+
+    /// CHECK: constraint check above. old tip claimer gets tokens transferred to them before
+    /// new tip claimer.
     #[account(mut)]
     pub old_tip_claimer: AccountInfo<'info>,
+
+    /// CHECK: any new account is allowed as a tip claimer.
     pub new_tip_claimer: AccountInfo<'info>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_1],
-        bump = config.mev_bump_1
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_1],
+    bump = config.mev_bump_1
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_2],
-        bump = config.mev_bump_2
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_2],
+    bump = config.mev_bump_2
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_3],
-        bump = config.mev_bump_3
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_3],
+    bump = config.mev_bump_3
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_4],
-        bump = config.mev_bump_4
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_4],
+    bump = config.mev_bump_4
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_5],
-        bump = config.mev_bump_5
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_5],
+    bump = config.mev_bump_5
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_6],
-        bump = config.mev_bump_6
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_6],
+    bump = config.mev_bump_6
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_7],
-        bump = config.mev_bump_7
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_7],
+    bump = config.mev_bump_7
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
-        mut,
-        seeds = [MEV_ACCOUNT_SEED_8],
-        bump = config.mev_bump_8
+    mut,
+    seeds = [MEV_ACCOUNT_SEED_8],
+    bump = config.mev_bump_8
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     #[account(mut)]
     pub signer: Signer<'info>,
 }
 
-impl<'info> SetTipClaimer<'info> {
+impl<'info> ChangeTipReceiver<'info> {
     fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
         let mut accs = Vec::new();
         accs.push(self.mev_payment_account_1.to_account_info());
@@ -427,6 +436,7 @@ impl<'info> SetTipClaimer<'info> {
 #[account]
 #[derive(Default)]
 pub struct Config {
+    bump: u8,
     /// The account claiming tips from the mev_payment accounts.
     tip_claimer: Pubkey,
     /// Bumps used to derive MEV account PDAs.
@@ -440,22 +450,27 @@ pub struct Config {
     mev_bump_8: u8,
 }
 
+impl Config {
+    pub const SIZE: usize = HEADER + size_of::<Self>();
+}
+
 /// Account that searchers will need to tip for their bundles to be accepted.
 /// There will be 8 accounts of this type initialized in order to parallelize bundles.
 #[account]
 #[derive(Default)]
-pub struct MevPaymentAccount {}
+pub struct MevPaymentAccount {
+    bump: u8,
+}
 
-pub const HEADER: usize = 8;
 
 impl MevPaymentAccount {
     // add 8 bytes for header
     pub const SIZE: usize = HEADER + size_of::<Self>();
 
-    fn debit_accounts(accs: Vec<AccountInfo>) -> Result<u64, ProgramError> {
+    fn drain_accounts(accs: Vec<AccountInfo>) -> Result<u64> {
         let mut total_tips: u64 = 0;
         for acc in accs {
-            total_tips = total_tips.checked_add(Self::debit(&acc)?).expect(&*format!(
+            total_tips = total_tips.checked_add(Self::drain_account(&acc)?).expect(&*format!(
                 "debit_accounts overflow: [account: {}, amount: {}]",
                 acc.key(),
                 acc.lamports(),
@@ -465,7 +480,7 @@ impl MevPaymentAccount {
         Ok(total_tips)
     }
 
-    fn debit(acc: &AccountInfo) -> Result<u64, ProgramError> {
+    fn drain_account(acc: &AccountInfo) -> Result<u64> {
         let tips = Self::calc_tips(acc.lamports())?;
         if tips > 0 {
             let pre_lamports = acc.lamports();
@@ -479,7 +494,7 @@ impl MevPaymentAccount {
         Ok(tips)
     }
 
-    fn calc_tips(total_balance: u64) -> Result<u64, ProgramError> {
+    fn calc_tips(total_balance: u64) -> Result<u64> {
         let rent = Rent::get()?;
         let min_rent = rent.minimum_balance(Self::SIZE);
 
@@ -505,7 +520,6 @@ impl ValidatorMeta {
 }
 
 /// events
-
 #[event]
 pub struct TipsClaimed {
     by: Pubkey,
