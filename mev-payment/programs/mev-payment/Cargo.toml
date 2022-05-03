@@ -15,4 +15,4 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { git = "https://github.com/jito-labs/anchor.git", branch = "lb/update_client_version" }
+anchor-lang = { path = "../../../../anchor/lang" }
