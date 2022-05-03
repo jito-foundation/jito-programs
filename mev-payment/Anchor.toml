@@ -2,7 +2,7 @@
 seeds = false
 
 [programs.localnet]
-foo = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
+foo = "4tsETgKZoRbC9sZQH4VPqQ1UvhQLvfr7Jhxk5Eg5u3z8"
 
 [registry]
 url = "https://anchor.projectserum.com"
@@ -12,4 +12,5 @@ cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+test = "mocha -t 1000000 tests/" #"yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/"
+#mocha -t 1000000 tests/
