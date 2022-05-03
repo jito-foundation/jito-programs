@@ -25,7 +25,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-access-control"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -38,7 +37,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-account"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -52,7 +50,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-constant"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -62,7 +59,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-error"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "proc-macro2",
@@ -73,7 +69,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-event"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -85,7 +80,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-interface"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -98,7 +92,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-program"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -110,7 +103,6 @@ dependencies = [
 [[package]]
 name = "anchor-attribute-state"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -122,7 +114,6 @@ dependencies = [
 [[package]]
 name = "anchor-derive-accounts"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-syn",
  "anyhow",
@@ -134,7 +125,6 @@ dependencies = [
 [[package]]
 name = "anchor-lang"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anchor-attribute-access-control",
  "anchor-attribute-account",
@@ -157,7 +147,6 @@ dependencies = [
 [[package]]
 name = "anchor-syn"
 version = "0.24.2"
-source = "git+https://github.com/jito-labs/anchor.git?branch=lb/update_client_version#910d5387a766cc4d1b444b20eae2c005fa5cad41"
 dependencies = [
  "anyhow",
  "bs58 0.3.1",
@@ -641,13 +630,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1aab8fc367588b89dcee83ab0fd66b72b50b72fa1904d7095045ace2b0c81c35"
 
 [[package]]
-name = "jito-mev-payment"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
-]
-
-[[package]]
 name = "js-sys"
 version = "0.3.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -763,6 +745,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5aa361d4faea93603064a027415f07bd8e1d5c88c9fbf68bf56a285428fd79ce"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "mev-payment"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
 ]
 
 [[package]]
@@ -1107,9 +1096,7 @@ checksum = "f2dd574626839106c320a323308629dcb1acfc96e32a8cba364ddc61ac23ee83"
 
 [[package]]
 name = "solana-frozen-abi"
-version = "1.10.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9688a711cb652ee3d34536ad8a3156c763474152dc89bc5e01deadcab3647564"
+version = "1.11.0"
 dependencies = [
  "bs58 0.4.0",
  "bv",
@@ -1129,9 +1116,7 @@ dependencies = [
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "1.10.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d47451a9d2fe137d0601b90194edb4a04498a488dcb201da052f02971179797c"
+version = "1.11.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1141,9 +1126,7 @@ dependencies = [
 
 [[package]]
 name = "solana-program"
-version = "1.10.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "916b4dd6b0ca292d2a26e49a783d64b8649bad689646830dabc7139a77181495"
+version = "1.11.0"
 dependencies = [
  "base64 0.13.0",
  "bincode",
@@ -1163,6 +1146,7 @@ dependencies = [
  "lazy_static",
  "libsecp256k1",
  "log",
+ "memoffset",
  "num-derive",
  "num-traits",
  "parking_lot",
@@ -1183,9 +1167,7 @@ dependencies = [
 
 [[package]]
 name = "solana-sdk-macro"
-version = "1.10.11"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "92fa5b549316755f8c51767d9a51b0f96a62ea79a055e689304e1fbc0591e514"
+version = "1.11.0"
 dependencies = [
  "bs58 0.4.0",
  "proc-macro2",
