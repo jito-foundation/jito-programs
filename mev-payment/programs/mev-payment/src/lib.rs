@@ -26,19 +26,22 @@ pub const HEADER: usize = 8;
 pub mod mev_payment {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>, args: InitArgs) -> Result<()> {
+    pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumps) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
         cfg.tip_claimer = ctx.accounts.payer.key();
 
-        cfg.bump = args.config_account_bump;
-        cfg.mev_bump_1 = args.mev_bump_1;
-        cfg.mev_bump_2 = args.mev_bump_2;
-        cfg.mev_bump_3 = args.mev_bump_3;
-        cfg.mev_bump_4 = args.mev_bump_4;
-        cfg.mev_bump_5 = args.mev_bump_5;
-        cfg.mev_bump_6 = args.mev_bump_6;
-        cfg.mev_bump_7 = args.mev_bump_7;
-        cfg.mev_bump_8 = args.mev_bump_8;
+        let bumps = InitBumps {
+            config: *ctx.bumps.get("config").unwrap(),
+            mev_payment_account_1: *ctx.bumps.get("mev_payment_account_1").unwrap(),
+            mev_payment_account_2: *ctx.bumps.get("mev_payment_account_2").unwrap(),
+            mev_payment_account_3: *ctx.bumps.get("mev_payment_account_3").unwrap(),
+            mev_payment_account_4: *ctx.bumps.get("mev_payment_account_4").unwrap(),
+            mev_payment_account_5: *ctx.bumps.get("mev_payment_account_5").unwrap(),
+            mev_payment_account_6: *ctx.bumps.get("mev_payment_account_6").unwrap(),
+            mev_payment_account_7: *ctx.bumps.get("mev_payment_account_7").unwrap(),
+            mev_payment_account_8: *ctx.bumps.get("mev_payment_account_8").unwrap(),
+        };
+        cfg.bumps = bumps;
 
         Ok(())
     }
@@ -133,22 +136,22 @@ pub mod mev_payment {
     }
 }
 
-/// instructions
+/// Bumps used during initialization
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
-pub struct InitArgs {
-    pub config_account_bump: u8,
-    pub mev_bump_1: u8,
-    pub mev_bump_2: u8,
-    pub mev_bump_3: u8,
-    pub mev_bump_4: u8,
-    pub mev_bump_5: u8,
-    pub mev_bump_6: u8,
-    pub mev_bump_7: u8,
-    pub mev_bump_8: u8,
+pub struct InitBumps {
+    pub config: u8,
+    pub mev_payment_account_1: u8,
+    pub mev_payment_account_2: u8,
+    pub mev_payment_account_3: u8,
+    pub mev_payment_account_4: u8,
+    pub mev_payment_account_5: u8,
+    pub mev_payment_account_6: u8,
+    pub mev_payment_account_7: u8,
+    pub mev_payment_account_8: u8,
 }
 
 #[derive(Accounts)]
-#[instruction(args: InitArgs)]
+#[instruction(bumps: InitBumps)]
 pub struct Initialize<'info> {
     /// singleton account
     #[account(
@@ -156,7 +159,8 @@ pub struct Initialize<'info> {
         seeds = [CONFIG_ACCOUNT_SEED],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = Config::SIZE,
+        rent_exempt = enforce
     )]
     pub config: Account<'info, Config>,
     #[account(
@@ -164,7 +168,8 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_1],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
@@ -172,7 +177,8 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_2],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
@@ -180,7 +186,8 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_3],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
@@ -188,7 +195,8 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_4],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
@@ -196,15 +204,17 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_5],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
         init,
         seeds = [MEV_ACCOUNT_SEED_6],
-        bump ,
+        bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
@@ -212,7 +222,8 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_7],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
@@ -220,10 +231,12 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_8],
         bump,
         payer = payer,
-        space = 8 + 9 + 32,
+        space = MevPaymentAccount::SIZE,
+        rent_exempt = enforce
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
     #[account(mut)]
     pub payer: Signer<'info>,
 }
@@ -237,56 +250,56 @@ pub struct ClaimTips<'info> {
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_1],
-        bump = config.mev_bump_1,
+        bump = config.bumps.mev_payment_account_1,
         rent_exempt = enforce
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_2],
-        bump = config.mev_bump_2,
+        bump = config.bumps.mev_payment_account_2,
         rent_exempt = enforce
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_3],
-        bump = config.mev_bump_3,
+        bump = config.bumps.mev_payment_account_3,
         rent_exempt = enforce
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_4],
-        bump = config.mev_bump_4,
+        bump = config.bumps.mev_payment_account_4,
         rent_exempt = enforce
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_5],
-        bump = config.mev_bump_5,
+        bump = config.bumps.mev_payment_account_5,
         rent_exempt = enforce
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_6],
-        bump = config.mev_bump_6,
+        bump = config.bumps.mev_payment_account_6,
         rent_exempt = enforce
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_7],
-        bump = config.mev_bump_7,
+        bump = config.bumps.mev_payment_account_7,
         rent_exempt = enforce
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_8],
-        bump = config.mev_bump_8,
+        bump = config.bumps.mev_payment_account_8,
         rent_exempt = enforce
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
@@ -372,56 +385,56 @@ pub struct ChangeTipReceiver<'info> {
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_1],
-        bump = config.mev_bump_1,
+        bump = config.bumps.mev_payment_account_1,
         rent_exempt = enforce
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_2],
-        bump = config.mev_bump_2,
+        bump = config.bumps.mev_payment_account_2,
         rent_exempt = enforce
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_3],
-        bump = config.mev_bump_3,
+        bump = config.bumps.mev_payment_account_3,
         rent_exempt = enforce
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_4],
-        bump = config.mev_bump_4,
+        bump = config.bumps.mev_payment_account_4,
         rent_exempt = enforce
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_5],
-        bump = config.mev_bump_5,
+        bump = config.bumps.mev_payment_account_5,
         rent_exempt = enforce
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_6],
-        bump = config.mev_bump_6,
+        bump = config.bumps.mev_payment_account_6,
         rent_exempt = enforce
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_7],
-        bump = config.mev_bump_7,
+        bump = config.bumps.mev_payment_account_7,
         rent_exempt = enforce
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
         mut,
         seeds = [MEV_ACCOUNT_SEED_8],
-        bump = config.mev_bump_8,
+        bump = config.bumps.mev_payment_account_8,
         rent_exempt = enforce
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
@@ -451,30 +464,25 @@ impl<'info> ChangeTipReceiver<'info> {
 #[account]
 #[derive(Default)]
 pub struct Config {
-    bump: u8,
     /// The account claiming tips from the mev_payment accounts.
     tip_claimer: Pubkey,
-    /// Bumps used to derive MEV account PDAs.
-    mev_bump_1: u8,
-    mev_bump_2: u8,
-    mev_bump_3: u8,
-    mev_bump_4: u8,
-    mev_bump_5: u8,
-    mev_bump_6: u8,
-    mev_bump_7: u8,
-    mev_bump_8: u8,
+
+    /// Bumps used to derive PDAs
+    bumps: InitBumps,
+}
+
+impl Config {
+    pub const SIZE: usize = 8 + 32 + 9; // 8 for header, 32 for pubkey, 9 for bumps
 }
 
 /// Account that searchers will need to tip for their bundles to be accepted.
 /// There will be 8 accounts of this type initialized in order to parallelize bundles.
 #[account]
 #[derive(Default)]
-pub struct MevPaymentAccount {
-    bump: u8,
-}
+pub struct MevPaymentAccount {}
 
 impl MevPaymentAccount {
-    pub const SIZE: usize = 8 + 1;
+    pub const SIZE: usize = 8;
 
     fn drain_accounts(accs: Vec<AccountInfo>) -> Result<u64> {
         let mut total_tips: u64 = 0;

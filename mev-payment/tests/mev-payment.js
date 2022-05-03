@@ -1,9 +1,9 @@
 const anchor = require( '@project-serum/anchor' )
 const assert = require( 'assert' )
-const { SystemProgram, Transaction } = anchor.web3
+const { SystemProgram, Transaction, SYSVAR_RENT_PUBKEY } = anchor.web3
 
 const CONFIG_ACCOUNT_LEN = 8 + 9 + 32 // 8 for anchor header, 9 for bumps, 32 for pubkey
-const MEV_PAYMENT_ACCOUNT_LEN = 8 + 1 // 8 for header, 1 for bump
+const MEV_PAYMENT_ACCOUNT_LEN = 8  // 8 for header
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
 const mevSeed1 = 'MEV_ACCOUNT_1'
@@ -25,7 +25,8 @@ let configAccount, configAccountBump,
     mevPaymentAccount7, mevBump7,
     mevPaymentAccount8, mevBump8
 
-const provider = anchor.AnchorProvider.local()
+const provider = anchor.AnchorProvider.local(null,
+    { commitment: 'confirmed', preflightCommitment: 'confirmed' },)
 anchor.setProvider( provider )
 const mevPaymentProg = anchor.workspace.MevPayment
 
@@ -133,35 +134,42 @@ describe( 'tests mev_payment', () => {
         assert.equal( accInfo.lamports, minRentExempt )
     }
     it( '#initialize happy path', async () => {
-        await mevPaymentProg.rpc.initialize(
-            {
-                configAccountBump,
-                mevBump1,
-                mevBump2,
-                mevBump3,
-                mevBump4,
-                mevBump5,
-                mevBump6,
-                mevBump7,
-                mevBump8,
-            },
-            {
-                accounts: {
-                    config: configAccount,
-                    mevPaymentAccount1: mevPaymentAccount1,
-                    mevPaymentAccount2: mevPaymentAccount2,
-                    mevPaymentAccount3: mevPaymentAccount3,
-                    mevPaymentAccount4: mevPaymentAccount4,
-                    mevPaymentAccount5: mevPaymentAccount5,
-                    mevPaymentAccount6: mevPaymentAccount6,
-                    mevPaymentAccount7: mevPaymentAccount7,
-                    mevPaymentAccount8: mevPaymentAccount8,
-                    systemProgram: SystemProgram.programId,
-                    payer: initializerKeys.publicKey,
+        try {
+
+            await mevPaymentProg.rpc.initialize(
+                {
+                    configAccountBump, // config
+                    mevBump1, // mev_payment_account_1
+                    mevBump2,
+                    mevBump3,
+                    mevBump4,
+                    mevBump5,
+                    mevBump6,
+                    mevBump7,
+                    mevBump8, // mev_payment_account_8
                 },
-                signers: [initializerKeys],
-            },
-        )
+                {
+                    accounts: {
+                        config: configAccount,
+                        mevPaymentAccount1: mevPaymentAccount1,
+                        mevPaymentAccount2: mevPaymentAccount2,
+                        mevPaymentAccount3: mevPaymentAccount3,
+                        mevPaymentAccount4: mevPaymentAccount4,
+                        mevPaymentAccount5: mevPaymentAccount5,
+                        mevPaymentAccount6: mevPaymentAccount6,
+                        mevPaymentAccount7: mevPaymentAccount7,
+                        mevPaymentAccount8: mevPaymentAccount8,
+                        systemProgram: SystemProgram.programId,
+                        payer: initializerKeys.publicKey,
+                        rent: SYSVAR_RENT_PUBKEY
+                    },
+                    signers: [initializerKeys],
+                },
+            )
+        } catch (e) {
+            console.log( 'error', e )
+            assert.fail()
+        }
         const configState = await mevPaymentProg.account.config.fetch( configAccount )
         assert.equal( configState.tipClaimer.toString(), initializerKeys.publicKey.toString() )
     })
@@ -217,7 +225,7 @@ describe( 'tests mev_payment', () => {
             )
             assert.fail( 'expected exception to be thrown' )
         } catch ( e ) {
-            assert.equal( e.msg, 'A raw constraint was violated' )
+            assert.equal( e.error.errorMessage, 'A raw constraint was violated' )
         }
     })
     it( '#claim_tips `constraint = tip_claimer.key() == config.tip_claimer`', async () => {
@@ -243,7 +251,7 @@ describe( 'tests mev_payment', () => {
             )
             assert( false )
         } catch ( err ) {
-            assertErr({ err, msg: 'A raw constraint was violated' })
+            assert.equal( err.error.errorMessage, 'A raw constraint was violated' )
         }
     })
     it( '#claim_tips with bad mevPaymentAccountN', async () => {
@@ -266,7 +274,7 @@ describe( 'tests mev_payment', () => {
                 )
                 assert( false )
             } catch ( e ) {
-                assert.equal( e.msg, 'The given account is owned by a different program than expected' )
+                assert.equal( e.error.errorMessage, 'The given account is owned by a different program than expected' )
             }
         }
     })
@@ -389,7 +397,7 @@ describe( 'tests mev_payment', () => {
             await call_setBackendUrl({ backendUrl: newUrl, validator, meta })
             assert.fail( 'expected exception to be thrown' )
         } catch ( err ) {
-            assertErr({ err, msg: 'Failed to serialize the account' })
+            assert.equal(err.error.errorMessage, 'Failed to serialize the account')
         }
     })
     it( '#set_backend_url happy path', async () => {
