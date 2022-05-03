@@ -2,8 +2,8 @@ const anchor = require( '@project-serum/anchor' )
 const assert = require( 'assert' )
 const { SystemProgram, Transaction } = anchor.web3
 
-const CONFIG_ACCOUNT_LEN = 8 + 40
-const MEV_PAYMENT_ACCOUNT_LEN = 8
+const CONFIG_ACCOUNT_LEN = 8 + 9 + 32 // 8 for anchor header, 9 for bumps, 32 for pubkey
+const MEV_PAYMENT_ACCOUNT_LEN = 8 + 1 // 8 for header, 1 for bump
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
 const mevSeed1 = 'MEV_ACCOUNT_1'
@@ -25,10 +25,7 @@ let configAccount, configAccountBump,
     mevPaymentAccount7, mevBump7,
     mevPaymentAccount8, mevBump8
 
-const provider = anchor.Provider.local(
-    undefined,
-    { commitment: 'confirmed', preflightCommitment: 'confirmed' },
-)
+const provider = anchor.AnchorProvider.local()
 anchor.setProvider( provider )
 const mevPaymentProg = anchor.workspace.MevPayment
 
@@ -151,17 +148,16 @@ describe( 'tests mev_payment', () => {
             {
                 accounts: {
                     config: configAccount,
-                    initialTipClaimer: initializerKeys.publicKey,
-                    payer: initializerKeys.publicKey,
+                    mevPaymentAccount1: mevPaymentAccount1,
+                    mevPaymentAccount2: mevPaymentAccount2,
+                    mevPaymentAccount3: mevPaymentAccount3,
+                    mevPaymentAccount4: mevPaymentAccount4,
+                    mevPaymentAccount5: mevPaymentAccount5,
+                    mevPaymentAccount6: mevPaymentAccount6,
+                    mevPaymentAccount7: mevPaymentAccount7,
+                    mevPaymentAccount8: mevPaymentAccount8,
                     systemProgram: SystemProgram.programId,
-                    mevPaymentAccount1,
-                    mevPaymentAccount2,
-                    mevPaymentAccount3,
-                    mevPaymentAccount4,
-                    mevPaymentAccount5,
-                    mevPaymentAccount6,
-                    mevPaymentAccount7,
-                    mevPaymentAccount8,
+                    payer: initializerKeys.publicKey,
                 },
                 signers: [initializerKeys],
             },

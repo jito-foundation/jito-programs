@@ -28,9 +28,9 @@ pub mod mev_payment {
 
     pub fn initialize(ctx: Context<Initialize>, args: InitArgs) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
-        // This must be set to some value otherwise the `mut` attribute in a subsequent `set_tip_claimer`
-        // call will fail since an uninitialized account cannot have data written to it.
         cfg.tip_claimer = ctx.accounts.payer.key();
+
+        cfg.bump = args.config_account_bump;
         cfg.mev_bump_1 = args.mev_bump_1;
         cfg.mev_bump_2 = args.mev_bump_2;
         cfg.mev_bump_3 = args.mev_bump_3;
@@ -156,8 +156,7 @@ pub struct Initialize<'info> {
         seeds = [CONFIG_ACCOUNT_SEED],
         bump,
         payer = payer,
-        space = Config::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub config: Account<'info, Config>,
     #[account(
@@ -165,8 +164,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_1],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
     #[account(
@@ -174,8 +172,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_2],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
     #[account(
@@ -183,8 +180,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_3],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
     #[account(
@@ -192,8 +188,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_4],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
     #[account(
@@ -201,8 +196,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_5],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
     #[account(
@@ -210,8 +204,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_6],
         bump ,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
     #[account(
@@ -219,8 +212,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_7],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
     #[account(
@@ -228,8 +220,7 @@ pub struct Initialize<'info> {
         seeds = [MEV_ACCOUNT_SEED_8],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
-        rent_exempt = enforce
+        space = 8 + 9 + 32,
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     pub system_program: Program<'info, System>,
@@ -474,10 +465,6 @@ pub struct Config {
     mev_bump_8: u8,
 }
 
-impl Config {
-    pub const SIZE: usize = HEADER + size_of::<Self>();
-}
-
 /// Account that searchers will need to tip for their bundles to be accepted.
 /// There will be 8 accounts of this type initialized in order to parallelize bundles.
 #[account]
@@ -487,8 +474,7 @@ pub struct MevPaymentAccount {
 }
 
 impl MevPaymentAccount {
-    // add 8 bytes for header
-    pub const SIZE: usize = HEADER + size_of::<Self>();
+    pub const SIZE: usize = 8 + 1;
 
     fn drain_accounts(accs: Vec<AccountInfo>) -> Result<u64> {
         let mut total_tips: u64 = 0;
