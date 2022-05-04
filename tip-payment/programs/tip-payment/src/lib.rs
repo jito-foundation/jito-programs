@@ -10,36 +10,36 @@ declare_id!("4tsETgKZoRbC9sZQH4VPqQ1UvhQLvfr7Jhxk5Eg5u3z8");
 /// otherwise the tx would fail since the accounts would have
 /// already been initialized on subsequent calls.
 const CONFIG_ACCOUNT_SEED: &'static [u8] = b"CONFIG_ACCOUNT";
-const MEV_ACCOUNT_SEED_1: &'static [u8] = b"MEV_ACCOUNT_1";
-const MEV_ACCOUNT_SEED_2: &'static [u8] = b"MEV_ACCOUNT_2";
-const MEV_ACCOUNT_SEED_3: &'static [u8] = b"MEV_ACCOUNT_3";
-const MEV_ACCOUNT_SEED_4: &'static [u8] = b"MEV_ACCOUNT_4";
-const MEV_ACCOUNT_SEED_5: &'static [u8] = b"MEV_ACCOUNT_5";
-const MEV_ACCOUNT_SEED_6: &'static [u8] = b"MEV_ACCOUNT_6";
-const MEV_ACCOUNT_SEED_7: &'static [u8] = b"MEV_ACCOUNT_7";
-const MEV_ACCOUNT_SEED_8: &'static [u8] = b"MEV_ACCOUNT_8";
+const TIP_ACCOUNT_SEED_1: &'static [u8] = b"TIP_ACCOUNT_1";
+const TIP_ACCOUNT_SEED_2: &'static [u8] = b"TIP_ACCOUNT_2";
+const TIP_ACCOUNT_SEED_3: &'static [u8] = b"TIP_ACCOUNT_3";
+const TIP_ACCOUNT_SEED_4: &'static [u8] = b"TIP_ACCOUNT_4";
+const TIP_ACCOUNT_SEED_5: &'static [u8] = b"TIP_ACCOUNT_5";
+const TIP_ACCOUNT_SEED_6: &'static [u8] = b"TIP_ACCOUNT_6";
+const TIP_ACCOUNT_SEED_7: &'static [u8] = b"TIP_ACCOUNT_7";
+const TIP_ACCOUNT_SEED_8: &'static [u8] = b"TIP_ACCOUNT_8";
 const VALIDATOR_META_SEED: &'static [u8] = b"VALIDATOR_META";
 
 pub const HEADER: usize = 8;
 
 #[program]
-pub mod mev_payment {
+pub mod tip_payment {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumps) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
-        cfg.tip_claimer = ctx.accounts.payer.key();
+        cfg.tip_receiver = ctx.accounts.payer.key();
 
         let bumps = InitBumps {
             config: *ctx.bumps.get("config").unwrap(),
-            mev_payment_account_1: *ctx.bumps.get("mev_payment_account_1").unwrap(),
-            mev_payment_account_2: *ctx.bumps.get("mev_payment_account_2").unwrap(),
-            mev_payment_account_3: *ctx.bumps.get("mev_payment_account_3").unwrap(),
-            mev_payment_account_4: *ctx.bumps.get("mev_payment_account_4").unwrap(),
-            mev_payment_account_5: *ctx.bumps.get("mev_payment_account_5").unwrap(),
-            mev_payment_account_6: *ctx.bumps.get("mev_payment_account_6").unwrap(),
-            mev_payment_account_7: *ctx.bumps.get("mev_payment_account_7").unwrap(),
-            mev_payment_account_8: *ctx.bumps.get("mev_payment_account_8").unwrap(),
+            tip_payment_account_1: *ctx.bumps.get("tip_payment_account_1").unwrap(),
+            tip_payment_account_2: *ctx.bumps.get("tip_payment_account_2").unwrap(),
+            tip_payment_account_3: *ctx.bumps.get("tip_payment_account_3").unwrap(),
+            tip_payment_account_4: *ctx.bumps.get("tip_payment_account_4").unwrap(),
+            tip_payment_account_5: *ctx.bumps.get("tip_payment_account_5").unwrap(),
+            tip_payment_account_6: *ctx.bumps.get("tip_payment_account_6").unwrap(),
+            tip_payment_account_7: *ctx.bumps.get("tip_payment_account_7").unwrap(),
+            tip_payment_account_8: *ctx.bumps.get("tip_payment_account_8").unwrap(),
         };
         cfg.bumps = bumps;
 
@@ -80,23 +80,20 @@ pub mod mev_payment {
         Ok(())
     }
 
-    /// Validators should call this at the end of the slot or prior to rotation.
-    /// If this isn't called before the next leader rotation, tips will be transferred
-    /// in set_tip_claimer before claimer is updated.
     pub fn claim_tips(ctx: Context<ClaimTips>) -> Result<()> {
-        let total_tips = MevPaymentAccount::drain_accounts(ctx.accounts.get_mev_accounts())?;
-        let pre_lamports = ctx.accounts.tip_claimer.lamports();
-        **ctx.accounts.tip_claimer.try_borrow_mut_lamports()? =
+        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
+        let pre_lamports = ctx.accounts.tip_receiver.lamports();
+        **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? =
             pre_lamports.checked_add(total_tips).expect(&*format!(
                 "claim_tips overflow: [tip_claimer: {}, pre_lamports: {}, total_tips: {}]",
-                ctx.accounts.tip_claimer.key(),
+                ctx.accounts.tip_receiver.key(),
                 pre_lamports,
                 total_tips,
             ));
 
         emit!(TipsClaimed {
             by: ctx.accounts.claimer.key(),
-            to: ctx.accounts.tip_claimer.key(),
+            to: ctx.accounts.tip_receiver.key(),
             amount: total_tips,
         });
 
@@ -106,30 +103,30 @@ pub mod mev_payment {
     /// Validator should invoke this instruction before executing any transactions that contain tips.
     /// Validator should also ensure it calls it if there's a fork detected.
     pub fn change_tip_receiver(ctx: Context<ChangeTipReceiver>) -> Result<()> {
-        let total_tips = MevPaymentAccount::drain_accounts(ctx.accounts.get_mev_accounts())?;
+        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_mev_accounts())?;
 
         if total_tips > 0 {
-            let pre_lamports = ctx.accounts.old_tip_claimer.lamports();
-            **ctx.accounts.old_tip_claimer.try_borrow_mut_lamports()? =
+            let pre_lamports = ctx.accounts.old_tip_receiver.lamports();
+            **ctx.accounts.old_tip_receiver.try_borrow_mut_lamports()? =
                 pre_lamports.checked_add(total_tips).expect(&*format!(
-                    "set_tip_claimer overflow: [old_tip_claimer: {}, pre_lamports: {}, total_tips: {}]",
-                    ctx.accounts.old_tip_claimer.key(),
+                    "change_tip_receiver overflow: [old_tip_receiver: {}, pre_lamports: {}, total_tips: {}]",
+                    ctx.accounts.old_tip_receiver.key(),
                     pre_lamports,
                     total_tips,
                 ));
             emit!(TipsClaimed {
                 by: ctx.accounts.signer.key(),
-                to: ctx.accounts.old_tip_claimer.key(),
+                to: ctx.accounts.old_tip_receiver.key(),
                 amount: total_tips,
             });
         }
 
         // set new funding account
-        ctx.accounts.config.tip_claimer = ctx.accounts.new_tip_claimer.key();
+        ctx.accounts.config.tip_receiver = ctx.accounts.new_tip_receiver.key();
 
         emit!(TipClaimerUpdated {
-            new_tip_claimer: ctx.accounts.new_tip_claimer.key(),
-            old_tip_claimer: ctx.accounts.old_tip_claimer.key(),
+            new_tip_receiver: ctx.accounts.new_tip_receiver.key(),
+            old_tip_receiver: ctx.accounts.old_tip_receiver.key(),
         });
 
         Ok(())
@@ -140,14 +137,14 @@ pub mod mev_payment {
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct InitBumps {
     pub config: u8,
-    pub mev_payment_account_1: u8,
-    pub mev_payment_account_2: u8,
-    pub mev_payment_account_3: u8,
-    pub mev_payment_account_4: u8,
-    pub mev_payment_account_5: u8,
-    pub mev_payment_account_6: u8,
-    pub mev_payment_account_7: u8,
-    pub mev_payment_account_8: u8,
+    pub tip_payment_account_1: u8,
+    pub tip_payment_account_2: u8,
+    pub tip_payment_account_3: u8,
+    pub tip_payment_account_4: u8,
+    pub tip_payment_account_5: u8,
+    pub tip_payment_account_6: u8,
+    pub tip_payment_account_7: u8,
+    pub tip_payment_account_8: u8,
 }
 
 #[derive(Accounts)]
@@ -165,76 +162,76 @@ pub struct Initialize<'info> {
     pub config: Account<'info, Config>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_1],
+        seeds = [TIP_ACCOUNT_SEED_1],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_1: Account<'info, TipPaymentAccount>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_2],
+        seeds = [TIP_ACCOUNT_SEED_2],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_2: Account<'info, TipPaymentAccount>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_3],
+        seeds = [TIP_ACCOUNT_SEED_3],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_3: Account<'info, TipPaymentAccount>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_4],
+        seeds = [TIP_ACCOUNT_SEED_4],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_4: Account<'info, TipPaymentAccount>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_5],
+        seeds = [TIP_ACCOUNT_SEED_5],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_5: Account<'info, TipPaymentAccount>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_6],
+        seeds = [TIP_ACCOUNT_SEED_6],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_6: Account<'info, TipPaymentAccount>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_7],
+        seeds = [TIP_ACCOUNT_SEED_7],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
     #[account(
         init,
-        seeds = [MEV_ACCOUNT_SEED_8],
+        seeds = [TIP_ACCOUNT_SEED_8],
         bump,
         payer = payer,
-        space = MevPaymentAccount::SIZE,
+        space = TipPaymentAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_8: Account<'info, TipPaymentAccount>,
     pub system_program: Program<'info, System>,
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -243,69 +240,69 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct ClaimTips<'info> {
     #[account(
-        constraint = config.tip_claimer == tip_claimer.key(),
+        constraint = config.tip_receiver == tip_receiver.key(),
     )]
     pub config: Account<'info, Config>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_1],
-        bump = config.bumps.mev_payment_account_1,
+        seeds = [TIP_ACCOUNT_SEED_1],
+        bump = config.bumps.tip_payment_account_1,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_1: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_2],
-        bump = config.bumps.mev_payment_account_2,
+        seeds = [TIP_ACCOUNT_SEED_2],
+        bump = config.bumps.tip_payment_account_2,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_2: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_3],
-        bump = config.bumps.mev_payment_account_3,
+        seeds = [TIP_ACCOUNT_SEED_3],
+        bump = config.bumps.tip_payment_account_3,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_3: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_4],
-        bump = config.bumps.mev_payment_account_4,
+        seeds = [TIP_ACCOUNT_SEED_4],
+        bump = config.bumps.tip_payment_account_4,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_4: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_5],
-        bump = config.bumps.mev_payment_account_5,
+        seeds = [TIP_ACCOUNT_SEED_5],
+        bump = config.bumps.tip_payment_account_5,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_5: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_6],
-        bump = config.bumps.mev_payment_account_6,
+        seeds = [TIP_ACCOUNT_SEED_6],
+        bump = config.bumps.tip_payment_account_6,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_6: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_7],
-        bump = config.bumps.mev_payment_account_7,
+        seeds = [TIP_ACCOUNT_SEED_7],
+        bump = config.bumps.tip_payment_account_7,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_8],
-        bump = config.bumps.mev_payment_account_8,
+        seeds = [TIP_ACCOUNT_SEED_8],
+        bump = config.bumps.tip_payment_account_8,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_8: Account<'info, TipPaymentAccount>,
     /// CHECK: this is the account that is configured to receive tips, which is constantly rotating and
     /// can be an account with a private key to a PDA owned by some other program.
     #[account(mut)]
-    pub tip_claimer: AccountInfo<'info>,
+    pub tip_receiver: AccountInfo<'info>,
     #[account(mut)]
     pub claimer: Signer<'info>,
 }
@@ -351,16 +348,16 @@ pub struct SetBackendUrl<'info> {
 }
 
 impl<'info> ClaimTips<'info> {
-    fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
+    fn get_tip_accounts(&self) -> Vec<AccountInfo<'info>> {
         let mut accs = Vec::new();
-        accs.push(self.mev_payment_account_1.to_account_info());
-        accs.push(self.mev_payment_account_2.to_account_info());
-        accs.push(self.mev_payment_account_3.to_account_info());
-        accs.push(self.mev_payment_account_4.to_account_info());
-        accs.push(self.mev_payment_account_5.to_account_info());
-        accs.push(self.mev_payment_account_6.to_account_info());
-        accs.push(self.mev_payment_account_7.to_account_info());
-        accs.push(self.mev_payment_account_8.to_account_info());
+        accs.push(self.tip_payment_account_1.to_account_info());
+        accs.push(self.tip_payment_account_2.to_account_info());
+        accs.push(self.tip_payment_account_3.to_account_info());
+        accs.push(self.tip_payment_account_4.to_account_info());
+        accs.push(self.tip_payment_account_5.to_account_info());
+        accs.push(self.tip_payment_account_6.to_account_info());
+        accs.push(self.tip_payment_account_7.to_account_info());
+        accs.push(self.tip_payment_account_8.to_account_info());
 
         accs
     }
@@ -370,73 +367,73 @@ impl<'info> ClaimTips<'info> {
 pub struct ChangeTipReceiver<'info> {
     #[account(
         mut,
-        constraint = old_tip_claimer.key() == config.tip_claimer,
+        constraint = old_tip_receiver.key() == config.tip_receiver,
     )]
     pub config: Account<'info, Config>,
 
     /// CHECK: constraint check above. old tip claimer gets tokens transferred to them before
     /// new tip claimer.
     #[account(mut)]
-    pub old_tip_claimer: AccountInfo<'info>,
+    pub old_tip_receiver: AccountInfo<'info>,
 
     /// CHECK: any new account is allowed as a tip claimer.
-    pub new_tip_claimer: AccountInfo<'info>,
+    pub new_tip_receiver: AccountInfo<'info>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_1],
-        bump = config.bumps.mev_payment_account_1,
+        seeds = [TIP_ACCOUNT_SEED_1],
+        bump = config.bumps.tip_payment_account_1,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_1: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_1: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_2],
-        bump = config.bumps.mev_payment_account_2,
+        seeds = [TIP_ACCOUNT_SEED_2],
+        bump = config.bumps.tip_payment_account_2,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_2: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_2: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_3],
-        bump = config.bumps.mev_payment_account_3,
+        seeds = [TIP_ACCOUNT_SEED_3],
+        bump = config.bumps.tip_payment_account_3,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_3: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_3: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_4],
-        bump = config.bumps.mev_payment_account_4,
+        seeds = [TIP_ACCOUNT_SEED_4],
+        bump = config.bumps.tip_payment_account_4,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_4: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_4: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_5],
-        bump = config.bumps.mev_payment_account_5,
+        seeds = [TIP_ACCOUNT_SEED_5],
+        bump = config.bumps.tip_payment_account_5,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_5: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_5: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_6],
-        bump = config.bumps.mev_payment_account_6,
+        seeds = [TIP_ACCOUNT_SEED_6],
+        bump = config.bumps.tip_payment_account_6,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_6: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_6: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_7],
-        bump = config.bumps.mev_payment_account_7,
+        seeds = [TIP_ACCOUNT_SEED_7],
+        bump = config.bumps.tip_payment_account_7,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_7: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
     #[account(
         mut,
-        seeds = [MEV_ACCOUNT_SEED_8],
-        bump = config.bumps.mev_payment_account_8,
+        seeds = [TIP_ACCOUNT_SEED_8],
+        bump = config.bumps.tip_payment_account_8,
         rent_exempt = enforce
     )]
-    pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
+    pub tip_payment_account_8: Account<'info, TipPaymentAccount>,
     #[account(mut)]
     pub signer: Signer<'info>,
 }
@@ -444,14 +441,14 @@ pub struct ChangeTipReceiver<'info> {
 impl<'info> ChangeTipReceiver<'info> {
     fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
         let mut accs = Vec::new();
-        accs.push(self.mev_payment_account_1.to_account_info());
-        accs.push(self.mev_payment_account_2.to_account_info());
-        accs.push(self.mev_payment_account_3.to_account_info());
-        accs.push(self.mev_payment_account_4.to_account_info());
-        accs.push(self.mev_payment_account_5.to_account_info());
-        accs.push(self.mev_payment_account_6.to_account_info());
-        accs.push(self.mev_payment_account_7.to_account_info());
-        accs.push(self.mev_payment_account_8.to_account_info());
+        accs.push(self.tip_payment_account_1.to_account_info());
+        accs.push(self.tip_payment_account_2.to_account_info());
+        accs.push(self.tip_payment_account_3.to_account_info());
+        accs.push(self.tip_payment_account_4.to_account_info());
+        accs.push(self.tip_payment_account_5.to_account_info());
+        accs.push(self.tip_payment_account_6.to_account_info());
+        accs.push(self.tip_payment_account_7.to_account_info());
+        accs.push(self.tip_payment_account_8.to_account_info());
 
         accs
     }
@@ -464,10 +461,10 @@ impl<'info> ChangeTipReceiver<'info> {
 #[derive(Default)]
 pub struct Config {
     /// The account claiming tips from the mev_payment accounts.
-    tip_claimer: Pubkey,
+    pub tip_receiver: Pubkey,
 
     /// Bumps used to derive PDAs
-    bumps: InitBumps,
+    pub bumps: InitBumps,
 }
 
 impl Config {
@@ -478,9 +475,9 @@ impl Config {
 /// There will be 8 accounts of this type initialized in order to parallelize bundles.
 #[account]
 #[derive(Default)]
-pub struct MevPaymentAccount {}
+pub struct TipPaymentAccount {}
 
-impl MevPaymentAccount {
+impl TipPaymentAccount {
     pub const SIZE: usize = 8;
 
     fn drain_accounts(accs: Vec<AccountInfo>) -> Result<u64> {
@@ -547,8 +544,8 @@ pub struct TipsClaimed {
 
 #[event]
 pub struct TipClaimerUpdated {
-    new_tip_claimer: Pubkey,
-    old_tip_claimer: Pubkey,
+    new_tip_receiver: Pubkey,
+    old_tip_receiver: Pubkey,
 }
 
 #[event]

@@ -1,12 +1,12 @@
 [package]
-name = "mev-payment"
+name = "tip-payment"
 version = "0.1.0"
-description = "Created with Anchor"
+description = "Tip Payment Program"
 edition = "2021"
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "mev_payment"
+name = "tip_payment"
 
 [features]
 no-entrypoint = []
