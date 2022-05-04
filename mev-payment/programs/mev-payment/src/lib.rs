@@ -236,7 +236,6 @@ pub struct Initialize<'info> {
     )]
     pub mev_payment_account_8: Account<'info, MevPaymentAccount>,
     pub system_program: Program<'info, System>,
-    pub rent: Sysvar<'info, Rent>,
     #[account(mut)]
     pub payer: Signer<'info>,
 }

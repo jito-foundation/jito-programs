@@ -1,6 +1,6 @@
 const anchor = require( '@project-serum/anchor' )
 const assert = require( 'assert' )
-const { SystemProgram, Transaction, SYSVAR_RENT_PUBKEY } = anchor.web3
+const { SystemProgram, Transaction } = anchor.web3
 
 const CONFIG_ACCOUNT_LEN = 8 + 9 + 32 // 8 for anchor header, 9 for bumps, 32 for pubkey
 const MEV_PAYMENT_ACCOUNT_LEN = 8  // 8 for header
@@ -161,7 +161,6 @@ describe( 'tests mev_payment', () => {
                         mevPaymentAccount8: mevPaymentAccount8,
                         systemProgram: SystemProgram.programId,
                         payer: initializerKeys.publicKey,
-                        rent: SYSVAR_RENT_PUBKEY
                     },
                     signers: [initializerKeys],
                 },
