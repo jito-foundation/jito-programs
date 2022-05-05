@@ -2,23 +2,23 @@ use std::mem::size_of;
 
 use anchor_lang::prelude::*;
 
-declare_id!("6pi32PYRYWkkC6GuQALCQEgp1iiar3w8Df1M4mMrYF2S");
+declare_id!("Ek3SBXmGDvyvCGPYb98du8CNNjTomyiuc1wh7dMBw8gk");
 
 /// We've decided to hardcode the seeds, effectively meaning
 /// the following PDAs owned by this program are singleton.
 /// This ensures that `initialize` can only be invoked once,
 /// otherwise the tx would fail since the accounts would have
 /// already been initialized on subsequent calls.
-const CONFIG_ACCOUNT_SEED: &'static [u8] = b"CONFIG_ACCOUNT";
-const TIP_ACCOUNT_SEED_1: &'static [u8] = b"TIP_ACCOUNT_1";
-const TIP_ACCOUNT_SEED_2: &'static [u8] = b"TIP_ACCOUNT_2";
-const TIP_ACCOUNT_SEED_3: &'static [u8] = b"TIP_ACCOUNT_3";
-const TIP_ACCOUNT_SEED_4: &'static [u8] = b"TIP_ACCOUNT_4";
-const TIP_ACCOUNT_SEED_5: &'static [u8] = b"TIP_ACCOUNT_5";
-const TIP_ACCOUNT_SEED_6: &'static [u8] = b"TIP_ACCOUNT_6";
-const TIP_ACCOUNT_SEED_7: &'static [u8] = b"TIP_ACCOUNT_7";
-const TIP_ACCOUNT_SEED_8: &'static [u8] = b"TIP_ACCOUNT_8";
-const VALIDATOR_META_SEED: &'static [u8] = b"VALIDATOR_META";
+pub const CONFIG_ACCOUNT_SEED: &'static [u8] = b"CONFIG_ACCOUNT";
+pub const TIP_ACCOUNT_SEED_1: &'static [u8] = b"TIP_ACCOUNT_1";
+pub const TIP_ACCOUNT_SEED_2: &'static [u8] = b"TIP_ACCOUNT_2";
+pub const TIP_ACCOUNT_SEED_3: &'static [u8] = b"TIP_ACCOUNT_3";
+pub const TIP_ACCOUNT_SEED_4: &'static [u8] = b"TIP_ACCOUNT_4";
+pub const TIP_ACCOUNT_SEED_5: &'static [u8] = b"TIP_ACCOUNT_5";
+pub const TIP_ACCOUNT_SEED_6: &'static [u8] = b"TIP_ACCOUNT_6";
+pub const TIP_ACCOUNT_SEED_7: &'static [u8] = b"TIP_ACCOUNT_7";
+pub const TIP_ACCOUNT_SEED_8: &'static [u8] = b"TIP_ACCOUNT_8";
+pub const VALIDATOR_META_SEED: &'static [u8] = b"VALIDATOR_META";
 
 pub const HEADER: usize = 8;
 
@@ -103,7 +103,7 @@ pub mod tip_payment {
     /// Validator should invoke this instruction before executing any transactions that contain tips.
     /// Validator should also ensure it calls it if there's a fork detected.
     pub fn change_tip_receiver(ctx: Context<ChangeTipReceiver>) -> Result<()> {
-        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_mev_accounts())?;
+        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         if total_tips > 0 {
             let pre_lamports = ctx.accounts.old_tip_receiver.lamports();
@@ -439,7 +439,7 @@ pub struct ChangeTipReceiver<'info> {
 }
 
 impl<'info> ChangeTipReceiver<'info> {
-    fn get_mev_accounts(&self) -> Vec<AccountInfo<'info>> {
+    fn get_tip_accounts(&self) -> Vec<AccountInfo<'info>> {
         let mut accs = Vec::new();
         accs.push(self.tip_payment_account_1.to_account_info());
         accs.push(self.tip_payment_account_2.to_account_info());
