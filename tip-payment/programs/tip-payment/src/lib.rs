@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use anchor_lang::prelude::*;
 
-declare_id!("4tsETgKZoRbC9sZQH4VPqQ1UvhQLvfr7Jhxk5Eg5u3z8");
+declare_id!("6pi32PYRYWkkC6GuQALCQEgp1iiar3w8Df1M4mMrYF2S");
 
 /// We've decided to hardcode the seeds, effectively meaning
 /// the following PDAs owned by this program are singleton.
