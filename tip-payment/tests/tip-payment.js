@@ -1,359 +1,276 @@
-const anchor = require( '@project-serum/anchor' )
-const assert = require( 'assert' )
-const { SystemProgram, Transaction } = anchor.web3
+const anchor = require('@project-serum/anchor')
+const assert = require('assert')
+const {SystemProgram, Transaction} = anchor.web3
 
 const CONFIG_ACCOUNT_LEN = 8 + 9 + 32 // 8 for anchor header, 9 for bumps, 32 for pubkey
-const MEV_PAYMENT_ACCOUNT_LEN = 8  // 8 for header
+const TIP_PAYMENT_ACCOUNT_LEN = 8  // 8 for header
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
-const mevSeed1 = 'MEV_ACCOUNT_1'
-const mevSeed2 = 'MEV_ACCOUNT_2'
-const mevSeed3 = 'MEV_ACCOUNT_3'
-const mevSeed4 = 'MEV_ACCOUNT_4'
-const mevSeed5 = 'MEV_ACCOUNT_5'
-const mevSeed6 = 'MEV_ACCOUNT_6'
-const mevSeed7 = 'MEV_ACCOUNT_7'
-const mevSeed8 = 'MEV_ACCOUNT_8'
+const tipSeed1 = 'TIP_ACCOUNT_1'
+const tipSeed2 = 'TIP_ACCOUNT_2'
+const tipSeed3 = 'TIP_ACCOUNT_3'
+const tipSeed4 = 'TIP_ACCOUNT_4'
+const tipSeed5 = 'TIP_ACCOUNT_5'
+const tipSeed6 = 'TIP_ACCOUNT_6'
+const tipSeed7 = 'TIP_ACCOUNT_7'
+const tipSeed8 = 'TIP_ACCOUNT_8'
 const validatorMetaSeed = 'VALIDATOR_META'
-let configAccount, configAccountBump,
-    mevPaymentAccount1, mevBump1,
-    mevPaymentAccount2, mevBump2,
-    mevPaymentAccount3, mevBump3,
-    mevPaymentAccount4, mevBump4,
-    mevPaymentAccount5, mevBump5,
-    mevPaymentAccount6, mevBump6,
-    mevPaymentAccount7, mevBump7,
-    mevPaymentAccount8, mevBump8
+let configAccount, configAccountBump, tipPaymentAccount1, tipBump1, tipPaymentAccount2, tipBump2, tipPaymentAccount3,
+    tipBump3, tipPaymentAccount4, tipBump4, tipPaymentAccount5, tipBump5, tipPaymentAccount6, tipBump6,
+    tipPaymentAccount7, tipBump7, tipPaymentAccount8, tipBump8
 
-const provider = anchor.AnchorProvider.local(null,
-    { commitment: 'confirmed', preflightCommitment: 'confirmed' },)
-anchor.setProvider( provider )
-const mevPaymentProg = anchor.workspace.MevPayment
+const provider = anchor.AnchorProvider.local(null, {commitment: 'confirmed', preflightCommitment: 'confirmed'},)
+anchor.setProvider(provider)
+const tipPaymentProg = anchor.workspace.TipPayment
 
-describe( 'tests mev_payment', () => {
-    const sendTip = async ( accountToTip, tipAmount ) => {
+describe('tests tip_payment', () => {
+    const sendTip = async (accountToTip, tipAmount) => {
         const searcherKP = anchor.web3.Keypair.generate()
         const airDrop = tipAmount * 2
-        await provider.connection.confirmTransaction(
-            await provider.connection.requestAirdrop(
-                searcherKP.publicKey, airDrop
-            ),
-            'confirmed',
-        )
+        await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(searcherKP.publicKey, airDrop), 'confirmed',)
         const tipTx = new Transaction()
-        tipTx.add(
-            SystemProgram.transfer({
-                fromPubkey: searcherKP.publicKey,
-                toPubkey: accountToTip,
-                lamports: tipAmount,
-            })
-        )
-        await anchor.web3.sendAndConfirmTransaction(
-            mevPaymentProg.provider.connection,
-            tipTx,
-            [ searcherKP ],
-        )
+        tipTx.add(SystemProgram.transfer({
+            fromPubkey: searcherKP.publicKey, toPubkey: accountToTip, lamports: tipAmount,
+        }))
+        await anchor.web3.sendAndConfirmTransaction(tipPaymentProg.provider.connection, tipTx, [searcherKP],)
     }
     const initializerKeys = anchor.web3.Keypair.generate()
-    before( async () => {
-        const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( configAccountSeed, 'utf8' )],
-            mevPaymentProg.programId,
-        )
+    before(async () => {
+        const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(configAccountSeed, 'utf8')], tipPaymentProg.programId,)
         configAccount = _configAccount
         configAccountBump = _configAccountBump
-        const [_mevPaymentAccount1, _mevBump1] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed1, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount1 = _mevPaymentAccount1
-        mevBump1 = _mevBump1
-        const [_mevPaymentAccount2, _mevBump2] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed2, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount2 = _mevPaymentAccount2
-        mevBump2 = _mevBump2
-        const [_mevPaymentAccount3, _mevBump3] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed3, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount3 = _mevPaymentAccount3
-        mevBump3 = _mevBump3
-        const [_mevPaymentAccount4, _mevBump4] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed4, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount4 = _mevPaymentAccount4
-        mevBump4 = _mevBump4
-        const [_mevPaymentAccount5, _mevBump5] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed5, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount5 = _mevPaymentAccount5
-        mevBump5 = _mevBump5
-        const [_mevPaymentAccount6, _mevBump6] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed6, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount6 = _mevPaymentAccount6
-        mevBump6 = _mevBump6
-        const [_mevPaymentAccount7, _mevBump7] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed7, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount7 = _mevPaymentAccount7
-        mevBump7 = _mevBump7
-        const [_mevPaymentAccount8, _mevBump8] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( mevSeed8, 'utf8' )],
-            mevPaymentProg.programId,
-        )
-        mevPaymentAccount8 = _mevPaymentAccount8
-        mevBump8 = _mevBump8
+        const [_tipPaymentAccount1, _tipBump1] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed1, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount1 = _tipPaymentAccount1
+        tipBump1 = _tipBump1
+        const [_tipPaymentAccount2, _tipBump2] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed2, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount2 = _tipPaymentAccount2
+        tipBump2 = _tipBump2
+        const [_tipPaymentAccount3, _tipBump3] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed3, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount3 = _tipPaymentAccount3
+        tipBump3 = _tipBump3
+        const [_tipPaymentAccount4, _tipBump4] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed4, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount4 = _tipPaymentAccount4
+        tipBump4 = _tipBump4
+        const [_tipPaymentAccount5, _tipBump5] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed5, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount5 = _tipPaymentAccount5
+        tipBump5 = _tipBump5
+        const [_tipPaymentAccount6, _tipBump6] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed6, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount6 = _tipPaymentAccount6
+        tipBump6 = _tipBump6
+        const [_tipPaymentAccount7, _tipBump7] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed7, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount7 = _tipPaymentAccount7
+        tipBump7 = _tipBump7
+        const [_tipPaymentAccount8, _tipBump8] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed8, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount8 = _tipPaymentAccount8
+        tipBump8 = _tipBump8
 
-        await provider.connection.confirmTransaction(
-            await provider.connection.requestAirdrop(
-                initializerKeys.publicKey, 100000000000000
-            ),
-            'confirmed',
-        )
+        await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(initializerKeys.publicKey, 100000000000000), 'confirmed',)
     })
 
     // utility function asserting all expected rent exempt accounts are indeed exempt
     const assertRentExemptAccounts = async () => {
-        let minRentExempt = await mevPaymentProg.provider.connection.getMinimumBalanceForRentExemption( CONFIG_ACCOUNT_LEN )
-        let accInfo = await mevPaymentProg.provider.connection.getAccountInfo( configAccount )
-        assert.equal( accInfo.lamports, minRentExempt )
+        let minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(CONFIG_ACCOUNT_LEN)
+        let accInfo = await tipPaymentProg.provider.connection.getAccountInfo(configAccount)
+        assert.equal(accInfo.lamports, minRentExempt)
 
-        minRentExempt = await mevPaymentProg.provider.connection.getMinimumBalanceForRentExemption( MEV_PAYMENT_ACCOUNT_LEN )
-        accInfo = await mevPaymentProg.provider.connection.getAccountInfo( mevPaymentAccount1 )
-        assert.equal( accInfo.lamports, minRentExempt )
+        minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(TIP_PAYMENT_ACCOUNT_LEN)
+        accInfo = await tipPaymentProg.provider.connection.getAccountInfo(tipPaymentAccount1)
+        assert.equal(accInfo.lamports, minRentExempt)
 
-        minRentExempt = await mevPaymentProg.provider.connection.getMinimumBalanceForRentExemption( MEV_PAYMENT_ACCOUNT_LEN )
-        accInfo = await mevPaymentProg.provider.connection.getAccountInfo( mevPaymentAccount2 )
-        assert.equal( accInfo.lamports, minRentExempt )
+        minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(TIP_PAYMENT_ACCOUNT_LEN)
+        accInfo = await tipPaymentProg.provider.connection.getAccountInfo(tipPaymentAccount2)
+        assert.equal(accInfo.lamports, minRentExempt)
     }
-    it( '#initialize happy path', async () => {
+    it('#initialize happy path', async () => {
         try {
 
-            await mevPaymentProg.rpc.initialize(
-                {
-                    configAccountBump, // config
-                    mevBump1, // mev_payment_account_1
-                    mevBump2,
-                    mevBump3,
-                    mevBump4,
-                    mevBump5,
-                    mevBump6,
-                    mevBump7,
-                    mevBump8, // mev_payment_account_8
-                },
-                {
-                    accounts: {
-                        config: configAccount,
-                        mevPaymentAccount1: mevPaymentAccount1,
-                        mevPaymentAccount2: mevPaymentAccount2,
-                        mevPaymentAccount3: mevPaymentAccount3,
-                        mevPaymentAccount4: mevPaymentAccount4,
-                        mevPaymentAccount5: mevPaymentAccount5,
-                        mevPaymentAccount6: mevPaymentAccount6,
-                        mevPaymentAccount7: mevPaymentAccount7,
-                        mevPaymentAccount8: mevPaymentAccount8,
-                        systemProgram: SystemProgram.programId,
-                        payer: initializerKeys.publicKey,
-                    },
-                    signers: [initializerKeys],
-                },
-            )
+            await tipPaymentProg.rpc.initialize({
+                configAccountBump, // config
+                tipBump1: tipBump1, // tip_payment_account_1
+                tipBump2: tipBump2,
+                tipBump3: tipBump3,
+                tipBump4: tipBump4,
+                tipBump5: tipBump5,
+                tipBump6: tipBump6,
+                tipBump7: tipBump7,
+                tipBump8: tipBump8, // tip_payment_account_8
+            }, {
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipPaymentAccount8: tipPaymentAccount8,
+                    systemProgram: SystemProgram.programId,
+                    payer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            },)
         } catch (e) {
-            console.log( 'error', e )
+            console.log('error', e)
             assert.fail()
         }
-        const configState = await mevPaymentProg.account.config.fetch( configAccount )
-        assert.equal( configState.tipClaimer.toString(), initializerKeys.publicKey.toString() )
+        const configState = await tipPaymentProg.account.config.fetch(configAccount)
+        assert.equal(configState.tipReceiver.toString(), initializerKeys.publicKey.toString())
     })
-    it( '#set_tip_claimer with 0 total tips succeeds', async () => {
-        let configState = await mevPaymentProg.account.config.fetch( configAccount )
-        const oldTipClaimer = configState.tipClaimer
-        const newTipClaimer = anchor.web3.Keypair.generate()
-        await mevPaymentProg.rpc.changeTipReceiver(
-            {
-                accounts: {
-                    oldTipClaimer,
-                    newTipClaimer: newTipClaimer.publicKey,
-                    config: configAccount,
-                    signer: initializerKeys.publicKey,
-                    mevPaymentAccount1,
-                    mevPaymentAccount2,
-                    mevPaymentAccount3,
-                    mevPaymentAccount4,
-                    mevPaymentAccount5,
-                    mevPaymentAccount6,
-                    mevPaymentAccount7,
-                    mevPaymentAccount8,
-                },
-                signers: [initializerKeys],
-            },
-        )
-        await assertRentExemptAccounts()
-        configState = await mevPaymentProg.account.config.fetch( configAccount )
-        assert.equal( configState.tipClaimer.toString(), newTipClaimer.publicKey.toString())
-    })
-    it( '#set_tip_claimer `constraint = old_tip_claimer.key() == config.tip_claimer`', async () => {
-        const badOldTipClaimer = anchor.web3.Keypair.generate().publicKey
-        const newTipClaimer = anchor.web3.Keypair.generate()
-        try {
-            await mevPaymentProg.rpc.changeTipReceiver(
-                {
-                    accounts: {
-                        oldTipClaimer: badOldTipClaimer,
-                        newTipClaimer: newTipClaimer.publicKey,
-                        config: configAccount,
-                        signer: initializerKeys.publicKey,
-                        mevPaymentAccount1,
-                        mevPaymentAccount2,
-                        mevPaymentAccount3,
-                        mevPaymentAccount4,
-                        mevPaymentAccount5,
-                        mevPaymentAccount6,
-                        mevPaymentAccount7,
-                        mevPaymentAccount8,
-                    },
-                    signers: [initializerKeys],
-                },
-            )
-            assert.fail( 'expected exception to be thrown' )
-        } catch ( e ) {
-            assert.equal( e.error.errorMessage, 'A raw constraint was violated' )
-        }
-    })
-    it( '#claim_tips `constraint = tip_claimer.key() == config.tip_claimer`', async () => {
-        const badTipClaimer = anchor.web3.Keypair.generate().publicKey
-        try {
-            await mevPaymentProg.rpc.claimTips(
-                {
-                    accounts: {
-                        claimer: initializerKeys.publicKey,
-                        config: configAccount,
-                        tipClaimer: badTipClaimer,
-                        mevPaymentAccount1,
-                        mevPaymentAccount2,
-                        mevPaymentAccount3,
-                        mevPaymentAccount4,
-                        mevPaymentAccount5,
-                        mevPaymentAccount6,
-                        mevPaymentAccount7,
-                        mevPaymentAccount8,
-                    },
-                    signers: [initializerKeys],
-                },
-            )
-            assert( false )
-        } catch ( err ) {
-            assert.equal( err.error.errorMessage, 'A raw constraint was violated' )
-        }
-    })
-    it( '#claim_tips with bad mevPaymentAccountN', async () => {
-        const configState = await mevPaymentProg.account.config.fetch( configAccount )
-        const tipClaimer = configState.tipClaimer
-        for ( let i = 0; i < 8; i++ ) {
-            let accounts = await getBadMevPaymentAccounts( i )
-            accounts = {
-                ...accounts,
-                claimer: initializerKeys.publicKey,
+    it('#change_tip_receiver with 0 total tips succeeds', async () => {
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const oldTipReceiver = configState.tipReceiver
+        const newTipReceiver = anchor.web3.Keypair.generate()
+        await tipPaymentProg.rpc.changeTipReceiver({
+            accounts: {
                 config: configAccount,
-                tipClaimer,
+                oldTipReceiver,
+                newTipReceiver: newTipReceiver.publicKey,
+                tipPaymentAccount1: tipPaymentAccount1,
+                tipPaymentAccount2: tipPaymentAccount2,
+                tipPaymentAccount3: tipPaymentAccount3,
+                tipPaymentAccount4: tipPaymentAccount4,
+                tipPaymentAccount5: tipPaymentAccount5,
+                tipPaymentAccount6: tipPaymentAccount6,
+                tipPaymentAccount7: tipPaymentAccount7,
+                tipPaymentAccount8: tipPaymentAccount8,
+                signer: initializerKeys.publicKey,
+            }, signers: [initializerKeys],
+        },)
+        await assertRentExemptAccounts()
+        configState = await tipPaymentProg.account.config.fetch(configAccount)
+        assert.equal(configState.tipReceiver.toString(), newTipReceiver.publicKey.toString())
+    })
+    it('#change_tip_receiver `constraint = old_tip_receiver.key() == config.tip_receiver`', async () => {
+        const badOldTipReceiver = anchor.web3.Keypair.generate().publicKey
+        const newTipReceiver = anchor.web3.Keypair.generate()
+        try {
+            await tipPaymentProg.rpc.changeTipReceiver({
+                accounts: {
+                    config: configAccount,
+                    oldTipReceiver: badOldTipReceiver,
+                    newTipReceiver: newTipReceiver.publicKey,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipPaymentAccount8: tipPaymentAccount8,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            },)
+            assert.fail('expected exception to be thrown')
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'A raw constraint was violated')
+        }
+    })
+    it('#claim_tips `constraint = tip_receiver.key() == config.tip_receiver`', async () => {
+        const badTipReceiver = anchor.web3.Keypair.generate().publicKey
+        try {
+            await tipPaymentProg.rpc.claimTips({
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipPaymentAccount8: tipPaymentAccount8,
+                    tipReceiver: badTipReceiver,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            },)
+            assert(false)
+        } catch (err) {
+            assert.equal(err.error.errorMessage, 'A raw constraint was violated')
+        }
+    })
+    it('#claim_tips with bad tipPaymentAccountN', async () => {
+        const configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+        for (let i = 0; i < 8; i++) {
+            let accounts = await getBadTipPaymentAccounts(i)
+            accounts = {
+                ...accounts, signer: initializerKeys.publicKey, config: configAccount, tipReceiver,
             }
             try {
-                await mevPaymentProg.rpc.claimTips(
-                    {
-                        accounts,
-                        signers: [initializerKeys],
-                    },
-                )
-                assert( false )
-            } catch ( e ) {
-                assert.equal( e.error.errorMessage, 'The given account is owned by a different program than expected' )
+                await tipPaymentProg.rpc.claimTips({
+                    accounts, signers: [initializerKeys],
+                },)
+                assert(false)
+            } catch (e) {
+                assert.equal(e.error.errorMessage, 'The given account is owned by a different program than expected')
             }
         }
     })
-    it( '#claim_tips moves funds to correct account', async () => {
-        const claimer = anchor.web3.Keypair.generate()
+    it('#claim_tips moves funds to correct account', async () => {
+        const signer = anchor.web3.Keypair.generate()
         const tipAmount = 1000000
-        await sendTip( mevPaymentAccount1, tipAmount )
-        await sendTip( mevPaymentAccount2, tipAmount )
+        await sendTip(tipPaymentAccount1, tipAmount)
+        await sendTip(tipPaymentAccount2, tipAmount)
         const totalTip = tipAmount * 2
 
-        let configState = await mevPaymentProg.account.config.fetch( configAccount )
-        const tipClaimer = configState.tipClaimer
-        const tipClaimerLamportsBefore =
-            (( await mevPaymentProg.provider.connection.getAccountInfo( tipClaimer )) || { lamports: 0 }).lamports
-        await mevPaymentProg.rpc.claimTips(
-            {
-                accounts: {
-                    tipClaimer,
-                    claimer: claimer.publicKey,
-                    config: configAccount,
-                    mevPaymentAccount1,
-                    mevPaymentAccount2,
-                    mevPaymentAccount3,
-                    mevPaymentAccount4,
-                    mevPaymentAccount5,
-                    mevPaymentAccount6,
-                    mevPaymentAccount7,
-                    mevPaymentAccount8,
-                },
-                signers: [ claimer ],
-            },
-        )
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)) || {lamports: 0}).lamports
+        await tipPaymentProg.rpc.claimTips({
+            accounts: {
+                config: configAccount,
+                tipPaymentAccount1: tipPaymentAccount1,
+                tipPaymentAccount2: tipPaymentAccount2,
+                tipPaymentAccount3: tipPaymentAccount3,
+                tipPaymentAccount4: tipPaymentAccount4,
+                tipPaymentAccount5: tipPaymentAccount5,
+                tipPaymentAccount6: tipPaymentAccount6,
+                tipPaymentAccount7: tipPaymentAccount7,
+                tipPaymentAccount8: tipPaymentAccount8,
+                tipReceiver: tipReceiver,
+                signer: signer.publicKey,
+            }, signers: [signer],
+        },)
 
         await assertRentExemptAccounts()
-        const tipClaimerLamportsAfter =
-            ( await mevPaymentProg.provider.connection.getAccountInfo( tipClaimer )).lamports
-        assert.equal( tipClaimerLamportsAfter - tipClaimerLamportsBefore, totalTip )
+        const tipReceiverLamportsAfter = (await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)).lamports
+        assert.equal(tipReceiverLamportsAfter - tipReceiverLamportsBefore, totalTip)
     })
-    it( '#set_tip_claimer transfers funds to previous tip_claimer', async () => {
+    it('#set_tip_receiver transfers funds to previous tip_receiver', async () => {
         const tipAmount = 10000000
-        await sendTip( mevPaymentAccount1, tipAmount )
-        await sendTip( mevPaymentAccount2, tipAmount )
+        await sendTip(tipPaymentAccount1, tipAmount)
+        await sendTip(tipPaymentAccount2, tipAmount)
         const totalTip = tipAmount * 2
 
-        let configState = await mevPaymentProg.account.config.fetch( configAccount )
-        const oldTipClaimer = configState.tipClaimer
-        const oldTipClaimerBalanceBefore =
-            ( await mevPaymentProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
-        const newTipClaimer = anchor.web3.Keypair.generate()
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const oldTipReceiver = configState.tipReceiver
+        const oldTipReceiverBalanceBefore = (await tipPaymentProg.provider.connection.getAccountInfo(oldTipReceiver)).lamports
+        const newTipReceiver = anchor.web3.Keypair.generate()
         const newLeader = anchor.web3.Keypair.generate()
-        await mevPaymentProg.rpc.changeTipReceiver(
-            {
-                accounts: {
-                    oldTipClaimer,
-                    newTipClaimer: newTipClaimer.publicKey,
-                    config: configAccount,
-                    signer: newLeader.publicKey,
-                    mevPaymentAccount1,
-                    mevPaymentAccount2,
-                    mevPaymentAccount3,
-                    mevPaymentAccount4,
-                    mevPaymentAccount5,
-                    mevPaymentAccount6,
-                    mevPaymentAccount7,
-                    mevPaymentAccount8,
-                },
-                signers: [newLeader],
-            },
-        )
+        await tipPaymentProg.rpc.changeTipReceiver({
+            accounts: {
+                oldTipReceiver,
+                newTipReceiver: newTipReceiver.publicKey,
+                config: configAccount,
+                signer: newLeader.publicKey,
+                tipPaymentAccount1: tipPaymentAccount1,
+                tipPaymentAccount2: tipPaymentAccount2,
+                tipPaymentAccount3: tipPaymentAccount3,
+                tipPaymentAccount4: tipPaymentAccount4,
+                tipPaymentAccount5: tipPaymentAccount5,
+                tipPaymentAccount6: tipPaymentAccount6,
+                tipPaymentAccount7: tipPaymentAccount7,
+                tipPaymentAccount8: tipPaymentAccount8,
+            }, signers: [newLeader],
+        },)
         await assertRentExemptAccounts()
-        const oldTipClaimerBalanceAfter =
-            ( await mevPaymentProg.provider.connection.getAccountInfo( oldTipClaimer )).lamports
-        assert.equal( oldTipClaimerBalanceAfter, totalTip + oldTipClaimerBalanceBefore )
+        const oldTipReceiverBalanceAfter = (await tipPaymentProg.provider.connection.getAccountInfo(oldTipReceiver)).lamports
+        assert.equal(oldTipReceiverBalanceAfter, totalTip + oldTipReceiverBalanceBefore)
     })
-    it( '#init_validator_meta happy path', async () => {
+    it('#init_validator_meta happy path', async () => {
         // given
         const {
-            validator,
-            meta,
-            metaBump,
+            validator, meta, metaBump,
         } = await setup_initValidatorMeta()
         const backendUrl = 'eu.jito.wtf/mempool'
         const extraSpace = backendUrl.length
@@ -361,123 +278,102 @@ describe( 'tests mev_payment', () => {
         // then
         try {
             await call_initValidatorMeta({
-                validator,
-                backendUrl,
-                meta,
-                metaBump,
-                extraSpace,
-                systemProgram: SystemProgram.programId,
+                validator, backendUrl, meta, metaBump, extraSpace, systemProgram: SystemProgram.programId,
             })
-        } catch ( e ) {
-            assert.fail( 'unexpected exception: ' + e )
+        } catch (e) {
+            console.log(e)
+            assert.fail('unexpected exception: ' + e)
         }
 
         // expect
-        const created = ( await mevPaymentProg.provider.connection.getAccountInfo( meta )) != null
-        assert( created )
-        const validatorMeta = await mevPaymentProg.account.validatorMeta.fetch( meta )
-        assert.equal( validatorMeta.bump, metaBump )
-        assert.equal( validatorMeta.backendUrl, backendUrl )
+        const created = (await tipPaymentProg.provider.connection.getAccountInfo(meta)) != null
+        assert(created)
+        const validatorMeta = await tipPaymentProg.account.validatorMeta.fetch(meta)
+        assert.equal(validatorMeta.bump, metaBump)
+        assert.equal(validatorMeta.backendUrl, backendUrl)
     })
-    it( '#set_backend_url fails due low pre-allocated space', async () => {
+    it('#set_backend_url fails due low pre-allocated space', async () => {
         // given
         const backendUrl = 'eu.jito.wtf/mempool'
         const extraSpace = backendUrl.length
-        const { validator, meta } =
-            await setup_setBackendUrl({
-                extraSpace,
-                backendUrl,
-                systemProgram: SystemProgram.programId,
-            })
+        const {validator, meta} = await setup_setBackendUrl({
+            extraSpace, backendUrl, systemProgram: SystemProgram.programId,
+        })
 
         // then
         const newUrl = backendUrl + "/bundles"
         try {
-            await call_setBackendUrl({ backendUrl: newUrl, validator, meta })
-            assert.fail( 'expected exception to be thrown' )
-        } catch ( err ) {
+            await call_setBackendUrl({backendUrl: newUrl, validator, meta})
+            assert.fail('expected exception to be thrown')
+        } catch (err) {
             assert.equal(err.error.errorMessage, 'Failed to serialize the account')
         }
     })
-    it( '#set_backend_url happy path', async () => {
+    it('#set_backend_url happy path', async () => {
         // given
         const backendUrl = 'eu.jito.wtf/mempool'
         const extraSpace = backendUrl.length + 1280
-        const { validator, meta, metaBump } =
-            await setup_setBackendUrl({
-                extraSpace,
-                backendUrl,
-                systemProgram: SystemProgram.programId,
-            })
+        const {validator, meta, metaBump} = await setup_setBackendUrl({
+            extraSpace, backendUrl, systemProgram: SystemProgram.programId,
+        })
 
         // then
         const newUrl = backendUrl + "/bundles"
         try {
-            await call_setBackendUrl({ backendUrl: newUrl, validator, meta })
-        } catch ( e ) {
-            assert.fail( 'unexpected exception: ' + e )
+            await call_setBackendUrl({backendUrl: newUrl, validator, meta})
+        } catch (e) {
+            assert.fail('unexpected exception: ' + e)
         }
 
         // expect
-        const validatorMeta = await mevPaymentProg.account.validatorMeta.fetch( meta )
-        assert.equal( validatorMeta.bump, metaBump )
-        assert.equal( validatorMeta.backendUrl, newUrl )
+        const validatorMeta = await tipPaymentProg.account.validatorMeta.fetch(meta)
+        assert.equal(validatorMeta.bump, metaBump)
+        assert.equal(validatorMeta.backendUrl, newUrl)
     })
-    it( '#close_validator_meta_account happy path', async () => {
+    it('#close_validator_meta_account happy path', async () => {
         // given
         const backendUrl = 'eu.jito.wtf/mempool'
         const extraSpace = backendUrl.length
-        const { validator, meta, metaBump } =
-            await setup_closeValidatorMetaAccount({
-                extraSpace,
-                backendUrl,
-                systemProgram: SystemProgram.programId,
-            })
+        const {validator, meta, metaBump} = await setup_closeValidatorMetaAccount({
+            extraSpace, backendUrl, systemProgram: SystemProgram.programId,
+        })
 
         // then
         try {
-            await call_closeValidatorMetaAccount({ validator, meta })
-        } catch ( e ) {
-            assert.fail( 'unexpected exception: ' + e )
+            await call_closeValidatorMetaAccount({validator, meta})
+        } catch (e) {
+            assert.fail('unexpected exception: ' + e)
         }
 
         // expect
-        const closed = ( await mevPaymentProg.provider.connection.getAccountInfo( meta )) == null
-        assert( closed )
+        const closed = (await tipPaymentProg.provider.connection.getAccountInfo(meta)) == null
+        assert(closed)
     })
-    it( '#re-init happy path', async () => {
+    it('#re-init happy path', async () => {
         // given
         let backendUrl = 'eu.jito.wtf/mempool'
         let extraSpace = backendUrl.length
-        const { validator, meta, metaBump } =
-            await setup_closeValidatorMetaAccount({
-                extraSpace,
-                backendUrl,
-                systemProgram: SystemProgram.programId,
-            })
+        const {validator, meta, metaBump} = await setup_closeValidatorMetaAccount({
+            extraSpace, backendUrl, systemProgram: SystemProgram.programId,
+        })
         // close account
-        await call_closeValidatorMetaAccount({ validator, meta })
+        await call_closeValidatorMetaAccount({validator, meta})
 
         // then re-init
         backendUrl = backendUrl + '/bundles'
         extraSpace = backendUrl.length
         try {
             await call_initValidatorMeta({
-                validator,
-                backendUrl,
-                meta,
-                metaBump,
-                extraSpace,
-                systemProgram: SystemProgram.programId,
+                validator, backendUrl, meta, metaBump, extraSpace, systemProgram: SystemProgram.programId,
             })
-        } catch ( e ) {
-            assert.fail( 'unexpected exception: ' + e )
+        } catch (e) {
+            assert.fail('unexpected exception: ' + e)
         }
 
         // expect
-        const validatorMeta = await mevPaymentProg.account.validatorMeta.fetch( meta )
-        assert.equal( validatorMeta.bump, metaBump )
-        assert.equal( validatorMeta.backendUrl, backendUrl )
+        const validatorMeta = await tipPaymentProg.account.validatorMeta.fetch(meta)
+        assert.equal(validatorMeta.bump, metaBump)
+        assert.equal(validatorMeta.backendUrl, backendUrl)
     })
 })
 
@@ -486,160 +382,111 @@ describe( 'tests mev_payment', () => {
 
 const setup_initValidatorMeta = async () => {
     const validator = anchor.web3.Keypair.generate()
-    await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(
-            validator.publicKey, 10000000000000
-        ),
-        'confirmed',
-    )
-    const [meta, metaBump] = await anchor.web3.PublicKey.findProgramAddress(
-        [Buffer.from( validatorMetaSeed, 'utf8' ), validator.publicKey.toBuffer()],
-        mevPaymentProg.programId,
-    )
+    await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(validator.publicKey, 10000000000000), 'confirmed',)
+    const [meta, metaBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(validatorMetaSeed, 'utf8'), validator.publicKey.toBuffer()], tipPaymentProg.programId,)
 
     return {
-        validator,
-        meta,
-        metaBump,
+        validator, meta, metaBump,
     }
 }
 
-const call_initValidatorMeta = async ({ backendUrl, extraSpace, metaBump, validator, meta, systemProgram }) => {
-    return await mevPaymentProg.rpc.initValidatorMeta(
-        backendUrl,
-        extraSpace,
-        metaBump,
-        {
-            accounts: {
-                validator: validator.publicKey,
-                systemProgram,
-                meta,
-            },
-            signers: [validator],
-        },
-    )
+const call_initValidatorMeta = async ({backendUrl, extraSpace, metaBump, validator, meta, systemProgram}) => {
+    return await tipPaymentProg.rpc.initValidatorMeta(backendUrl, extraSpace, metaBump, {
+        accounts: {
+            validator: validator.publicKey, systemProgram, meta,
+        }, signers: [validator],
+    },)
 }
 
-const call_setBackendUrl = async ({ backendUrl, validator, meta }) => {
-    return await mevPaymentProg.rpc.setBackendUrl(
-        backendUrl,
-        {
-            accounts: {
-                validator: validator.publicKey,
-                meta,
-            },
-            signers: [validator],
-        },
-    )
+const call_setBackendUrl = async ({backendUrl, validator, meta}) => {
+    return await tipPaymentProg.rpc.setBackendUrl(backendUrl, {
+        accounts: {
+            validator: validator.publicKey, meta,
+        }, signers: [validator],
+    },)
 }
 
-const setup_setBackendUrl = async ({ extraSpace, backendUrl, systemProgram }) => {
-    return await initValidatorMeta({ backendUrl, extraSpace, systemProgram })
+const setup_setBackendUrl = async ({extraSpace, backendUrl, systemProgram}) => {
+    return await initValidatorMeta({backendUrl, extraSpace, systemProgram})
 }
 
-const setup_closeValidatorMetaAccount = async ({ extraSpace, backendUrl, systemProgram }) => {
-    return await initValidatorMeta({ backendUrl, extraSpace, systemProgram })
+const setup_closeValidatorMetaAccount = async ({extraSpace, backendUrl, systemProgram}) => {
+    return await initValidatorMeta({backendUrl, extraSpace, systemProgram})
 }
 
-const call_closeValidatorMetaAccount = async ({ validator, meta }) => {
-    return await mevPaymentProg.rpc.closeValidatorMetaAccount(
-        {
-            accounts: {
-                validator: validator.publicKey,
-                meta,
-            },
-            signers: [validator],
-        },
-    )
+const call_closeValidatorMetaAccount = async ({validator, meta}) => {
+    return await tipPaymentProg.rpc.closeValidatorMetaAccount({
+        accounts: {
+            validator: validator.publicKey, meta,
+        }, signers: [validator],
+    },)
 }
 
 // helper function that initializes a ValidatorMeta account
-const initValidatorMeta = async ({ backendUrl, extraSpace, systemProgram }) => {
+const initValidatorMeta = async ({backendUrl, extraSpace, systemProgram}) => {
     const {
-        validator,
-        meta,
-        metaBump,
+        validator, meta, metaBump,
     } = await setup_initValidatorMeta()
 
     await call_initValidatorMeta({
-        validator,
-        backendUrl,
-        meta,
-        metaBump,
-        extraSpace,
-        systemProgram,
+        validator, backendUrl, meta, metaBump, extraSpace, systemProgram,
     })
 
     return {
-        validator,
-        meta,
-        metaBump,
+        validator, meta, metaBump,
     }
 }
 
-const assertErr = ({ err, msg }) => {
-    assert( !!err && !!err.msg )
-    assert.equal( err.msg, msg )
+const assertErr = ({err, msg}) => {
+    assert(!!err && !!err.msg)
+    assert.equal(err.msg, msg)
 }
 
-const getBadMevPaymentAccounts = async ( n ) => {
-    const badMevPaymentAccount = anchor.web3.Keypair.generate().publicKey
-    await provider.connection.confirmTransaction(
-        await provider.connection.requestAirdrop(
-            badMevPaymentAccount, 100000000000
-        ),
-        'confirmed',
-    )
+const getBadTipPaymentAccounts = async (n) => {
+    const badTipPaymentAccount = anchor.web3.Keypair.generate().publicKey
+    await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(badTipPaymentAccount, 100000000000), 'confirmed',)
     let accs = {
-        mevPaymentAccount1,
-        mevPaymentAccount2,
-        mevPaymentAccount3,
-        mevPaymentAccount4,
-        mevPaymentAccount5,
-        mevPaymentAccount6,
-        mevPaymentAccount7,
-        mevPaymentAccount8,
+        tipPaymentAccount1: tipPaymentAccount1,
+        tipPaymentAccount2: tipPaymentAccount2,
+        tipPaymentAccount3: tipPaymentAccount3,
+        tipPaymentAccount4: tipPaymentAccount4,
+        tipPaymentAccount5: tipPaymentAccount5,
+        tipPaymentAccount6: tipPaymentAccount6,
+        tipPaymentAccount7: tipPaymentAccount7,
+        tipPaymentAccount8: tipPaymentAccount8,
     }
-    switch ( n + 1 ) {
+    switch (n + 1) {
         case 1:
             return {
-                ...accs,
-                mevPaymentAccount1: badMevPaymentAccount,
+                ...accs, tipPaymentAccount1: badTipPaymentAccount,
             }
         case 2:
             return {
-                ...accs,
-                mevPaymentAccount2: badMevPaymentAccount,
+                ...accs, tipPaymentAccount2: badTipPaymentAccount,
             }
         case 3:
             return {
-                ...accs,
-                mevPaymentAccount3: badMevPaymentAccount,
+                ...accs, tipPaymentAccount3: badTipPaymentAccount,
             }
         case 4:
             return {
-                ...accs,
-                mevPaymentAccount4: badMevPaymentAccount,
+                ...accs, tipPaymentAccount4: badTipPaymentAccount,
             }
         case 5:
             return {
-                ...accs,
-                mevPaymentAccount5: badMevPaymentAccount,
+                ...accs, tipPaymentAccount5: badTipPaymentAccount,
             }
         case 6:
             return {
-                ...accs,
-                mevPaymentAccount6: badMevPaymentAccount,
+                ...accs, tipPaymentAccount6: badTipPaymentAccount,
             }
         case 7:
             return {
-                ...accs,
-                mevPaymentAccount7: badMevPaymentAccount,
+                ...accs, tipPaymentAccount7: badTipPaymentAccount,
             }
         case 8:
             return {
-                ...accs,
-                mevPaymentAccount8: badMevPaymentAccount,
+                ...accs, tipPaymentAccount8: badTipPaymentAccount,
             }
         default:
             return undefined

@@ -85,14 +85,14 @@ pub mod tip_payment {
         let pre_lamports = ctx.accounts.tip_receiver.lamports();
         **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? =
             pre_lamports.checked_add(total_tips).expect(&*format!(
-                "claim_tips overflow: [tip_claimer: {}, pre_lamports: {}, total_tips: {}]",
+                "claim_tips overflow: [tip_receiver: {}, pre_lamports: {}, total_tips: {}]",
                 ctx.accounts.tip_receiver.key(),
                 pre_lamports,
                 total_tips,
             ));
 
         emit!(TipsClaimed {
-            by: ctx.accounts.claimer.key(),
+            by: ctx.accounts.signer.key(),
             to: ctx.accounts.tip_receiver.key(),
             amount: total_tips,
         });
@@ -124,7 +124,7 @@ pub mod tip_payment {
         // set new funding account
         ctx.accounts.config.tip_receiver = ctx.accounts.new_tip_receiver.key();
 
-        emit!(TipClaimerUpdated {
+        emit!(TipReceiverUpdate {
             new_tip_receiver: ctx.accounts.new_tip_receiver.key(),
             old_tip_receiver: ctx.accounts.old_tip_receiver.key(),
         });
@@ -240,7 +240,10 @@ pub struct Initialize<'info> {
 #[derive(Accounts)]
 pub struct ClaimTips<'info> {
     #[account(
-        constraint = config.tip_receiver == tip_receiver.key(),
+        mut,
+        seeds = [CONFIG_ACCOUNT_SEED],
+        bump = config.bumps.config,
+        rent_exempt = enforce
     )]
     pub config: Account<'info, Config>,
     #[account(
@@ -301,10 +304,12 @@ pub struct ClaimTips<'info> {
     pub tip_payment_account_8: Account<'info, TipPaymentAccount>,
     /// CHECK: this is the account that is configured to receive tips, which is constantly rotating and
     /// can be an account with a private key to a PDA owned by some other program.
-    #[account(mut)]
+    #[account(mut,
+        constraint = config.tip_receiver == tip_receiver.key(),
+    )]
     pub tip_receiver: AccountInfo<'info>,
     #[account(mut)]
-    pub claimer: Signer<'info>,
+    pub signer: Signer<'info>,
 }
 
 #[derive(Accounts)]
@@ -371,12 +376,12 @@ pub struct ChangeTipReceiver<'info> {
     )]
     pub config: Account<'info, Config>,
 
-    /// CHECK: constraint check above. old tip claimer gets tokens transferred to them before
-    /// new tip claimer.
+    /// CHECK: constraint check above. old tip receiver gets tokens transferred to them before
+    /// new tip receiver.
     #[account(mut)]
     pub old_tip_receiver: AccountInfo<'info>,
 
-    /// CHECK: any new account is allowed as a tip claimer.
+    /// CHECK: any new account is allowed as a tip receiver.
     pub new_tip_receiver: AccountInfo<'info>,
     #[account(
         mut,
@@ -543,7 +548,7 @@ pub struct TipsClaimed {
 }
 
 #[event]
-pub struct TipClaimerUpdated {
+pub struct TipReceiverUpdate {
     new_tip_receiver: Pubkey,
     old_tip_receiver: Pubkey,
 }

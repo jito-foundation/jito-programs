@@ -2,7 +2,7 @@
 #seeds = false
 
 [programs.localnet]
-mev_payment = "Ek3SBXmGDvyvCGPYb98du8CNNjTomyiuc1wh7dMBw8gk"
+tip_payment = "Ek3SBXmGDvyvCGPYb98du8CNNjTomyiuc1wh7dMBw8gk"
 
 [registry]
 url = "https://anchor.projectserum.com"
