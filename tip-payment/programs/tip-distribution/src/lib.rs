@@ -1,5 +1,5 @@
-mod merkle_proof;
-mod state;
+pub mod merkle_proof;
+pub mod state;
 
 use anchor_lang::prelude::*;
 
@@ -53,8 +53,11 @@ pub mod tip_distribution {
         distribution_acc.validator_commission_bps = validator_commission_bps;
         distribution_acc.merkle_root_upload_authority = merkle_root_upload_authority;
         distribution_acc.merkle_root = None;
-
         distribution_acc.validate()?;
+
+        emit!(TipDistributionAccountInitializedEvent {
+            tip_distribution_account: distribution_acc.key(),
+        });
 
         Ok(())
     }
@@ -72,8 +75,15 @@ pub mod tip_distribution {
             return Err(InvalidValidatorCommissionFeeBps.into());
         }
 
+        let old_commission_bps = distribution_acc.validator_commission_bps;
         distribution_acc.validator_commission_bps = new_validator_commission_bps;
         distribution_acc.validate()?;
+
+        emit!(ValidatorCommissionBpsUpdatedEvent {
+            tip_distribution_account: distribution_acc.key(),
+            old_commission_bps,
+            new_commission_bps: new_validator_commission_bps,
+        });
 
         Ok(())
     }
@@ -85,8 +95,14 @@ pub mod tip_distribution {
         new_merkle_root_upload_authority: Pubkey,
     ) -> Result<()> {
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
+        let old_authority = distribution_acc.merkle_root_upload_authority;
         distribution_acc.merkle_root_upload_authority = new_merkle_root_upload_authority;
         distribution_acc.validate()?;
+
+        emit!(MerkleRootUploadAuthorityUpdatedEvent {
+            old_authority,
+            new_authority: new_merkle_root_upload_authority
+        });
 
         Ok(())
     }
@@ -99,6 +115,10 @@ pub mod tip_distribution {
         config.num_epochs_valid = new_config.num_epochs_valid;
         config.max_validator_commission_bps = new_config.max_validator_commission_bps;
         config.validate()?;
+
+        emit!(ConfigUpdatedEvent {
+            authority: ctx.accounts.authority.key(),
+        });
 
         Ok(())
     }
@@ -137,6 +157,11 @@ pub mod tip_distribution {
         });
         distribution_acc.validate()?;
 
+        emit!(MerkleRootUploadedEvent {
+            merkle_root_upload_authority: ctx.accounts.merkle_root_upload_authority.key(),
+            tip_distribution_account: distribution_acc.key(),
+        });
+
         Ok(())
     }
 
@@ -151,11 +176,17 @@ pub mod tip_distribution {
 
         let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
         if tip_distribution_account.is_expired(&ctx.accounts.config, current_epoch) {
-            TipDistributionAccount::claim_expired(
+            let expired_amount = TipDistributionAccount::claim_expired(
                 tip_distribution_account.to_account_info(),
                 ctx.accounts.expired_funds_account.to_account_info(),
             )?;
             tip_distribution_account.validate()?;
+
+            emit!(TipDistributionAccountClosedEvent {
+                expired_funds_account: ctx.accounts.expired_funds_account.key(),
+                tip_distribution_account: tip_distribution_account.key(),
+                expired_amount,
+            });
 
             Ok(())
         } else {
@@ -214,6 +245,7 @@ pub mod tip_distribution {
         }
 
         emit!(ClaimedEvent {
+            tip_distribution_account: tip_distribution_account.key(),
             index,
             claimant: claimant_account.key(),
             amount
@@ -267,12 +299,12 @@ pub enum ErrorCode {
 #[derive(Accounts)]
 pub struct Initialize<'info> {
     #[account(
-        init,
-        seeds = [Config::SEED],
-        bump,
-        payer = initializer,
-        space = Config::SIZE,
-        rent_exempt = enforce
+    init,
+    seeds = [Config::SEED],
+    bump,
+    payer = initializer,
+    space = Config::SIZE,
+    rent_exempt = enforce
     )]
     pub config: Account<'info, Config>,
 
@@ -287,16 +319,16 @@ pub struct InitTipDistributionAccount<'info> {
     pub config: Account<'info, Config>,
 
     #[account(
-        init,
-        seeds = [
-            TipDistributionAccount::SEED,
-            validator_vote_account.key().as_ref(),
-            Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
-        ],
-        bump,
-        payer = validator_vote_account,
-        space = TipDistributionAccount::SIZE,
-        rent_exempt = enforce
+    init,
+    seeds = [
+    TipDistributionAccount::SEED,
+    validator_vote_account.key().as_ref(),
+    Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
+    ],
+    bump,
+    payer = validator_vote_account,
+    space = TipDistributionAccount::SIZE,
+    rent_exempt = enforce
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
@@ -309,9 +341,9 @@ pub struct InitTipDistributionAccount<'info> {
 #[derive(Accounts)]
 pub struct SetMerkleRootUploadAuthority<'info> {
     #[account(
-        mut,
-        rent_exempt = enforce,
-        constraint = tip_distribution_account.validator_vote_pubkey == validator_vote_account.key() @ ErrorCode::Unauthorized
+    mut,
+    rent_exempt = enforce,
+    constraint = tip_distribution_account.validator_vote_pubkey == validator_vote_account.key() @ ErrorCode::Unauthorized
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
@@ -324,9 +356,9 @@ pub struct SetValidatorCommissionBps<'info> {
     pub config: Account<'info, Config>,
 
     #[account(
-        mut,
-        rent_exempt = enforce,
-        constraint = tip_distribution_account.validator_vote_pubkey == validator_vote_account.key() @ ErrorCode::Unauthorized
+    mut,
+    rent_exempt = enforce,
+    constraint = tip_distribution_account.validator_vote_pubkey == validator_vote_account.key() @ ErrorCode::Unauthorized
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
@@ -350,20 +382,20 @@ pub struct CloseTipDistributionAccount<'info> {
 
     /// CHECK: safe see constraint check
     #[account(
-        mut,
-        constraint = config.expired_funds_account == expired_funds_account.key()
+    mut,
+    constraint = config.expired_funds_account == expired_funds_account.key()
     )]
     pub expired_funds_account: AccountInfo<'info>,
 
     #[account(
-        mut,
-        close = validator_vote_account,
-        seeds = [
-            TipDistributionAccount::SEED,
-            validator_vote_account.key().as_ref(),
-            epoch.to_le_bytes().as_ref(),
-        ],
-        bump,
+    mut,
+    close = validator_vote_account,
+    seeds = [
+    TipDistributionAccount::SEED,
+    validator_vote_account.key().as_ref(),
+    epoch.to_le_bytes().as_ref(),
+    ],
+    bump,
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
@@ -386,16 +418,16 @@ pub struct Claim<'info> {
 
     /// Status of the claim. Used to prevent the same party from claiming multiple times.
     #[account(
-        init,
-        rent_exempt = enforce,
-        seeds = [
-            ClaimStatus::SEED,
-            index.to_le_bytes().as_ref(),
-            tip_distribution_account.key().as_ref()
-        ],
-        bump,
-        space = ClaimStatus::SIZE,
-        payer = payer
+    init,
+    rent_exempt = enforce,
+    seeds = [
+    ClaimStatus::SEED,
+    index.to_le_bytes().as_ref(),
+    tip_distribution_account.key().as_ref()
+    ],
+    bump,
+    space = ClaimStatus::SIZE,
+    payer = payer
     )]
     pub claim_status: Account<'info, ClaimStatus>,
 
@@ -418,21 +450,70 @@ pub struct UploadMerkleRoot<'info> {
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
     #[account(
-        mut,
-        constraint = merkle_root_upload_authority.key() == tip_distribution_account.merkle_root_upload_authority
+    mut,
+    constraint = merkle_root_upload_authority.key() == tip_distribution_account.merkle_root_upload_authority
     )]
     pub merkle_root_upload_authority: Signer<'info>,
 }
 
 // Events
 
-/// Emitted when funds are claimed.
+#[event]
+pub struct TipDistributionAccountInitializedEvent {
+    pub tip_distribution_account: Pubkey,
+}
+
+#[event]
+pub struct ValidatorCommissionBpsUpdatedEvent {
+    pub tip_distribution_account: Pubkey,
+    pub old_commission_bps: u16,
+    pub new_commission_bps: u16,
+}
+
+#[event]
+pub struct MerkleRootUploadAuthorityUpdatedEvent {
+    pub old_authority: Pubkey,
+    pub new_authority: Pubkey,
+}
+
+#[event]
+pub struct ConfigUpdatedEvent {
+    /// Who updated it.
+    authority: Pubkey,
+}
+
 #[event]
 pub struct ClaimedEvent {
-    /// Index of the claim.
-    pub index: u64,
+    /// [TipDistributionAccount] claimed from.
+    pub tip_distribution_account: Pubkey,
+
     /// User that claimed.
     pub claimant: Pubkey,
+
+    /// Index of the claim.
+    pub index: u64,
+
     /// Amount of funds to distribute.
     pub amount: u64,
+}
+
+#[event]
+pub struct MerkleRootUploadedEvent {
+    /// Who uploaded to root.
+    pub merkle_root_upload_authority: Pubkey,
+
+    /// Where the root was uploaded to.
+    pub tip_distribution_account: Pubkey,
+}
+
+#[event]
+pub struct TipDistributionAccountClosedEvent {
+    /// Account where unclaimed funds were transferred to.
+    pub expired_funds_account: Pubkey,
+
+    /// [TipDistributionAccount] closed.
+    pub tip_distribution_account: Pubkey,
+
+    /// Unclaimed amount transferred.
+    pub expired_amount: u64,
 }

@@ -104,12 +104,13 @@ impl TipDistributionAccount {
         self.epoch_created_at + config.num_epochs_valid <= current_epoch
     }
 
-    pub fn claim_expired(from: AccountInfo, to: AccountInfo) -> Result<()> {
+    pub fn claim_expired(from: AccountInfo, to: AccountInfo) -> Result<u64> {
         let rent = Rent::get()?;
         let min_rent_lamports = rent.minimum_balance(TipDistributionAccount::SIZE);
         let amount = from.lamports().checked_sub(min_rent_lamports).unwrap();
+        Self::checked_transfer(from, to, amount, min_rent_lamports)?;
 
-        Self::checked_transfer(from, to, amount, min_rent_lamports)
+        Ok(amount)
     }
 
     pub fn claim(from: AccountInfo, to: AccountInfo, amount: u64) -> Result<()> {
