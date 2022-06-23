@@ -30,14 +30,14 @@ jobs:
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install --git https://github.com/project-serum/anchor --tag v0.20.1 anchor-cli --locked --force
-      - run: cd mev-payment && yarn
+      - run: cd tip-payment && yarn
       - run: yarn global add mocha@^9.0.3
       - name: test
-        working-directory: ./mev-payment
+        working-directory: ./tip-payment
         run: anchor test
       - uses: reinismu/clippy-check@master
         with:
-          working-directory: ./mev-payment/programs
+          working-directory: ./tip-payment/programs
           token: ${{ secrets.GITHUB_TOKEN }}
   soteria:
     needs: build-and-test
@@ -52,5 +52,5 @@ jobs:
         with:
           toolchain: nightly
           override: true
-      - run: cd ./mev-payment && sh -c "$(curl -k https://supercompiler.xyz/install)" && cargo build-bpf
-      - run: cd ./mev-payment && ./soteria-linux-develop/bin/soteria -analyzeAll .
+      - run: cd ./tip-payment && sh -c "$(curl -k https://supercompiler.xyz/install)" && cargo build-bpf
+      - run: cd ./tip-payment && ./soteria-linux-develop/bin/soteria -analyzeAll .

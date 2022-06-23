@@ -6,6 +6,7 @@ const CONFIG_ACCOUNT_LEN = 8 + 9 + 32 // 8 for anchor header, 9 for bumps, 32 fo
 const TIP_PAYMENT_ACCOUNT_LEN = 8  // 8 for header
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
+const tipSeed0 = 'TIP_ACCOUNT_0'
 const tipSeed1 = 'TIP_ACCOUNT_1'
 const tipSeed2 = 'TIP_ACCOUNT_2'
 const tipSeed3 = 'TIP_ACCOUNT_3'
@@ -13,11 +14,10 @@ const tipSeed4 = 'TIP_ACCOUNT_4'
 const tipSeed5 = 'TIP_ACCOUNT_5'
 const tipSeed6 = 'TIP_ACCOUNT_6'
 const tipSeed7 = 'TIP_ACCOUNT_7'
-const tipSeed8 = 'TIP_ACCOUNT_8'
 const validatorMetaSeed = 'VALIDATOR_META'
-let configAccount, configAccountBump, tipPaymentAccount1, tipBump1, tipPaymentAccount2, tipBump2, tipPaymentAccount3,
+let configAccount, configAccountBump, tipPaymentAccount0, tipBump0, tipPaymentAccount1, tipBump1, tipPaymentAccount2, tipBump2, tipPaymentAccount3,
     tipBump3, tipPaymentAccount4, tipBump4, tipPaymentAccount5, tipBump5, tipPaymentAccount6, tipBump6,
-    tipPaymentAccount7, tipBump7, tipPaymentAccount8, tipBump8
+    tipPaymentAccount7, tipBump7
 
 const provider = anchor.AnchorProvider.local(null, {commitment: 'confirmed', preflightCommitment: 'confirmed'},)
 anchor.setProvider(provider)
@@ -39,6 +39,9 @@ describe('tests tip_payment', () => {
         const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(configAccountSeed, 'utf8')], tipPaymentProg.programId,)
         configAccount = _configAccount
         configAccountBump = _configAccountBump
+        const [_tipPaymentAccount0, _tipBump0] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed0, 'utf8')], tipPaymentProg.programId,)
+        tipPaymentAccount0 = _tipPaymentAccount0
+        tipBump0 = _tipBump0
         const [_tipPaymentAccount1, _tipBump1] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed1, 'utf8')], tipPaymentProg.programId,)
         tipPaymentAccount1 = _tipPaymentAccount1
         tipBump1 = _tipBump1
@@ -60,9 +63,6 @@ describe('tests tip_payment', () => {
         const [_tipPaymentAccount7, _tipBump7] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed7, 'utf8')], tipPaymentProg.programId,)
         tipPaymentAccount7 = _tipPaymentAccount7
         tipBump7 = _tipBump7
-        const [_tipPaymentAccount8, _tipBump8] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(tipSeed8, 'utf8')], tipPaymentProg.programId,)
-        tipPaymentAccount8 = _tipPaymentAccount8
-        tipBump8 = _tipBump8
 
         await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(initializerKeys.publicKey, 100000000000000), 'confirmed',)
     })
@@ -83,17 +83,16 @@ describe('tests tip_payment', () => {
     }
     it('#initialize happy path', async () => {
         try {
-
             await tipPaymentProg.rpc.initialize({
                 configAccountBump, // config
-                tipBump1: tipBump1, // tip_payment_account_1
+                tipBump0: tipBump0,
+                tipBump1: tipBump1,
                 tipBump2: tipBump2,
                 tipBump3: tipBump3,
                 tipBump4: tipBump4,
                 tipBump5: tipBump5,
                 tipBump6: tipBump6,
                 tipBump7: tipBump7,
-                tipBump8: tipBump8, // tip_payment_account_8
             }, {
                 accounts: {
                     config: configAccount,
@@ -104,7 +103,7 @@ describe('tests tip_payment', () => {
                     tipPaymentAccount5: tipPaymentAccount5,
                     tipPaymentAccount6: tipPaymentAccount6,
                     tipPaymentAccount7: tipPaymentAccount7,
-                    tipPaymentAccount8: tipPaymentAccount8,
+                    tipPaymentAccount0: tipPaymentAccount0,
                     systemProgram: SystemProgram.programId,
                     payer: initializerKeys.publicKey,
                 }, signers: [initializerKeys],
@@ -132,7 +131,7 @@ describe('tests tip_payment', () => {
                 tipPaymentAccount5: tipPaymentAccount5,
                 tipPaymentAccount6: tipPaymentAccount6,
                 tipPaymentAccount7: tipPaymentAccount7,
-                tipPaymentAccount8: tipPaymentAccount8,
+                tipPaymentAccount0: tipPaymentAccount0,
                 signer: initializerKeys.publicKey,
             }, signers: [initializerKeys],
         },)
@@ -156,7 +155,7 @@ describe('tests tip_payment', () => {
                     tipPaymentAccount5: tipPaymentAccount5,
                     tipPaymentAccount6: tipPaymentAccount6,
                     tipPaymentAccount7: tipPaymentAccount7,
-                    tipPaymentAccount8: tipPaymentAccount8,
+                    tipPaymentAccount0: tipPaymentAccount0,
                     signer: initializerKeys.publicKey,
                 }, signers: [initializerKeys],
             },)
@@ -178,7 +177,7 @@ describe('tests tip_payment', () => {
                     tipPaymentAccount5: tipPaymentAccount5,
                     tipPaymentAccount6: tipPaymentAccount6,
                     tipPaymentAccount7: tipPaymentAccount7,
-                    tipPaymentAccount8: tipPaymentAccount8,
+                    tipPaymentAccount0: tipPaymentAccount0,
                     tipReceiver: badTipReceiver,
                     signer: initializerKeys.publicKey,
                 }, signers: [initializerKeys],
@@ -226,7 +225,7 @@ describe('tests tip_payment', () => {
                 tipPaymentAccount5: tipPaymentAccount5,
                 tipPaymentAccount6: tipPaymentAccount6,
                 tipPaymentAccount7: tipPaymentAccount7,
-                tipPaymentAccount8: tipPaymentAccount8,
+                tipPaymentAccount0: tipPaymentAccount0,
                 tipReceiver: tipReceiver,
                 signer: signer.publicKey,
             }, signers: [signer],
@@ -260,7 +259,7 @@ describe('tests tip_payment', () => {
                 tipPaymentAccount5: tipPaymentAccount5,
                 tipPaymentAccount6: tipPaymentAccount6,
                 tipPaymentAccount7: tipPaymentAccount7,
-                tipPaymentAccount8: tipPaymentAccount8,
+                tipPaymentAccount0: tipPaymentAccount0,
             }, signers: [newLeader],
         },)
         await assertRentExemptAccounts()
@@ -446,6 +445,7 @@ const getBadTipPaymentAccounts = async (n) => {
     const badTipPaymentAccount = anchor.web3.Keypair.generate().publicKey
     await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(badTipPaymentAccount, 100000000000), 'confirmed',)
     let accs = {
+        tipPaymentAccount0: tipPaymentAccount0,
         tipPaymentAccount1: tipPaymentAccount1,
         tipPaymentAccount2: tipPaymentAccount2,
         tipPaymentAccount3: tipPaymentAccount3,
@@ -453,9 +453,12 @@ const getBadTipPaymentAccounts = async (n) => {
         tipPaymentAccount5: tipPaymentAccount5,
         tipPaymentAccount6: tipPaymentAccount6,
         tipPaymentAccount7: tipPaymentAccount7,
-        tipPaymentAccount8: tipPaymentAccount8,
     }
-    switch (n + 1) {
+    switch (n) {
+        case 0:
+            return {
+                ...accs, tipPaymentAccount0: badTipPaymentAccount,
+            }
         case 1:
             return {
                 ...accs, tipPaymentAccount1: badTipPaymentAccount,
@@ -483,10 +486,6 @@ const getBadTipPaymentAccounts = async (n) => {
         case 7:
             return {
                 ...accs, tipPaymentAccount7: badTipPaymentAccount,
-            }
-        case 8:
-            return {
-                ...accs, tipPaymentAccount8: badTipPaymentAccount,
             }
         default:
             return undefined
