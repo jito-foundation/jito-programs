@@ -287,7 +287,6 @@ pub fn close_tip_distribution_account_ix(
 pub struct ClaimArgs {
     pub proof: Vec<[u8; 32]>,
     pub amount: u64,
-    pub index: u64,
     pub bump: u8,
 }
 pub struct ClaimAccounts {
@@ -302,7 +301,6 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
     let ClaimArgs {
         proof,
         amount,
-        index,
         bump,
     } = args;
 
@@ -320,7 +318,6 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
         data: crate::instruction::Claim {
             proof,
             amount,
-            index,
             bump,
         }
         .data(),
