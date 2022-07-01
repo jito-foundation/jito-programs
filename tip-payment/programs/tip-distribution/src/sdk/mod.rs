@@ -1,3 +1,5 @@
+pub mod instruction;
+
 use anchor_lang::{prelude::Pubkey, solana_program::clock::Epoch};
 
 use crate::TipDistributionAccount;
