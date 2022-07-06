@@ -4,7 +4,10 @@ pub mod state;
 
 use anchor_lang::prelude::*;
 
-use crate::state::{ClaimStatus, Config, MerkleRoot, TipDistributionAccount};
+use crate::{
+    state::{ClaimStatus, Config, MerkleRoot, TipDistributionAccount},
+    ErrorCode::Unauthorized,
+};
 
 declare_id!("Bqw8hzRC4CQro7rrmssXSepUjZ4yysYqg7UHZN3dkDRJ");
 
@@ -69,6 +72,8 @@ pub mod tip_distribution {
         ctx: Context<SetValidatorCommissionBps>,
         new_validator_commission_bps: u16,
     ) -> Result<()> {
+        SetValidatorCommissionBps::auth(&ctx)?;
+
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
         if !(new_validator_commission_bps <= ctx.accounts.config.max_validator_commission_bps
             && new_validator_commission_bps > 0)
@@ -95,6 +100,8 @@ pub mod tip_distribution {
         ctx: Context<SetMerkleRootUploadAuthority>,
         new_merkle_root_upload_authority: Pubkey,
     ) -> Result<()> {
+        SetMerkleRootUploadAuthority::auth(&ctx)?;
+
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
         let old_authority = distribution_acc.merkle_root_upload_authority;
         distribution_acc.merkle_root_upload_authority = new_merkle_root_upload_authority;
@@ -110,6 +117,8 @@ pub mod tip_distribution {
 
     /// Update config fields. Only the [Config] authority can invoke this.
     pub fn update_config(ctx: Context<UpdateConfig>, new_config: Config) -> Result<()> {
+        UpdateConfig::auth(&ctx)?;
+
         let config = &mut ctx.accounts.config;
         config.authority = new_config.authority;
         config.expired_funds_account = new_config.expired_funds_account;
@@ -134,6 +143,8 @@ pub mod tip_distribution {
         max_total_claim: u64,
         max_num_nodes: u64,
     ) -> Result<()> {
+        UploadMerkleRoot::auth(&ctx)?;
+
         let current_epoch = Clock::get().unwrap().epoch;
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
 
@@ -173,6 +184,8 @@ pub mod tip_distribution {
         ctx: Context<CloseTipDistributionAccount>,
         _epoch: u64,
     ) -> Result<()> {
+        CloseTipDistributionAccount::auth(&ctx)?;
+
         let current_epoch = Clock::get().unwrap().epoch;
 
         let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
@@ -343,13 +356,24 @@ pub struct InitTipDistributionAccount<'info> {
 pub struct SetMerkleRootUploadAuthority<'info> {
     #[account(
         mut,
-        rent_exempt = enforce,
-        constraint = tip_distribution_account.validator_vote_pubkey == validator_vote_account.key() @ ErrorCode::Unauthorized
+        rent_exempt = enforce
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
     #[account(mut)]
     pub validator_vote_account: Signer<'info>,
+}
+
+impl SetMerkleRootUploadAuthority<'_> {
+    fn auth(ctx: &Context<SetMerkleRootUploadAuthority>) -> Result<()> {
+        if ctx.accounts.tip_distribution_account.validator_vote_pubkey
+            != ctx.accounts.validator_vote_account.key()
+        {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[derive(Accounts)]
@@ -358,8 +382,7 @@ pub struct SetValidatorCommissionBps<'info> {
 
     #[account(
         mut,
-        rent_exempt = enforce,
-        constraint = tip_distribution_account.validator_vote_pubkey == validator_vote_account.key() @ ErrorCode::Unauthorized
+        rent_exempt = enforce
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
@@ -367,13 +390,35 @@ pub struct SetValidatorCommissionBps<'info> {
     pub validator_vote_account: Signer<'info>,
 }
 
+impl SetValidatorCommissionBps<'_> {
+    fn auth(ctx: &Context<SetValidatorCommissionBps>) -> Result<()> {
+        if ctx.accounts.tip_distribution_account.validator_vote_pubkey
+            != ctx.accounts.validator_vote_account.key()
+        {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
+}
+
 #[derive(Accounts)]
 pub struct UpdateConfig<'info> {
     #[account(mut, rent_exempt = enforce)]
     pub config: Account<'info, Config>,
 
-    #[account(mut, constraint = config.authority == authority.key() @ ErrorCode::Unauthorized)]
+    #[account(mut)]
     pub authority: Signer<'info>,
+}
+
+impl UpdateConfig<'_> {
+    fn auth(ctx: &Context<UpdateConfig>) -> Result<()> {
+        if ctx.accounts.config.authority != ctx.accounts.authority.key() {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[derive(Accounts)]
@@ -381,11 +426,8 @@ pub struct UpdateConfig<'info> {
 pub struct CloseTipDistributionAccount<'info> {
     pub config: Account<'info, Config>,
 
-    /// CHECK: safe see constraint check
-    #[account(
-        mut,
-        constraint = config.expired_funds_account == expired_funds_account.key()
-    )]
+    /// CHECK: safe see auth fn
+    #[account(mut)]
     pub expired_funds_account: AccountInfo<'info>,
 
     #[account(
@@ -400,13 +442,23 @@ pub struct CloseTipDistributionAccount<'info> {
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
-    /// CHECK: safe see above constraint
+    /// CHECK: safe see auth fn
     #[account(mut)]
     pub validator_vote_account: AccountInfo<'info>,
 
     /// Anyone can crank this instruction.
     #[account(mut)]
     pub signer: Signer<'info>,
+}
+
+impl CloseTipDistributionAccount<'_> {
+    fn auth(ctx: &Context<CloseTipDistributionAccount>) -> Result<()> {
+        if ctx.accounts.config.expired_funds_account != ctx.accounts.expired_funds_account.key() {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[derive(Accounts)]
@@ -455,6 +507,21 @@ pub struct UploadMerkleRoot<'info> {
         constraint = merkle_root_upload_authority.key() == tip_distribution_account.merkle_root_upload_authority
     )]
     pub merkle_root_upload_authority: Signer<'info>,
+}
+
+impl UploadMerkleRoot<'_> {
+    fn auth(ctx: &Context<UploadMerkleRoot>) -> Result<()> {
+        if ctx.accounts.merkle_root_upload_authority.key()
+            != ctx
+                .accounts
+                .tip_distribution_account
+                .merkle_root_upload_authority
+        {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
 }
 
 // Events
