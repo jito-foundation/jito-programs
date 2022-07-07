@@ -46,6 +46,7 @@ describe( 'tests tip_distribution', () => {
                 expiredFundsAccount.publicKey,
                 numEpochsValid,
                 maxValidatorCommissionBps,
+                configBump,
                 {
                     accounts: {
                         config: configAccount,
@@ -77,6 +78,7 @@ describe( 'tests tip_distribution', () => {
             maxValidatorCommissionBps: validatorCommissionBps,
             tipDistributionAccount,
             epochInfo,
+            bump,
         } = await setup_initTipDistributionAccount()
 
         // then
@@ -88,6 +90,7 @@ describe( 'tests tip_distribution', () => {
                 systemProgram: SystemProgram.programId,
                 validatorVoteAccount,
                 tipDistributionAccount,
+                bump,
             })
         } catch ( e ) {
             assert.fail( 'unexpected error: ' + e )
@@ -111,6 +114,7 @@ describe( 'tests tip_distribution', () => {
             validatorVoteAccount,
             maxValidatorCommissionBps,
             tipDistributionAccount,
+            bump,
         } = await setup_initTipDistributionAccount()
 
         // then
@@ -122,6 +126,7 @@ describe( 'tests tip_distribution', () => {
                 systemProgram: SystemProgram.programId,
                 validatorVoteAccount,
                 tipDistributionAccount,
+                bump,
             })
             assert.fail( 'expected exception to be thrown' )
         } catch ( e ) {
@@ -136,6 +141,7 @@ describe( 'tests tip_distribution', () => {
             maxValidatorCommissionBps,
             tipDistributionAccount,
             epochInfo,
+            bump,
         } = await setup_initTipDistributionAccount()
         await call_initTipDistributionAccount({
             validatorCommissionBps: maxValidatorCommissionBps,
@@ -144,6 +150,7 @@ describe( 'tests tip_distribution', () => {
             systemProgram: SystemProgram.programId,
             validatorVoteAccount,
             tipDistributionAccount,
+            bump,
         })
         const newMerkleRootUploader = anchor.web3.Keypair.generate().publicKey
 
@@ -179,6 +186,7 @@ describe( 'tests tip_distribution', () => {
             maxValidatorCommissionBps,
             tipDistributionAccount,
             epochInfo,
+            bump,
         } = await setup_initTipDistributionAccount()
         await call_initTipDistributionAccount({
             validatorCommissionBps: maxValidatorCommissionBps,
@@ -187,6 +195,7 @@ describe( 'tests tip_distribution', () => {
             merkleRootUploadAuthority: validatorVoteAccount.publicKey,
             validatorVoteAccount,
             tipDistributionAccount,
+            bump,
         })
         const newMerkleRootUploader = anchor.web3.Keypair.generate().publicKey
         const unAuthedSigner = await generateAccount( 1000 )
@@ -224,6 +233,7 @@ describe( 'tests tip_distribution', () => {
             maxValidatorCommissionBps,
             tipDistributionAccount,
             epochInfo,
+            bump,
         } = await setup_initTipDistributionAccount()
         await call_initTipDistributionAccount({
             validatorCommissionBps: maxValidatorCommissionBps,
@@ -232,6 +242,7 @@ describe( 'tests tip_distribution', () => {
             merkleRootUploadAuthority: validatorVoteAccount.publicKey,
             validatorVoteAccount,
             tipDistributionAccount,
+            bump,
         })
 
         const user0 = await generateAccount( 1000000 )
@@ -291,6 +302,7 @@ describe( 'tests tip_distribution', () => {
             validatorVoteAccount,
             maxValidatorCommissionBps,
             tipDistributionAccount,
+            bump,
         } = await setup_initTipDistributionAccount()
         await call_initTipDistributionAccount({
             validatorCommissionBps: maxValidatorCommissionBps,
@@ -299,6 +311,7 @@ describe( 'tests tip_distribution', () => {
             merkleRootUploadAuthority: validatorVoteAccount.publicKey,
             validatorVoteAccount,
             tipDistributionAccount,
+            bump,
         })
 
         const amount0 = 1_000_000
@@ -350,7 +363,7 @@ describe( 'tests tip_distribution', () => {
 
         try {
             await tipDistribution.rpc.claim(
-                index, amount, proof,
+                _bump, index, amount, proof,
                 {
                     accounts: {
                         config: configAccount,
@@ -434,10 +447,11 @@ const setup_initTipDistributionAccount = async () => {
 }
 
 const call_initTipDistributionAccount =
-    async ({ validatorCommissionBps, merkleRootUploadAuthority, config, systemProgram, validatorVoteAccount, tipDistributionAccount }) => {
+    async ({ validatorCommissionBps, merkleRootUploadAuthority, config, systemProgram, validatorVoteAccount, tipDistributionAccount, bump }) => {
     return await tipDistribution.rpc.initTipDistributionAccount(
         merkleRootUploadAuthority,
         validatorCommissionBps,
+        bump,
         {
             accounts: {
                 config,

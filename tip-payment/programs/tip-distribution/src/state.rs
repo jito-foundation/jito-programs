@@ -21,6 +21,9 @@ pub struct Config {
 
     /// The maximum commission a validator can set on their distribution account.
     pub max_validator_commission_bps: u16,
+
+    /// The bump used to generate this account
+    pub bump: u8,
 }
 
 /// The account that validators register as **tip_receiver** with the tip-payment program.
@@ -41,6 +44,9 @@ pub struct TipDistributionAccount {
 
     /// The commission basis points this validator charges.
     pub validator_commission_bps: u16,
+
+    /// The bump used to generate this account
+    pub bump: u8,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -169,6 +175,9 @@ pub struct ClaimStatus {
 
     /// Amount of funds claimed.
     pub amount: u64,
+
+    /// The bump used to generate this account
+    pub bump: u8,
 }
 
 impl ClaimStatus {

@@ -10,6 +10,7 @@ pub struct InitializeArgs {
     pub expired_funds_account: Pubkey,
     pub num_epochs_valid: u64,
     pub max_validator_commission_bps: u16,
+    pub bump: u8,
 }
 pub struct InitializeAccounts {
     pub config: Pubkey,
@@ -26,6 +27,7 @@ pub fn initialize_ix(
         expired_funds_account,
         num_epochs_valid,
         max_validator_commission_bps,
+        bump,
     } = args;
 
     let InitializeAccounts {
@@ -41,6 +43,7 @@ pub fn initialize_ix(
             expired_funds_account,
             num_epochs_valid,
             max_validator_commission_bps,
+            bump,
         }
         .data(),
         accounts: crate::accounts::Initialize {
@@ -55,6 +58,7 @@ pub fn initialize_ix(
 pub struct InitTipDistributionAccountArgs {
     pub merkle_root_upload_authority: Pubkey,
     pub validator_commission_bps: u16,
+    pub bump: u8,
 }
 pub struct InitTipDistributionAccountAccounts {
     pub config: Pubkey,
@@ -70,6 +74,7 @@ pub fn init_tip_distribution_account_ix(
     let InitTipDistributionAccountArgs {
         merkle_root_upload_authority,
         validator_commission_bps,
+        bump,
     } = args;
 
     let InitTipDistributionAccountAccounts {
@@ -84,6 +89,7 @@ pub fn init_tip_distribution_account_ix(
         data: crate::instruction::InitTipDistributionAccount {
             merkle_root_upload_authority,
             validator_commission_bps,
+            bump,
         }
         .data(),
         accounts: crate::accounts::InitTipDistributionAccount {
@@ -279,6 +285,7 @@ pub struct ClaimArgs {
     pub proof: Vec<[u8; 32]>,
     pub amount: u64,
     pub index: u64,
+    pub bump: u8,
 }
 pub struct ClaimAccounts {
     pub config: Pubkey,
@@ -293,6 +300,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
         proof,
         amount,
         index,
+        bump,
     } = args;
 
     let ClaimAccounts {
@@ -310,6 +318,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
             proof,
             amount,
             index,
+            bump,
         }
         .data(),
         accounts: crate::accounts::Claim {
