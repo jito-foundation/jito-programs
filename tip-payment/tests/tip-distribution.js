@@ -99,7 +99,7 @@ describe( 'tests tip_distribution', () => {
         // expect
         const actual = await tipDistribution.account.tipDistributionAccount.fetch( tipDistributionAccount )
         const expected = {
-            validatorVotePubkey: validatorVoteAccount.publicKey,
+            validatorVoteAccount: validatorVoteAccount.publicKey,
             epochCreatedAt: epochInfo.epoch,
             merkleRoot: undefined,
             merkleRootUploadAuthority: validatorVoteAccount.publicKey,
@@ -160,7 +160,7 @@ describe( 'tests tip_distribution', () => {
                 {
                     accounts: {
                         tipDistributionAccount,
-                        validatorVoteAccount: validatorVoteAccount.publicKey,
+                        signer: validatorVoteAccount.publicKey,
                     },
                     signers: [validatorVoteAccount],
                 },
@@ -171,7 +171,7 @@ describe( 'tests tip_distribution', () => {
 
         const actual = await tipDistribution.account.tipDistributionAccount.fetch( tipDistributionAccount )
         const expected = {
-            validatorVotePubkey: validatorVoteAccount.publicKey,
+            validatorVoteAccount: validatorVoteAccount.publicKey,
             epochCreatedAt: epochInfo.epoch,
             merkleRoot: undefined,
             merkleRootUploadAuthority: newMerkleRootUploader,
@@ -206,7 +206,7 @@ describe( 'tests tip_distribution', () => {
                 {
                     accounts: {
                         tipDistributionAccount,
-                        validatorVoteAccount: unAuthedSigner.publicKey,
+                        signer: unAuthedSigner.publicKey,
                     },
                     signers: [unAuthedSigner],
                 },
@@ -218,7 +218,7 @@ describe( 'tests tip_distribution', () => {
 
         const actual = await tipDistribution.account.tipDistributionAccount.fetch( tipDistributionAccount )
         const expected = {
-            validatorVotePubkey: validatorVoteAccount.publicKey,
+            validatorVoteAccount: validatorVoteAccount.publicKey,
             epochCreatedAt: epochInfo.epoch,
             merkleRoot: undefined,
             merkleRootUploadAuthority: validatorVoteAccount.publicKey,
@@ -282,7 +282,7 @@ describe( 'tests tip_distribution', () => {
 
         const actual = await tipDistribution.account.tipDistributionAccount.fetch( tipDistributionAccount )
         const expected = {
-            validatorVotePubkey: validatorVoteAccount.publicKey,
+            validatorVoteAccount: validatorVoteAccount.publicKey,
             epochCreatedAt: epochInfo.epoch,
             merkleRoot: {
                 root: [...root],
@@ -396,7 +396,7 @@ const assertConfigState = ( actual, expected ) => {
 }
 
 const assertDistributionAccount = ( actual, expected ) => {
-    assert.equal( actual.validatorVotePubkey.toString(), expected.validatorVotePubkey.toString())
+    assert.equal( actual.validatorVoteAccount.toString(), expected.validatorVoteAccount.toString())
     assert.equal( actual.merkleRootUploadAuthority.toString(), expected.merkleRootUploadAuthority.toString())
     assert.equal( actual.epochCreatedAt, expected.epochCreatedAt )
     assert.equal( actual.validatorCommissionBps, expected.validatorCommissionBps )
@@ -450,13 +450,14 @@ const call_initTipDistributionAccount =
     async ({ validatorCommissionBps, merkleRootUploadAuthority, config, systemProgram, validatorVoteAccount, tipDistributionAccount, bump }) => {
     return await tipDistribution.rpc.initTipDistributionAccount(
         merkleRootUploadAuthority,
+        validatorVoteAccount.publicKey,
         validatorCommissionBps,
         bump,
         {
             accounts: {
                 config,
                 systemProgram,
-                validatorVoteAccount: validatorVoteAccount.publicKey,
+                payer: validatorVoteAccount.publicKey,
                 tipDistributionAccount,
             },
             signers: [validatorVoteAccount],
