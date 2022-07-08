@@ -131,7 +131,7 @@ describe( 'tests tip_distribution', () => {
             assert.fail( 'expected exception to be thrown' )
         } catch ( e ) {
             // expect
-            assert( e.errorLogs[0].includes('Validator\'s commission basis points must be greater than 0 and less than or equal to the Config account\'s max_validator_commission_bps.' ))
+            assert( e.errorLogs[0].includes('Validator\'s commission basis points must be less than or equal to the Config account\'s max_validator_commission_bps.' ))
         }
     })
 

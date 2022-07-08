@@ -16,7 +16,7 @@ pub mod tip_distribution {
     use super::*;
     use crate::ErrorCode::{
         ExceedsMaxClaim, ExceedsMaxNumNodes, ExpiredTipDistributionAccount, FundsAlreadyClaimed,
-        InvalidProof, InvalidValidatorCommissionFeeBps, PrematureCloseTipDistributionAccount,
+        InvalidProof, MaxValidatorCommissionFeeBpsExceeded, PrematureCloseTipDistributionAccount,
         PrematureMerkleRootUpload, RootNotUploaded, Unauthorized,
     };
 
@@ -49,10 +49,8 @@ pub mod tip_distribution {
         validator_commission_bps: u16,
         bump: u8,
     ) -> Result<()> {
-        if !(validator_commission_bps <= ctx.accounts.config.max_validator_commission_bps
-            && validator_commission_bps > 0)
-        {
-            return Err(InvalidValidatorCommissionFeeBps.into());
+        if validator_commission_bps > ctx.accounts.config.max_validator_commission_bps {
+            return Err(MaxValidatorCommissionFeeBpsExceeded.into());
         }
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
@@ -80,10 +78,8 @@ pub mod tip_distribution {
         SetValidatorCommissionBps::auth(&ctx)?;
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
-        if !(new_validator_commission_bps <= ctx.accounts.config.max_validator_commission_bps
-            && new_validator_commission_bps > 0)
-        {
-            return Err(InvalidValidatorCommissionFeeBps.into());
+        if new_validator_commission_bps > ctx.accounts.config.max_validator_commission_bps {
+            return Err(MaxValidatorCommissionFeeBpsExceeded.into());
         }
 
         let old_commission_bps = distribution_acc.validator_commission_bps;
@@ -304,8 +300,8 @@ pub enum ErrorCode {
     #[msg("The given proof is invalid.")]
     InvalidProof,
 
-    #[msg("Validator's commission basis points must be greater than 0 and less than or equal to the Config account's max_validator_commission_bps.")]
-    InvalidValidatorCommissionFeeBps,
+    #[msg("Validator's commission basis points must be less than or equal to the Config account's max_validator_commission_bps.")]
+    MaxValidatorCommissionFeeBpsExceeded,
 
     #[msg("The given TipDistributionAccount is not ready to be closed.")]
     PrematureCloseTipDistributionAccount,
