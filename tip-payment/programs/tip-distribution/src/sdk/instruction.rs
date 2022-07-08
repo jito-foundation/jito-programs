@@ -10,6 +10,7 @@ pub struct InitializeArgs {
     pub expired_funds_account: Pubkey,
     pub num_epochs_valid: u64,
     pub max_validator_commission_bps: u16,
+    pub bump: u8,
 }
 pub struct InitializeAccounts {
     pub config: Pubkey,
@@ -26,6 +27,7 @@ pub fn initialize_ix(
         expired_funds_account,
         num_epochs_valid,
         max_validator_commission_bps,
+        bump,
     } = args;
 
     let InitializeAccounts {
@@ -41,6 +43,7 @@ pub fn initialize_ix(
             expired_funds_account,
             num_epochs_valid,
             max_validator_commission_bps,
+            bump,
         }
         .data(),
         accounts: crate::accounts::Initialize {
@@ -54,12 +57,14 @@ pub fn initialize_ix(
 
 pub struct InitTipDistributionAccountArgs {
     pub merkle_root_upload_authority: Pubkey,
+    pub validator_vote_account: Pubkey,
     pub validator_commission_bps: u16,
+    pub bump: u8,
 }
 pub struct InitTipDistributionAccountAccounts {
     pub config: Pubkey,
+    pub payer: Pubkey,
     pub tip_distribution_account: Pubkey,
-    pub validator_vote_account: Pubkey,
     pub system_program: Pubkey,
 }
 pub fn init_tip_distribution_account_ix(
@@ -69,28 +74,32 @@ pub fn init_tip_distribution_account_ix(
 ) -> Instruction {
     let InitTipDistributionAccountArgs {
         merkle_root_upload_authority,
+        validator_vote_account,
         validator_commission_bps,
+        bump,
     } = args;
 
     let InitTipDistributionAccountAccounts {
         config,
         tip_distribution_account,
-        validator_vote_account,
         system_program,
+        payer,
     } = accounts;
 
     Instruction {
         program_id,
         data: crate::instruction::InitTipDistributionAccount {
             merkle_root_upload_authority,
+            validator_vote_account,
             validator_commission_bps,
+            bump,
         }
         .data(),
         accounts: crate::accounts::InitTipDistributionAccount {
             config,
             tip_distribution_account,
-            validator_vote_account,
             system_program,
+            payer,
         }
         .to_account_metas(None),
     }
@@ -102,7 +111,7 @@ pub struct SetValidatorCommissionBpsArgs {
 pub struct SetValidatorCommissionBpsAccounts {
     pub config: Pubkey,
     pub tip_distribution_account: Pubkey,
-    pub validator_vote_account: Pubkey,
+    pub signer: Pubkey,
 }
 pub fn set_validator_commission_bps_ix(
     program_id: Pubkey,
@@ -116,7 +125,7 @@ pub fn set_validator_commission_bps_ix(
     let SetValidatorCommissionBpsAccounts {
         config,
         tip_distribution_account,
-        validator_vote_account,
+        signer,
     } = accounts;
 
     Instruction {
@@ -128,7 +137,7 @@ pub fn set_validator_commission_bps_ix(
         accounts: crate::accounts::SetValidatorCommissionBps {
             config,
             tip_distribution_account,
-            validator_vote_account,
+            signer,
         }
         .to_account_metas(None),
     }
@@ -139,7 +148,7 @@ pub struct SetMerkleRootUploadAuthorityArgs {
 }
 pub struct SetMerkleRootUploadAuthorityAccounts {
     pub tip_distribution_account: Pubkey,
-    pub validator_vote_account: Pubkey,
+    pub signer: Pubkey,
 }
 pub fn set_merkle_root_upload_authority_ix(
     program_id: Pubkey,
@@ -152,7 +161,7 @@ pub fn set_merkle_root_upload_authority_ix(
 
     let SetMerkleRootUploadAuthorityAccounts {
         tip_distribution_account,
-        validator_vote_account,
+        signer,
     } = accounts;
 
     Instruction {
@@ -163,7 +172,7 @@ pub fn set_merkle_root_upload_authority_ix(
         .data(),
         accounts: crate::accounts::SetMerkleRootUploadAuthority {
             tip_distribution_account,
-            validator_vote_account,
+            signer,
         }
         .to_account_metas(None),
     }
@@ -279,6 +288,7 @@ pub struct ClaimArgs {
     pub proof: Vec<[u8; 32]>,
     pub amount: u64,
     pub index: u64,
+    pub bump: u8,
 }
 pub struct ClaimAccounts {
     pub config: Pubkey,
@@ -293,6 +303,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
         proof,
         amount,
         index,
+        bump,
     } = args;
 
     let ClaimAccounts {
@@ -310,6 +321,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
             proof,
             amount,
             index,
+            bump,
         }
         .data(),
         accounts: crate::accounts::Claim {

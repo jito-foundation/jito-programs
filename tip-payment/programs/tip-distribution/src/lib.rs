@@ -27,12 +27,14 @@ pub mod tip_distribution {
         expired_funds_account: Pubkey,
         num_epochs_valid: u64,
         max_validator_commission_bps: u16,
+        bump: u8,
     ) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
         cfg.authority = authority;
         cfg.expired_funds_account = expired_funds_account;
         cfg.num_epochs_valid = num_epochs_valid;
         cfg.max_validator_commission_bps = max_validator_commission_bps;
+        cfg.bump = bump;
         cfg.validate()?;
 
         Ok(())
@@ -43,7 +45,9 @@ pub mod tip_distribution {
     pub fn init_tip_distribution_account(
         ctx: Context<InitTipDistributionAccount>,
         merkle_root_upload_authority: Pubkey,
+        validator_vote_account: Pubkey,
         validator_commission_bps: u16,
+        bump: u8,
     ) -> Result<()> {
         if !(validator_commission_bps <= ctx.accounts.config.max_validator_commission_bps
             && validator_commission_bps > 0)
@@ -52,11 +56,12 @@ pub mod tip_distribution {
         }
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
-        distribution_acc.validator_vote_pubkey = ctx.accounts.validator_vote_account.key();
+        distribution_acc.validator_vote_account = validator_vote_account;
         distribution_acc.epoch_created_at = Clock::get()?.epoch;
         distribution_acc.validator_commission_bps = validator_commission_bps;
         distribution_acc.merkle_root_upload_authority = merkle_root_upload_authority;
         distribution_acc.merkle_root = None;
+        distribution_acc.bump = bump;
         distribution_acc.validate()?;
 
         emit!(TipDistributionAccountInitializedEvent {
@@ -209,8 +214,16 @@ pub mod tip_distribution {
     }
 
     /// Claims tokens from the [TipDistributionAccount].
-    pub fn claim(ctx: Context<Claim>, index: u64, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+    pub fn claim(
+        ctx: Context<Claim>,
+        bump: u8,
+        index: u64,
+        amount: u64,
+        proof: Vec<[u8; 32]>,
+    ) -> Result<()> {
         let claim_status = &mut ctx.accounts.claim_status;
+        claim_status.bump = bump;
+
         let claimant_account = &mut ctx.accounts.claimant;
         let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
         let clock = Clock::get()?;
@@ -329,6 +342,12 @@ pub struct Initialize<'info> {
 }
 
 #[derive(Accounts)]
+#[instruction(
+    _merkle_root_upload_authority: Pubkey,
+    validator_vote_account: Pubkey,
+    _validator_commission_bps: u16,
+    _bump: u8
+)]
 pub struct InitTipDistributionAccount<'info> {
     pub config: Account<'info, Config>,
 
@@ -336,18 +355,18 @@ pub struct InitTipDistributionAccount<'info> {
         init,
         seeds = [
             TipDistributionAccount::SEED,
-            validator_vote_account.key().as_ref(),
+            validator_vote_account.as_ref(),
             Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
         ],
         bump,
-        payer = validator_vote_account,
+        payer = payer,
         space = TipDistributionAccount::SIZE,
         rent_exempt = enforce
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
     #[account(mut)]
-    pub validator_vote_account: Signer<'info>,
+    pub payer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -361,13 +380,12 @@ pub struct SetMerkleRootUploadAuthority<'info> {
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
     #[account(mut)]
-    pub validator_vote_account: Signer<'info>,
+    pub signer: Signer<'info>,
 }
 
 impl SetMerkleRootUploadAuthority<'_> {
     fn auth(ctx: &Context<SetMerkleRootUploadAuthority>) -> Result<()> {
-        if ctx.accounts.tip_distribution_account.validator_vote_pubkey
-            != ctx.accounts.validator_vote_account.key()
+        if ctx.accounts.tip_distribution_account.validator_vote_account != ctx.accounts.signer.key()
         {
             Err(Unauthorized.into())
         } else {
@@ -387,13 +405,12 @@ pub struct SetValidatorCommissionBps<'info> {
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
     #[account(mut)]
-    pub validator_vote_account: Signer<'info>,
+    pub signer: Signer<'info>,
 }
 
 impl SetValidatorCommissionBps<'_> {
     fn auth(ctx: &Context<SetValidatorCommissionBps>) -> Result<()> {
-        if ctx.accounts.tip_distribution_account.validator_vote_pubkey
-            != ctx.accounts.validator_vote_account.key()
+        if ctx.accounts.tip_distribution_account.validator_vote_account != ctx.accounts.signer.key()
         {
             Err(Unauthorized.into())
         } else {
@@ -438,7 +455,7 @@ pub struct CloseTipDistributionAccount<'info> {
             validator_vote_account.key().as_ref(),
             epoch.to_le_bytes().as_ref(),
         ],
-        bump,
+        bump = tip_distribution_account.bump,
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
@@ -462,7 +479,7 @@ impl CloseTipDistributionAccount<'_> {
 }
 
 #[derive(Accounts)]
-#[instruction(index: u64, _amount: u64, _proof: Vec<[u8; 32]>)]
+#[instruction(_bump: u8, index: u64, _amount: u64, _proof: Vec<[u8; 32]>)]
 pub struct Claim<'info> {
     pub config: Account<'info, Config>,
 
@@ -502,10 +519,7 @@ pub struct UploadMerkleRoot<'info> {
     #[account(mut, rent_exempt = enforce)]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
-    #[account(
-        mut,
-        constraint = merkle_root_upload_authority.key() == tip_distribution_account.merkle_root_upload_authority
-    )]
+    #[account(mut)]
     pub merkle_root_upload_authority: Signer<'info>,
 }
 

@@ -21,14 +21,18 @@ pub struct Config {
 
     /// The maximum commission a validator can set on their distribution account.
     pub max_validator_commission_bps: u16,
+
+    /// The bump used to generate this account
+    pub bump: u8,
 }
 
 /// The account that validators register as **tip_receiver** with the tip-payment program.
 #[account]
 #[derive(Default)]
 pub struct TipDistributionAccount {
-    /// The validator's vote pubkey, also the payer of this account.
-    pub validator_vote_pubkey: Pubkey,
+    /// The validator's vote account, also the recepient of remaining lamports after
+    /// upon closing this account.
+    pub validator_vote_account: Pubkey,
 
     /// The only account authorized to upload a merkle-root for this account.
     pub merkle_root_upload_authority: Pubkey,
@@ -41,6 +45,9 @@ pub struct TipDistributionAccount {
 
     /// The commission basis points this validator charges.
     pub validator_commission_bps: u16,
+
+    /// The bump used to generate this account
+    pub bump: u8,
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -91,7 +98,7 @@ impl TipDistributionAccount {
 
     pub fn validate(&self) -> Result<()> {
         let default_pubkey = Pubkey::default();
-        if self.validator_vote_pubkey == default_pubkey
+        if self.validator_vote_account == default_pubkey
             || self.merkle_root_upload_authority == default_pubkey
         {
             return Err(AccountValidationFailure.into());
@@ -169,6 +176,9 @@ pub struct ClaimStatus {
 
     /// Amount of funds claimed.
     pub amount: u64,
+
+    /// The bump used to generate this account
+    pub bump: u8,
 }
 
 impl ClaimStatus {
