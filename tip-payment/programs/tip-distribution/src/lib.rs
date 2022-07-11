@@ -9,7 +9,7 @@ use crate::{
     ErrorCode::Unauthorized,
 };
 
-declare_id!("Bqw8hzRC4CQro7rrmssXSepUjZ4yysYqg7UHZN3dkDRJ");
+declare_id!("7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh");
 
 #[program]
 pub mod tip_distribution {

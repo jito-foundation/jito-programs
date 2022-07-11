@@ -1,6 +1,6 @@
 [programs.localnet]
-tip_distribution = "Bqw8hzRC4CQro7rrmssXSepUjZ4yysYqg7UHZN3dkDRJ"
-tip_payment = "Ek3SBXmGDvyvCGPYb98du8CNNjTomyiuc1wh7dMBw8gk"
+tip_distribution = "7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh"
+tip_payment = "3jarB2NVZc9KouEppPHoAf3v9y77H5R88nyfMLDUzuwm"
 
 [registry]
 url = "https://anchor.projectserum.com"
