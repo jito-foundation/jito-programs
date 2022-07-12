@@ -270,6 +270,7 @@ pub mod tip_distribution {
         emit!(ClaimedEvent {
             tip_distribution_account: tip_distribution_account.key(),
             index,
+            payer: ctx.accounts.payer.key(),
             claimant: claimant_account.key(),
             amount
         });
@@ -497,9 +498,10 @@ pub struct Claim<'info> {
     )]
     pub claim_status: Account<'info, ClaimStatus>,
 
-    /// Who is claiming the tokens.
+    /// CHECK: This is safe.
+    /// Receiver of the funds.
     #[account(mut)]
-    pub claimant: Signer<'info>,
+    pub claimant: AccountInfo<'info>,
 
     /// Who is paying for the claim.
     #[account(mut)]
@@ -565,7 +567,10 @@ pub struct ClaimedEvent {
     /// [TipDistributionAccount] claimed from.
     pub tip_distribution_account: Pubkey,
 
-    /// User that claimed.
+    /// User that paid for the claim, may or may not be the same as claimant.
+    pub payer: Pubkey,
+
+    /// Account that received the funds.
     pub claimant: Pubkey,
 
     /// Index of the claim.
