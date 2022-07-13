@@ -373,7 +373,7 @@ describe( 'tests tip_distribution', () => {
                         systemProgram: SystemProgram.programId,
                         tipDistributionAccount,
                     },
-                    signers: [user0, user1],
+                    signers: [user1],
                 }
             )
         } catch ( e ) {
