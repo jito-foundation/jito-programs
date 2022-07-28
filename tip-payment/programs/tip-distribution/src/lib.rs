@@ -242,7 +242,7 @@ pub mod tip_distribution {
                 &claimant_account.key().to_bytes(),
                 &amount.to_le_bytes(),
             ])
-                .to_bytes(),
+            .to_bytes(),
         ]);
 
         if !merkle_proof::verify(proof, merkle_root.root, node.to_bytes()) {
