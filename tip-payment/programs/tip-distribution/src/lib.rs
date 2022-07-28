@@ -213,7 +213,6 @@ pub mod tip_distribution {
     pub fn claim(
         ctx: Context<Claim>,
         bump: u8,
-        index: u64,
         amount: u64,
         proof: Vec<[u8; 32]>,
     ) -> Result<()> {
