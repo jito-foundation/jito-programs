@@ -16,3 +16,4 @@ default = []
 
 [dependencies]
 anchor-lang = { path = "../../../../anchor/lang" }
+solana-program = "1.10.33"

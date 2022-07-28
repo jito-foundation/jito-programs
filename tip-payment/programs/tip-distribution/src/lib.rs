@@ -236,13 +236,16 @@ pub mod tip_distribution {
             .ok_or(RootNotUploaded)?;
 
         // Verify the merkle proof.
-        let node = anchor_lang::solana_program::keccak::hashv(&[
-            &index.to_le_bytes(),
-            &claimant_account.key().to_bytes(),
-            &amount.to_le_bytes(),
+        let node = &solana_program::hash::hashv(&[
+            &[0u8],
+            &solana_program::hash::hashv(&[
+                &claimant_account.key().to_bytes(),
+                &amount.to_le_bytes(),
+            ])
+                .to_bytes(),
         ]);
 
-        if !merkle_proof::verify(proof, merkle_root.root, node.0) {
+        if !merkle_proof::verify(proof, merkle_root.root, node.to_bytes()) {
             return Err(InvalidProof.into());
         }
 
