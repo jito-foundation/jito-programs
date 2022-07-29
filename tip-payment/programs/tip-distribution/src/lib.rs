@@ -271,7 +271,6 @@ pub mod tip_distribution {
 
         emit!(ClaimedEvent {
             tip_distribution_account: tip_distribution_account.key(),
-            index,
             payer: ctx.accounts.payer.key(),
             claimant: claimant_account.key(),
             amount
@@ -478,7 +477,7 @@ impl CloseTipDistributionAccount<'_> {
 }
 
 #[derive(Accounts)]
-#[instruction(_bump: u8, index: u64, _amount: u64, _proof: Vec<[u8; 32]>)]
+#[instruction(_bump: u8, _amount: u64, _proof: Vec<[u8; 32]>)]
 pub struct Claim<'info> {
     pub config: Account<'info, Config>,
 
@@ -491,7 +490,6 @@ pub struct Claim<'info> {
         rent_exempt = enforce,
         seeds = [
             ClaimStatus::SEED,
-            index.to_le_bytes().as_ref(),
             tip_distribution_account.key().as_ref()
         ],
         bump,
@@ -574,9 +572,6 @@ pub struct ClaimedEvent {
 
     /// Account that received the funds.
     pub claimant: Pubkey,
-
-    /// Index of the claim.
-    pub index: u64,
 
     /// Amount of funds to distribute.
     pub amount: u64,
