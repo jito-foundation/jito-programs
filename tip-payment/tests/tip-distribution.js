@@ -245,18 +245,16 @@ describe( 'tests tip_distribution', () => {
             bump,
         })
 
-        const user0 = await generateAccount( 1000000 )
-        const user1 = await generateAccount( 1000000 )
-        const amount0 = new u64( 1_000_000 )
-        const amount1 = new u64( 2_000_000 )
+        const amount0 = new u64( 151507 )
+        const amount1 = new u64( 76624 )
 
         const tree = new BalanceTree([
-            { account: user0.publicKey, amount: amount0 },
-            { account: user1.publicKey, amount: amount1 },
+            { account: "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM", amount: amount0 },
+            { account: "CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3", amount: amount1 },
         ])
 
 
-        const root = tree.getRoot()
+        const root = "3wCEfYL1rAGbpghwEoTWQu1UHaqY3X28iefmfbLoscAj"
         const maxTotalClaim = new anchor.BN( amount0 + amount1 )
         const maxNumNodes =  new anchor.BN( 2 )
 
@@ -314,8 +312,8 @@ describe( 'tests tip_distribution', () => {
             bump,
         })
 
-        const amount0 = 1_000_000
-        const amount1 = 2_000_000
+        const amount0 = 151507
+        const amount1 = 176624
         await provider.connection.confirmTransaction(
             await provider.connection.requestAirdrop(
                 tipDistributionAccount, amount0 + amount1
@@ -327,12 +325,12 @@ describe( 'tests tip_distribution', () => {
         const user1 = await generateAccount( preBalance0 )
 
         const tree = new BalanceTree([
-            { account: user0.publicKey, amount: new u64( amount0 )},
-            { account: user1.publicKey, amount: new u64( amount1 )},
+            { account: "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM", amount: new u64(amount0) },
+            { account: "CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3", amount: new u64(amount1) },
         ])
 
 
-        const root = tree.getRoot()
+        const root = "3wCEfYL1rAGbpghwEoTWQu1UHaqY3X28iefmfbLoscAj"
         const maxTotalClaim = new anchor.BN( amount0 + amount1 )
         const maxNumNodes =  new anchor.BN( 2 )
 
@@ -351,9 +349,8 @@ describe( 'tests tip_distribution', () => {
             },
         )
 
-        const index = new u64( 0 )
         const amount = new u64( amount0 )
-        const proof = tree.getProof( index, user0.publicKey, amount )
+        const proof = [[39, 97, 170, 59, 250, 225, 134, 70, 123, 170, 30, 4, 121, 18, 39, 93, 183, 60, 53, 0, 58, 193, 70, 178, 237, 153, 170, 64, 105, 85, 74, 92]]
         const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
             [Buffer.from( 'CLAIM_STATUS', 'utf8' ), tipDistributionAccount.toBuffer()],
             tipDistribution.programId,
