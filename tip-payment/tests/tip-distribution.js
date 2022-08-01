@@ -249,8 +249,8 @@ describe( 'tests tip_distribution', () => {
         const amount1 = new u64( 76624 )
 
         const tree = new BalanceTree([
-            { account: anchor.web3.PublicKey("4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"), amount: amount0 },
-            { account: anchor.web3.PublicKey("CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3"), amount: amount1 },
+            { account: new anchor.web3.PublicKey("4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"), amount: amount0 },
+            { account: new anchor.web3.PublicKey("CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3"), amount: amount1 },
         ])
 
 
