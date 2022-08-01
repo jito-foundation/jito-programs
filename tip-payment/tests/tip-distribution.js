@@ -249,8 +249,8 @@ describe( 'tests tip_distribution', () => {
         const amount1 = new u64( 76624 )
 
         const tree = new BalanceTree([
-            { account: "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM", amount: amount0 },
-            { account: "CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3", amount: amount1 },
+            { account: anchor.web3.PublicKey("4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"), amount: amount0 },
+            { account: anchor.web3.PublicKey("CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3"), amount: amount1 },
         ])
 
 
@@ -325,8 +325,8 @@ describe( 'tests tip_distribution', () => {
         const user1 = await generateAccount( preBalance0 )
 
         const tree = new BalanceTree([
-            { account: "4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM", amount: new u64(amount0) },
-            { account: "CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3", amount: new u64(amount1) },
+            { account: new anchor.web3.PublicKey("4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM"), amount: new u64(amount0) },
+            { account: new anchor.web3.PublicKey("CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3"), amount: new u64(amount1) },
         ])
 
 
