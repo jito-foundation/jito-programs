@@ -354,14 +354,16 @@ describe( 'tests tip_distribution', () => {
         const index = new u64( 0 )
         const amount = new u64( amount0 )
         const proof = tree.getProof( index, user0.publicKey, amount )
+        let indexSeed = new anchor.BN( 0 )
+        indexSeed = indexSeed.toArrayLike( Buffer, 'le', 8 )
         const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from( 'CLAIM_STATUS', 'utf8' ), tipDistributionAccount.toBuffer()],
+            [Buffer.from( 'CLAIM_STATUS', 'utf8' ), indexSeed, tipDistributionAccount.toBuffer()],
             tipDistribution.programId,
         )
 
         try {
             await tipDistribution.rpc.claim(
-                _bump, amount, proof,
+                _bump, index, amount, proof,
                 {
                     accounts: {
                         config: configAccount,
