@@ -210,12 +210,7 @@ pub mod tip_distribution {
     }
 
     /// Claims tokens from the [TipDistributionAccount].
-    pub fn claim(
-        ctx: Context<Claim>,
-        bump: u8,
-        amount: u64,
-        proof: Vec<[u8; 32]>,
-    ) -> Result<()> {
+    pub fn claim(ctx: Context<Claim>, bump: u8, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
         let claim_status = &mut ctx.accounts.claim_status;
         claim_status.bump = bump;
 
