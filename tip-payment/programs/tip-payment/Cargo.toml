@@ -19,4 +19,5 @@ default = []
 overflow-checks = true
 
 [dependencies]
-anchor-lang = "0.24.2"
+anchor-lang = { rev = "54752ed4d3f56f998c6956b69d85a776331eaaf3", git = "https://github.com/jito-labs/anchor.git" }
+

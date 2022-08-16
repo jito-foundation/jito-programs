@@ -15,5 +15,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.24.2"
-solana-program = "~1.9.13"
+anchor-lang = { rev = "54752ed4d3f56f998c6956b69d85a776331eaaf3", git = "https://github.com/jito-labs/anchor.git" }
+solana-program = "~1.10.33"
+
