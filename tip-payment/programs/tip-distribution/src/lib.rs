@@ -104,6 +104,12 @@ pub mod tip_distribution {
         SetMerkleRootUploadAuthority::auth(&ctx)?;
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
+        if let Some(merkle_root) = &distribution_acc.merkle_root {
+            if merkle_root.num_nodes_claimed > 0 {
+                return Err(Unauthorized.into());
+            }
+        }
+
         let old_authority = distribution_acc.merkle_root_upload_authority;
         distribution_acc.merkle_root_upload_authority = new_merkle_root_upload_authority;
         distribution_acc.validate()?;
@@ -485,6 +491,7 @@ pub struct Claim<'info> {
         rent_exempt = enforce,
         seeds = [
             ClaimStatus::SEED,
+            claimant.key().as_ref(),
             tip_distribution_account.key().as_ref()
         ],
         bump,
