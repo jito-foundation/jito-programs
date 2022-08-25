@@ -1,18 +1,20 @@
 //! This binary is used to update the merkle root authority in case of mistaken
 //! configuration or transfer of ownership.
 
-use {
-    clap::Parser,
-    log::info,
-    solana_client::nonblocking::rpc_client::RpcClient,
-    solana_program::pubkey::Pubkey,
-    solana_sdk::{signature::read_keypair_file, signer::Signer, transaction::Transaction},
-    solana_tip_distributor::merkle_root_generator_workflow::execute_transactions,
-    std::{path::PathBuf, str::FromStr, sync::Arc},
-    tip_distribution::sdk::instruction::{
-        set_merkle_root_upload_authority_ix, SetMerkleRootUploadAuthorityAccounts,
-        SetMerkleRootUploadAuthorityArgs,
-    },
+use std::{path::PathBuf, str::FromStr, thread::sleep, time::Duration};
+
+use clap::Parser;
+use log::{error, info};
+use solana_client::nonblocking::rpc_client::RpcClient;
+use solana_program::pubkey::Pubkey;
+use solana_sdk::{
+    signature::{read_keypair_file, Signature},
+    signer::Signer,
+    transaction::Transaction,
+};
+use tip_distribution::sdk::instruction::{
+    set_merkle_root_upload_authority_ix, SetMerkleRootUploadAuthorityAccounts,
+    SetMerkleRootUploadAuthorityArgs,
 };
 
 #[derive(Parser, Debug)]
@@ -42,6 +44,9 @@ struct Args {
     #[clap(long, env)]
     rpc_url: String,
 }
+
+const DELAY: Duration = Duration::from_millis(500);
+const MAX_RETRIES: usize = 5;
 
 fn main() {
     env_logger::init();
@@ -83,5 +88,41 @@ fn main() {
         &[&validator_vote_account, &fee_payer_kp],
         recent_blockhash,
     );
-    execute_transactions(Arc::new(rpc_client), vec![tx]);
+
+    runtime.spawn(async move {
+        if let Err(e) = send_transaction_with_retry(rpc_client, &tx, DELAY, MAX_RETRIES).await {
+            error!(
+                "error sending transaction [signature={}, error={}]",
+                tx.signatures[0], e
+            );
+        } else {
+            info!(
+                "successfully sent transaction: [signature={}]",
+                tx.signatures[0]
+            );
+        }
+    });
+}
+
+async fn send_transaction_with_retry(
+    rpc_client: RpcClient,
+    tx: &Transaction,
+    delay: Duration,
+    max_retries: usize,
+) -> solana_client::client_error::Result<Signature> {
+    let mut retry_count: usize = 0;
+    loop {
+        match rpc_client.send_and_confirm_transaction(tx).await {
+            Ok(sig) => {
+                return Ok(sig);
+            }
+            Err(e) => {
+                retry_count = retry_count.checked_add(1).unwrap();
+                if retry_count == max_retries {
+                    return Err(e);
+                }
+                sleep(delay);
+            }
+        }
+    }
 }
