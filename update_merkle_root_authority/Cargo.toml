@@ -1,0 +1,34 @@
+[package]
+name = "update_merkle_root_authority"
+version = "0.1.0"
+edition = "2021"
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anchor-lang = { path = "../../anchor/lang" }
+bigdecimal = "0.3.0"
+clap = { version = "3.2.5", features = ["derive", "env"] }
+env_logger = "0.9.0"
+futures = "0.3.21"
+im = "15.1.0"
+itertools = "0.10.3"
+log = "0.4.17"
+num-traits = "0.2.15"
+serde = "1.0.137"
+serde_json = "1.0.81"
+solana-client = { path = "../../client", version = "=1.12.0" }
+solana-genesis-utils = { path = "../../genesis-utils", version = "=1.12.0" }
+solana-ledger = { path = "../../ledger", version = "=1.12.0" }
+solana-merkle-tree = { path = "../../merkle-tree", version = "=1.12.0" }
+solana-program = { path = "../../sdk/program", version = "=1.12.0" }
+solana-runtime = { path = "../../runtime", version = "=1.12.0" }
+solana-sdk = { path = "../../sdk", version = "=1.12.0" }
+solana-stake-program = { path = "../../programs/stake", version = "=1.12.0" }
+solana-tip-distributor = { path = "../../tip-distributor/" }
+thiserror = "1.0.31"
+tip-distribution = { path = "../../jito-programs/tip-payment/programs/tip-distribution", features = ["no-entrypoint"] }
+tokio = { version = "1.12.0", features = ["rt-multi-thread", "macros", "sync", "time", "full"] }
+
+[[bin]]
+name = "update-merkle-root-authority"
+path = "src/bin/update_merkle_root_authority.rs"
