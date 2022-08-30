@@ -29,7 +29,7 @@ pub struct RpcConfig {
 }
 
 fn main() -> Result<(), Error> {
-    let matches = App::new("fuck u ")
+    let matches = App::new("claim")
         .arg({
             let arg = Arg::with_name("config_file")
                 .short('C')

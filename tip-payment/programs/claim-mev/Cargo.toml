@@ -12,8 +12,6 @@ clap = {version = "3.2.5", features = ["derive", "env"]}
 tip-distribution = {path = "../tip-distribution", features = ["no-entrypoint"]}
 solana-cli-config = "~1.10.33"
 solana-client = "~1.10.33"
-solana-genesis-utils = "~1.10.33"
-solana-ledger = "~1.10.33"
 solana-merkle-tree = {path = "../merkle-tree"}
 solana-program = "~1.10.33"
 solana-runtime = "~1.10.33"
@@ -24,4 +22,3 @@ log = "0.4.17"
 bigdecimal = "0.3.0"
 num-traits = "0.2.15"
 thiserror = "1.0.31"
-fast-math = "0.1"
