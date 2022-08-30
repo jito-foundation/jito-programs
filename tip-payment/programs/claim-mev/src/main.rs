@@ -112,38 +112,6 @@ fn main() -> Result<(), Error> {
     Ok(())
 }
 
-fn get_latest_blockhash(rpc_client: &RpcClient) -> Result<Hash, Error> {
-    Ok(rpc_client
-        .get_latest_blockhash_with_commitment(CommitmentConfig::confirmed())?
-        .0)
-}
-
-/// Sends transaction payload, optionally simulating only
-fn send_transaction(
-    rpc_config: &RpcConfig,
-    instructions: &[Instruction],
-    fee_payer: &Keypair,
-) -> Result<Transaction, Error> {
-    let recent_blockhash = get_latest_blockhash(&rpc_config.rpc_client)?;
-    let transaction = Transaction::new_signed_with_payer(
-        instructions,
-        Some(&fee_payer.pubkey()),
-        &[fee_payer],
-        recent_blockhash,
-    );
-
-    if rpc_config.dry_run {
-        let result = rpc_config.rpc_client.simulate_transaction(&transaction)?;
-        println!("Simulate result: {:?}", result);
-    } else {
-        let signature = rpc_config
-            .rpc_client
-            .send_and_confirm_transaction_with_spinner(&transaction)?;
-        println!("TX success. Signature: {:#?}", signature);
-    }
-    Ok(transaction)
-}
-
 /// runs workflow to claim all MEV rewards given a Generated merkle tree collection
 fn command_claim_all(
     rpc_config: &RpcConfig,
@@ -197,4 +165,35 @@ fn load_merkle_tree<P: AsRef<Path>>(path: P) -> Result<GeneratedMerkleTreeCollec
 
     let merkle_tree = serde_json::from_reader(reader)?;
     Ok(merkle_tree)
+}
+fn get_latest_blockhash(rpc_client: &RpcClient) -> Result<Hash, Error> {
+    Ok(rpc_client
+        .get_latest_blockhash_with_commitment(CommitmentConfig::confirmed())?
+        .0)
+}
+
+/// Sends transaction payload, optionally simulating only
+fn send_transaction(
+    rpc_config: &RpcConfig,
+    instructions: &[Instruction],
+    fee_payer: &Keypair,
+) -> Result<Transaction, Error> {
+    let recent_blockhash = get_latest_blockhash(&rpc_config.rpc_client)?;
+    let transaction = Transaction::new_signed_with_payer(
+        instructions,
+        Some(&fee_payer.pubkey()),
+        &[fee_payer],
+        recent_blockhash,
+    );
+
+    if rpc_config.dry_run {
+        let result = rpc_config.rpc_client.simulate_transaction(&transaction)?;
+        println!("Simulate result: {:?}", result);
+    } else {
+        let signature = rpc_config
+            .rpc_client
+            .send_and_confirm_transaction_with_spinner(&transaction)?;
+        println!("TX success. Signature: {:#?}", signature);
+    }
+    Ok(transaction)
 }
