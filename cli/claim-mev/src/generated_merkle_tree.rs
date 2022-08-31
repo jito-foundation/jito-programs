@@ -6,25 +6,19 @@ use std::{
 };
 
 use anchor_lang::AccountDeserialize;
-use bigdecimal::{num_bigint::BigUint, BigDecimal};
 use log::*;
-use num_traits::{CheckedDiv, CheckedMul, ToPrimitive};
 use serde::{Deserialize, Serialize};
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_merkle_tree::MerkleTree;
 use solana_runtime::bank::Bank;
 use solana_sdk::{
     account::{AccountSharedData, ReadableAccount},
-    bs58,
     clock::Slot,
-    hash::{Hash, Hasher},
     pubkey::Pubkey,
     stake_history::Epoch,
 };
 use thiserror::Error as ThisError;
 use tip_distribution::state::TipDistributionAccount;
-
-// use crate::Error::CheckedMathError;
 
 #[allow(dead_code)]
 #[derive(ThisError, Debug)]
@@ -70,87 +64,6 @@ pub struct GeneratedMerkleTree {
     pub max_num_nodes: u64,
 }
 
-#[allow(dead_code)]
-impl GeneratedMerkleTreeCollection {
-    pub fn new_from_stake_meta_collection(
-        stake_meta_coll: StakeMetaCollection,
-        merkle_root_upload_authority: Pubkey,
-    ) -> Result<GeneratedMerkleTreeCollection, Error> {
-        let b58_merkle_root_upload_authority =
-            bs58::encode(merkle_root_upload_authority.as_ref()).into_string();
-        let generated_merkle_trees = stake_meta_coll
-            .stake_metas
-            .into_iter()
-            .filter(|stake_meta| {
-                if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref()
-                {
-                    tip_distribution_meta.merkle_root_upload_authority
-                        == b58_merkle_root_upload_authority
-                } else {
-                    false
-                }
-            })
-            .filter_map(|stake_meta| {
-                // Build the tree
-                let mut tree_nodes = match TreeNode::vec_from_stake_meta(&stake_meta) {
-                    Err(e) => return Some(Err(e)),
-                    Ok(maybe_tree_nodes) => maybe_tree_nodes,
-                }?;
-
-                // Hash the nodes
-                let hashed_nodes: Vec<[u8; 32]> =
-                    tree_nodes.iter().map(|n| n.hash().to_bytes()).collect();
-
-                let tip_distribution_meta = stake_meta.maybe_tip_distribution_meta.unwrap();
-
-                let tip_distribution_account =
-                    match tip_distribution_meta.tip_distribution_account.parse() {
-                        Err(_) => return Some(Err(Error::Base58DecodeError)),
-                        Ok(tip_distribution_account) => tip_distribution_account,
-                    };
-
-                let merkle_tree = MerkleTree::new(&hashed_nodes[..], true);
-                let max_num_nodes = tree_nodes.len() as u64;
-
-                for (i, tree_node) in tree_nodes.iter_mut().enumerate() {
-                    tree_node.proof = Some(get_proof(&merkle_tree, i));
-                }
-
-                Some(Ok(GeneratedMerkleTree {
-                    max_num_nodes,
-                    tip_distribution_account,
-                    merkle_tree,
-                    tree_nodes,
-                    max_total_claim: tip_distribution_meta.total_tips,
-                }))
-            })
-            .collect::<Result<Vec<GeneratedMerkleTree>, Error>>()?;
-
-        Ok(GeneratedMerkleTreeCollection {
-            generated_merkle_trees,
-            bank_hash: stake_meta_coll.bank_hash,
-            epoch: stake_meta_coll.epoch,
-            slot: stake_meta_coll.slot,
-        })
-    }
-}
-
-#[allow(dead_code)]
-pub fn get_proof(merkle_tree: &MerkleTree, i: usize) -> Vec<[u8; 32]> {
-    let mut proof = Vec::new();
-    let path = merkle_tree.find_path(i).expect("path to index");
-    for branch in path.get_proof_entries() {
-        if let Some(hash) = branch.get_left_sibling() {
-            proof.push(hash.to_bytes());
-        } else if let Some(hash) = branch.get_right_sibling() {
-            proof.push(hash.to_bytes());
-        } else {
-            panic!("expected some hash at each level of the tree");
-        }
-    }
-    proof
-}
-
 #[derive(Clone, Eq, Debug, Hash, PartialEq, Deserialize, Serialize)]
 pub struct TreeNode {
     /// The account entitled to redeem.
@@ -161,96 +74,6 @@ pub struct TreeNode {
 
     /// The proof associated with this TreeNode
     pub proof: Option<Vec<[u8; 32]>>,
-}
-
-#[allow(dead_code)]
-impl TreeNode {
-    fn vec_from_stake_meta(stake_meta: &StakeMeta) -> Result<Option<Vec<TreeNode>>, Error> {
-        let validator_vote_account = stake_meta
-            .validator_vote_account
-            .parse()
-            .map_err(|_| Error::Base58DecodeError)?;
-        if let Some(tip_distribution_meta) = stake_meta.maybe_tip_distribution_meta.as_ref() {
-            let validator_fee = calc_validator_fee(
-                tip_distribution_meta.total_tips,
-                tip_distribution_meta.validator_fee_bps,
-            );
-            let mut tree_nodes = vec![TreeNode {
-                claimant: validator_vote_account,
-                amount: validator_fee,
-                proof: None,
-            }];
-
-            let remaining_tips = tip_distribution_meta
-                .total_tips
-                .checked_sub(validator_fee)
-                .unwrap();
-
-            // The theoretically smallest weight an account can have is  (1 / SOL_TOTAL_SUPPLY_IN_LAMPORTS)
-            // where we round SOL_TOTAL_SUPPLY is rounded to 500_000_000. We use u64::MAX. This gives a reasonable
-            // guarantee that everyone gets paid out regardless of weight, as long as some non-zero amount of
-            // lamports were delegated.
-            let uint_precision_multiplier = BigUint::from(u64::MAX);
-            let f64_precision_multiplier = BigDecimal::try_from(u64::MAX as f64).unwrap();
-
-            let total_delegated = BigDecimal::try_from(stake_meta.total_delegated as f64)
-                .expect("failed to convert total_delegated to BigDecimal");
-            tree_nodes.extend(stake_meta
-                .delegations
-                .iter()
-                .map(|delegation| {
-                    // TODO(seg): Check this math!
-                    let amount_delegated = BigDecimal::try_from(delegation.amount_delegated as f64)
-                        .expect(&*format!(
-                            "failed to convert amount_delegated to BigDecimal [stake_account={}, amount_delegated={}]",
-                            delegation.stake_account,
-                            delegation.amount_delegated,
-                        ));
-                    let mut weight = amount_delegated.div(&total_delegated);
-
-                    let use_multiplier = weight < f64_precision_multiplier;
-
-                    if use_multiplier {
-                        weight = weight.mul(&f64_precision_multiplier);
-                    }
-
-                    let truncated_weight = weight.to_u128()
-                        .expect(&*format!("failed to convert weight to u128 [stake_account={}, weight={}]", delegation.stake_account, weight));
-                    let truncated_weight = BigUint::from(truncated_weight);
-
-                    let mut amount = truncated_weight
-                        .checked_mul(&BigUint::from(remaining_tips))
-                        .unwrap();
-
-                    if use_multiplier {
-                        amount = amount.checked_div(&uint_precision_multiplier).unwrap();
-                    }
-
-                    Ok(TreeNode {
-                        claimant: delegation.stake_account.parse().map_err(|_| Error::Base58DecodeError)?,
-                        amount: amount.to_u64().unwrap(),
-                        proof: None
-                    })
-                })
-                .collect::<Result<Vec<TreeNode>, Error>>()?);
-
-            let total_claim_amount = tree_nodes.iter().fold(0u64, |sum, tree_node| {
-                sum.checked_add(tree_node.amount).unwrap()
-            });
-            assert!(total_claim_amount < stake_meta.total_delegated);
-
-            Ok(Some(tree_nodes))
-        } else {
-            Ok(None)
-        }
-    }
-
-    fn hash(&self) -> Hash {
-        let mut hasher = Hasher::default();
-        hasher.hash(self.claimant.as_ref());
-        hasher.hash(self.amount.to_le_bytes().as_ref());
-        hasher.result()
-    }
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -303,34 +126,6 @@ pub struct TipDistributionMeta {
     /// The validator's cut of tips from [TipDistributionAccount], calculated from the on-chain
     /// commission fee bps.
     pub validator_fee_bps: u16,
-}
-
-#[allow(dead_code)]
-impl TipDistributionMeta {
-    fn from_tda_wrapper(
-        tda_wrapper: TipDistributionAccountWrapper,
-        // The amount that will be left remaining in the tda to maintain rent exemption status.
-        rent_exempt_amount: u64,
-    ) -> Result<Self, Error> {
-        Ok(TipDistributionMeta {
-            tip_distribution_account: bs58::encode(tda_wrapper.tip_distribution_account_pubkey)
-                .into_string(),
-            total_tips: tda_wrapper
-                .account_data
-                .lamports()
-                .checked_sub(rent_exempt_amount)
-                .ok_or(Error::CheckedMathError)?,
-            validator_fee_bps: tda_wrapper
-                .tip_distribution_account
-                .validator_commission_bps,
-            merkle_root_upload_authority: bs58::encode(
-                tda_wrapper
-                    .tip_distribution_account
-                    .merkle_root_upload_authority,
-            )
-            .into_string(),
-        })
-    }
 }
 
 #[derive(Clone, Deserialize, Serialize, Debug, PartialEq, Eq)]
