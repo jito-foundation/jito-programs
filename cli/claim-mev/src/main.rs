@@ -17,7 +17,6 @@ use tip_distribution::{
     sdk::instruction::{claim_ix, ClaimAccounts, ClaimArgs},
     state::{ClaimStatus, Config},
 };
-pub const TIP_DISTRIBUTION_PID: &str = "7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh";
 
 type Error = Box<dyn std::error::Error>;
 
@@ -71,6 +70,13 @@ fn main() -> Result<(), Error> {
                 .global(true)
                 .help("Filepath of merkle tree json"),
         )
+        .arg(
+            Arg::with_name("tip_distribution_pid")
+                .short('t')
+                .long("tip-distribution-pid")
+                .takes_value(true)
+                .help("Tip distribution account program id"),
+        )
         .get_matches();
 
     let cli_config = if let Some(config_file) = matches.value_of("config_file") {
@@ -95,7 +101,10 @@ fn main() -> Result<(), Error> {
 
     let client =
         Client::new_with_options(url, Rc::new(Keypair::new()), CommitmentConfig::processed());
-    let pid = Pubkey::from_str(TIP_DISTRIBUTION_PID).unwrap();
+
+    let pid = value_t!(matches, "tip_distribution_pid", Pubkey)
+        .expect("missing or invalid tip distribution pid!");
+
     let program = client.program(pid);
     let merkle_tree_path =
         value_t!(matches, "merkle_tree", String).expect("merkle tree path not found!");
