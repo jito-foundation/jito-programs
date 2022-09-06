@@ -1,32 +1,25 @@
-#[allow(unused_imports)]
 use std::{
     fmt::{Debug, Display, Formatter},
-    ops::{Div, Mul},
     sync::Arc,
 };
 
-use anchor_lang::AccountDeserialize;
 use log::*;
 use serde::{Deserialize, Serialize};
 use solana_client::{client_error::ClientError, rpc_client::RpcClient};
 use solana_merkle_tree::MerkleTree;
 use solana_runtime::bank::Bank;
 use solana_sdk::{
-    account::{AccountSharedData, ReadableAccount},
+    account::{AccountSharedData},
     clock::Slot,
     pubkey::Pubkey,
     stake_history::Epoch,
 };
 use thiserror::Error as ThisError;
-use tip_distribution::state::TipDistributionAccount;
 
-#[allow(dead_code)]
 #[derive(ThisError, Debug)]
 pub enum Error {
     #[error(transparent)]
     AnchorError(#[from] anchor_lang::error::Error),
-
-    Base58DecodeError,
 
     #[error(transparent)]
     IoError(#[from] std::io::Error),
@@ -34,10 +27,8 @@ pub enum Error {
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
 
-    #[error(transparent)]
     RpcError(#[from] ClientError),
-    SnapshotSlotNotFound,
-    CheckedMathError,
+
 }
 
 impl Display for Error {
@@ -137,64 +128,11 @@ pub struct Delegation {
     pub amount_delegated: u64,
 }
 
-/// Convenience wrapper around [TipDistributionAccount]
-pub struct TipDistributionAccountWrapper {
-    pub tip_distribution_account: TipDistributionAccount,
-    pub account_data: AccountSharedData,
-    pub tip_distribution_account_pubkey: Pubkey,
-}
-
-// TODO: move to program's sdk
-#[allow(dead_code)]
-pub fn derive_tip_distribution_account_address(
-    tip_distribution_program_id: &Pubkey,
-    vote_pubkey: &Pubkey,
-    epoch: Epoch,
-) -> (Pubkey, u8) {
-    Pubkey::find_program_address(
-        &[
-            TipDistributionAccount::SEED,
-            vote_pubkey.to_bytes().as_ref(),
-            epoch.to_le_bytes().as_ref(),
-        ],
-        tip_distribution_program_id,
-    )
-}
 
 pub trait AccountFetcher {
     fn fetch_account(&self, pubkey: &Pubkey) -> Result<Option<AccountSharedData>, Error>;
 }
 
-/// Fetches and deserializes the vote_pubkey's corresponding [TipDistributionAccount].
-#[allow(dead_code)]
-pub fn fetch_and_deserialize_tip_distribution_account(
-    account_fetcher: Arc<Box<dyn AccountFetcher>>,
-    vote_pubkey: &Pubkey,
-    tip_distribution_program_id: &Pubkey,
-    epoch: Epoch,
-) -> Result<Option<TipDistributionAccountWrapper>, Error> {
-    let tip_distribution_account_pubkey =
-        derive_tip_distribution_account_address(tip_distribution_program_id, vote_pubkey, epoch).0;
-
-    match account_fetcher.fetch_account(&tip_distribution_account_pubkey)? {
-        None => {
-            warn!(
-                "TipDistributionAccount not found for vote_pubkey {}, epoch {}, tip_distribution_account_pubkey {}",
-                vote_pubkey,
-                epoch,
-                tip_distribution_account_pubkey,
-            );
-            Ok(None)
-        }
-        Some(account_data) => Ok(Some(TipDistributionAccountWrapper {
-            tip_distribution_account: TipDistributionAccount::try_deserialize(
-                &mut account_data.data(),
-            )?,
-            account_data,
-            tip_distribution_account_pubkey,
-        })),
-    }
-}
 
 struct BankAccountFetcher {
     bank: Arc<Bank>,
@@ -227,70 +165,6 @@ impl AccountFetcher for RpcAccountFetcher {
     }
 }
 
-/// Calculate validator fee denominated in lamports
-#[allow(dead_code)]
-pub fn calc_validator_fee(total_tips: u64, validator_commission_bps: u16) -> u64 {
-    let validator_commission_rate =
-        math::fee_tenth_of_bps(((validator_commission_bps as u64).checked_mul(10).unwrap()) as u64);
-    let validator_fee: math::U64F64 = validator_commission_rate.mul_u64(total_tips);
-
-    validator_fee
-        .floor()
-        .checked_add((validator_fee.frac_part() != 0) as u64)
-        .unwrap()
-}
-
-mod math {
-    /// copy-pasta from [here](https://github.com/project-serum/serum-dex/blob/e00bb9e6dac0a1fff295acb034722be9afc1eba3/dex/src/fees.rs#L43)
-    #[repr(transparent)]
-    #[derive(Copy, Clone)]
-    pub(crate) struct U64F64(u128);
-
-    #[allow(dead_code)]
-    impl U64F64 {
-        const ONE: Self = U64F64(1 << 64);
-
-        pub(crate) fn add(self, other: U64F64) -> U64F64 {
-            U64F64(self.0.checked_add(other.0).unwrap())
-        }
-
-        pub(crate) fn div(self, other: U64F64) -> u128 {
-            self.0.checked_div(other.0).unwrap()
-        }
-
-        pub(crate) fn mul_u64(self, other: u64) -> U64F64 {
-            U64F64(self.0.checked_mul(other as u128).unwrap())
-        }
-
-        /// right shift 64
-        pub(crate) fn floor(self) -> u64 {
-            (self.0.checked_div(2u128.checked_pow(64).unwrap()).unwrap()) as u64
-        }
-
-        pub(crate) fn frac_part(self) -> u64 {
-            self.0 as u64
-        }
-
-        /// left shift 64
-        pub(crate) fn from_int(n: u64) -> Self {
-            U64F64(
-                (n as u128)
-                    .checked_mul(2u128.checked_pow(64).unwrap())
-                    .unwrap(),
-            )
-        }
-    }
-
-    pub(crate) fn fee_tenth_of_bps(tenth_of_bps: u64) -> U64F64 {
-        U64F64(
-            ((tenth_of_bps as u128)
-                .checked_mul(2u128.checked_pow(64).unwrap())
-                .unwrap())
-            .checked_div(100_000)
-            .unwrap(),
-        )
-    }
-}
 
 #[cfg(test)]
 mod tests {

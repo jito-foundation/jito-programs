@@ -6,7 +6,6 @@ use anchor_client::{solana_sdk::signature::Signer, Client, Cluster, Program};
 use anchor_lang::{system_program::System, Id};
 use clap::{value_t, App, Arg};
 use generated_merkle_tree::GeneratedMerkleTreeCollection;
-use serde_json;
 use solana_client::rpc_client::RpcClient;
 use solana_program::{hash::Hash, instruction::Instruction, pubkey::Pubkey};
 use solana_sdk::{
@@ -151,9 +150,8 @@ fn command_claim_all(
             };
 
             let ix = claim_ix(rpc_config.pid, claim_args, claim_accounts);
-            match send_transaction(rpc_config, &[ix.clone()], payer) {
-                Err(e) => println!("error sending transaction: {:#?}, skipping", e),
-                Ok(_) => {}
+            if let Err(e) = send_transaction(rpc_config, &[ix.clone()], payer) {
+                println!("error sending transaction: {:#?}, skipping", e)
             }
         }
     }
