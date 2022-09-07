@@ -32,6 +32,7 @@ jobs:
       - run: cargo install --git https://github.com/project-serum/anchor --tag v0.25.0 anchor-cli --locked --force
       - run: cd tip-payment && yarn
       - run: yarn global add mocha@^9.0.3
+      - run: yarn global add ts-mocha@^10.0.0
       - name: test
         working-directory: ./tip-payment
         run: anchor test
