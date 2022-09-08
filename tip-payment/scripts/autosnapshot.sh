@@ -1,4 +1,7 @@
 #!/usr/bin/env sh
+# This script creates a snapshot for the last confirmed slot
+# in the previous epoch if one doesn't already exist.
+# Ex: ./autosnapshot.sh 10.1.23.506:8899 /solana/ledger/
 
 RPC_URL=$1
 LEDGER_LOCATION=$2
