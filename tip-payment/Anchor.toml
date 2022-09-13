@@ -1,16 +1,28 @@
-[programs.localnet]
-tip_distribution = "7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh"
-tip_payment = "3jarB2NVZc9KouEppPHoAf3v9y77H5R88nyfMLDUzuwm"
-
-[registry]
-url = "https://anchor.projectserum.com"
-
 [provider]
 cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
+# 7heq is the deployer here
+[programs.testnet]
+tip_distribution = "7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh"
+tip_payment = "3jarB2NVZc9KouEppPHoAf3v9y77H5R88nyfMLDUzuwm"
+
+[programs.localnet]
+tip_distribution = "7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh"
+tip_payment = "3jarB2NVZc9KouEppPHoAf3v9y77H5R88nyfMLDUzuwm"
+
+[workspace]
+members = [
+    "programs/tip-distribution",
+    "programs/tip-payment"
+]
+exclude = ["programs/merkle-tree"]
+
+[registry]
+url = "https://anchor.projectserum.com"
+
 [scripts]
-test = "mocha -t 1000000 tests/"
+test = "yarn ts-mocha -p ./tsconfig.json -t 1000000 tests/"
 
 [test.validator]
 slots_per_epoch = "32"
