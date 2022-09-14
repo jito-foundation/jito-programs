@@ -18,7 +18,6 @@ pub const TIP_ACCOUNT_SEED_4: &[u8] = b"TIP_ACCOUNT_4";
 pub const TIP_ACCOUNT_SEED_5: &[u8] = b"TIP_ACCOUNT_5";
 pub const TIP_ACCOUNT_SEED_6: &[u8] = b"TIP_ACCOUNT_6";
 pub const TIP_ACCOUNT_SEED_7: &[u8] = b"TIP_ACCOUNT_7";
-pub const VALIDATOR_META_SEED: &[u8] = b"VALIDATOR_META";
 
 pub const HEADER: usize = 8;
 
@@ -42,40 +41,6 @@ pub mod tip_payment {
             tip_payment_account_7: *ctx.bumps.get("tip_payment_account_7").unwrap(),
         };
         cfg.bumps = bumps;
-
-        Ok(())
-    }
-
-    pub fn init_validator_meta(
-        ctx: Context<InitValidatorMeta>,
-        backend_url: String,
-        // should be at least the size of backend_url
-        _extra_space: u32,
-        bump: u8,
-    ) -> Result<()> {
-        let meta = &mut ctx.accounts.meta;
-        meta.backend_url = backend_url;
-        meta.bump = bump;
-
-        Ok(())
-    }
-
-    pub fn close_validator_meta_account(ctx: Context<CloseValidatorMetaAccount>) -> Result<()> {
-        emit!(ValidatorMetaAccountClosed {
-            validator: ctx.accounts.validator.key(),
-        });
-
-        Ok(())
-    }
-
-    pub fn set_backend_url(ctx: Context<SetBackendUrl>, url: String) -> Result<()> {
-        let meta = &mut ctx.accounts.meta;
-        meta.backend_url = url.clone();
-
-        emit!(ValidatorBackendUrlUpdated {
-            url,
-            validator: ctx.accounts.validator.key(),
-        });
 
         Ok(())
     }
@@ -123,12 +88,6 @@ pub mod tip_payment {
 
         // set new funding account
         ctx.accounts.config.tip_receiver = ctx.accounts.new_tip_receiver.key();
-
-        emit!(TipReceiverUpdate {
-            new_tip_receiver: ctx.accounts.new_tip_receiver.key(),
-            old_tip_receiver: ctx.accounts.old_tip_receiver.key(),
-        });
-
         Ok(())
     }
 }
@@ -313,46 +272,6 @@ pub struct ClaimTips<'info> {
     pub signer: Signer<'info>,
 }
 
-#[derive(Accounts)]
-#[instruction(_backend_url: String, extra_space: u32, bump: u8)]
-pub struct InitValidatorMeta<'info> {
-    #[account(
-        init,
-        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-        bump,
-        payer = validator,
-        space = ValidatorMeta::SIZE + extra_space as usize,
-    )]
-    pub meta: Account<'info, ValidatorMeta>,
-    #[account(mut)]
-    pub validator: Signer<'info>,
-    pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct CloseValidatorMetaAccount<'info> {
-    #[account(
-        mut,
-        close = validator,
-        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-        bump = meta.bump,
-    )]
-    pub meta: Account<'info, ValidatorMeta>,
-    #[account(mut)]
-    pub validator: Signer<'info>,
-}
-
-#[derive(Accounts)]
-pub struct SetBackendUrl<'info> {
-    #[account(
-        mut,
-        seeds = [VALIDATOR_META_SEED, validator.key().as_ref()],
-        bump = meta.bump,
-    )]
-    pub meta: Account<'info, ValidatorMeta>,
-    pub validator: Signer<'info>,
-}
-
 impl<'info> ClaimTips<'info> {
     fn get_tip_accounts(&self) -> Vec<AccountInfo<'info>> {
         vec![
@@ -524,41 +443,10 @@ impl TipPaymentAccount {
     }
 }
 
-/// Searchers will need to connect to `backend_url` to stream txs and submit bundles.
-/// This may be JITO's hosted backend or custom infrastructure.
-#[account]
-#[derive(Default)]
-pub struct ValidatorMeta {
-    pub backend_url: String,
-    pub bump: u8,
-}
-
-impl ValidatorMeta {
-    // subtract size_of::<String>() to allow user to supply the program with extra space needed
-    pub const SIZE: usize = HEADER + size_of::<Self>() - size_of::<String>();
-}
-
 /// events
 #[event]
 pub struct TipsClaimed {
     by: Pubkey,
     to: Pubkey,
     amount: u64,
-}
-
-#[event]
-pub struct TipReceiverUpdate {
-    new_tip_receiver: Pubkey,
-    old_tip_receiver: Pubkey,
-}
-
-#[event]
-pub struct ValidatorBackendUrlUpdated {
-    url: String,
-    validator: Pubkey,
-}
-
-#[event]
-pub struct ValidatorMetaAccountClosed {
-    validator: Pubkey,
 }
