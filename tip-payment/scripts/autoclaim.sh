@@ -6,11 +6,33 @@
 
 RPC_URL=$1
 TIP_DISTRIBUTION_PROGRAM_ID=$2
+FEE_PAYER=$3
 SNAPSHOT_DIR=/home/core/autosnapshot/
 KEYPAIR_DIR=/home/core/autosnapshot/keypairs/
 STAKE_META_BIN=/home/core/jito-solana/docker-output/stake-meta-generator
 MERKLE_ROOT_BIN=/home/core/jito-solana/docker-output/merkle-root-generator
 SOLANA_KEYGEN_BIN=/home/core/jito-solana/docker-output/solana-keygen
+CLAIM_TIPS_BIN=/home/core/jito-solana/docker-output/claim-mev
+
+check_params () {
+  if [ -z "$RPC_URL" ]
+  then
+    echo "Please pass rpc url as first parameter to autoclaim"
+    exit
+  fi
+
+  if [ -z "$TIP_DISTRIBUTION_PROGRAM_ID" ]
+  then
+    echo "Please pass tip distribution program id as second parameter to autoclaim"
+    exit
+  fi
+
+  if [ -z "$FEE_PAYER" ]
+  then
+    echo "Please pass fee payer keypair file as third parameter to autoclaim"
+    exit
+  fi
+}
 
 fetch_last_epoch_final_slot () {
   EPOCH_INFO=$(curl -s "http://$RPC_URL" -X POST -H "Content-Type: application/json" -d '
@@ -97,26 +119,34 @@ generate_merkle_trees () {
           echo "Successfully uploaded merkle roots for $PUBKEY"
         fi
       done
-    else
-      echo "Found merkle roots for slot $LAST_EPOCH_FINAL_SLOT! Need to claim next :D"
     fi
   fi
 }
 
-if [ -z "$RPC_URL" ]
-then
-    echo "Please pass rpc url as first parameter to autoclaim"
-    exit
-fi
+claim_tips () {
+    FOUND_MERKLE_ROOT=$(ls "$SNAPSHOT_DIR"merkle-root-"$LAST_EPOCH_FINAL_SLOT"* 2> /dev/null)
+    if [ -z "$FOUND_MERKLE_ROOT" ]
+    then
+      echo "No merkle roots found, unable to claim tips."
+      exit 1
+    fi
+    echo "Found merkle roots for slot $LAST_EPOCH_FINAL_SLOT! Claiming tips."
 
-if [ -z "$TIP_DISTRIBUTION_PROGRAM_ID" ]
-then
-    echo "Please pass tip distribution program id as second parameter to autoclaim"
-    exit
-fi
+    for MERKLE_ROOT_FILE in $(ls "$SNAPSHOT_DIR"merkle-root-"$LAST_EPOCH_FINAL_SLOT"*)
+    do
+      echo "Processing $MERKLE_ROOT_FILE"
+      RUST_LOG=info "$CLAIM_TIPS_BIN" \
+        --fee-payer "$FEE_PAYER" \
+        --merkle-tree "$MERKLE_ROOT_FILE" \
+        --tip-distribution-pid "$TIP_DISTRIBUTION_PROGRAM_ID" \
+        --url "http://$RPC_URL"
+    done
+}
 
+check_params
 fetch_last_epoch_final_slot
 echo "last confirmed slot in previous epoch: $LAST_EPOCH_FINAL_SLOT"
 
 generate_stake_meta
 generate_merkle_trees
+claim_tips
