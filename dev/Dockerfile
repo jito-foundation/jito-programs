@@ -35,4 +35,4 @@ RUN --mount=type=cache,mode=0777,target=/solana/target \
     --mount=type=cache,mode=0777,target=/usr/local/cargo/registry \
     --mount=type=cache,mode=0777,target=/usr/local/cargo/git \
     cd cli/claim-mev; cargo build --verbose --release \
-    && cp target/release/claim-mev ./docker-output
+    && cp target/release/claim-mev ../../docker-output
