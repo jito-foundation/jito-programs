@@ -9,8 +9,8 @@ TIP_DISTRIBUTION_PROGRAM_ID=$2
 FEE_PAYER=$3
 SNAPSHOT_DIR=/home/core/autosnapshot/
 KEYPAIR_DIR=/home/core/autosnapshot/keypairs/
-STAKE_META_BIN=/home/core/jito-solana/docker-output/stake-meta-generator
-MERKLE_ROOT_BIN=/home/core/jito-solana/docker-output/merkle-root-generator
+STAKE_META_BIN=/home/core/jito-solana/docker-output/solana-stake-meta-generator
+MERKLE_ROOT_BIN=/home/core/jito-solana/docker-output/solana-merkle-root-generator
 SOLANA_KEYGEN_BIN=/home/core/jito-solana/docker-output/solana-keygen
 CLAIM_TIPS_BIN=/home/core/jito-solana/docker-output/claim-mev
 
