@@ -1,8 +1,8 @@
 mod generated_merkle_tree;
 
-use std::{fs::File, io::BufReader, path::Path, rc::Rc, str::FromStr};
+use std::{fs::File, io::BufReader, path::Path, str::FromStr};
 
-use anchor_client::{solana_sdk::signature::Signer, Client, Cluster, Program};
+use anchor_client::{solana_sdk::signature::Signer, Cluster};
 use anchor_lang::{system_program::System, Id};
 use clap::{value_t, App, Arg};
 use generated_merkle_tree::GeneratedMerkleTreeCollection;
@@ -15,8 +15,9 @@ use solana_sdk::{
 };
 use tip_distribution::{
     sdk::instruction::{claim_ix, ClaimAccounts, ClaimArgs},
-    state::{ClaimStatus, Config},
+    state::ClaimStatus,
 };
+use tip_distribution::sdk::derive_config_account_address;
 
 type Error = Box<dyn std::error::Error>;
 
@@ -99,13 +100,9 @@ fn main() -> Result<(), Error> {
     let dry_run = matches.is_present("dry_run");
     let fee_payer = read_keypair_file(fee_payer_path).unwrap();
 
-    let client =
-        Client::new_with_options(url, Rc::new(Keypair::new()), CommitmentConfig::processed());
-
     let pid = value_t!(matches, "tip_distribution_pid", Pubkey)
         .expect("missing or invalid tip distribution pid!");
 
-    let program = client.program(pid);
     let merkle_tree_path =
         value_t!(matches, "merkle_tree", String).expect("merkle tree path not found!");
     let merkle_tree = load_merkle_tree(merkle_tree_path)?;
@@ -116,7 +113,7 @@ fn main() -> Result<(), Error> {
         pid,
     };
 
-    command_claim_all(&rpc_config, &fee_payer, &program, &merkle_tree);
+    command_claim_all(&rpc_config, &fee_payer, &merkle_tree);
     Ok(())
 }
 
@@ -124,11 +121,8 @@ fn main() -> Result<(), Error> {
 fn command_claim_all(
     rpc_config: &RpcConfig,
     payer: &Keypair,
-    program: &Program,
     merkle_tree: &GeneratedMerkleTreeCollection,
 ) {
-    let program_tip_accounts: Vec<(Pubkey, Config)> = program.accounts(vec![]).unwrap();
-
     for tree in &merkle_tree.generated_merkle_trees {
         let tip_distribution_account = &tree.tip_distribution_account;
         for node in &tree.tree_nodes {
@@ -150,7 +144,7 @@ fn command_claim_all(
             println!("--------Claiming tips for {:#?}--------", claimant);
 
             let claim_accounts = ClaimAccounts {
-                config: program_tip_accounts[0].0, // TODO: check that this array access is safe
+                config: derive_config_account_address(&rpc_config.pid).0,
                 tip_distribution_account: tip_distribution_account.clone(),
                 claim_status,
                 claimant,
