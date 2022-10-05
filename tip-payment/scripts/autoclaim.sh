@@ -13,6 +13,7 @@ STAKE_META_BIN=/home/core/jito-solana/docker-output/solana-stake-meta-generator
 MERKLE_ROOT_BIN=/home/core/jito-solana/docker-output/solana-merkle-root-generator
 SOLANA_KEYGEN_BIN=/home/core/jito-solana/docker-output/solana-keygen
 CLAIM_TIPS_BIN=/home/core/jito-solana/docker-output/claim-mev
+GCLOUD_PATH=/home/core/google-cloud-sdk/bin/gcloud
 
 check_params () {
   if [ -z "$RPC_URL" ]
@@ -143,10 +144,46 @@ claim_tips () {
     done
 }
 
+upload_file () {
+  CURRENT_EPOCH=$(echo "$EPOCH_INFO" | jq .result.epoch)
+  LAST_EPOCH=$((CURRENT_EPOCH - 1))
+  UPLOAD_PATH="gs://jito-mainnet/$LAST_EPOCH/$2"
+  FILE_UPLOADED=$(su core -c "$GCLOUD_PATH storage ls $UPLOAD_PATH | grep $UPLOAD_PATH")
+
+  if [ -z "$FILE_UPLOADED" ]
+  then
+    echo "$1 not found in gcp bucket, uploading now."
+    su core -c "$GCLOUD_PATH storage cp $SNAPSHOT_DIR/$2 $UPLOAD_PATH"
+  else
+    echo "$1 already uploaded to gcp."
+  fi
+}
+
+upload_merkle_roots () {
+  for KEYPAIR_FILE in $(ls "$KEYPAIR_DIR")
+  do
+    KEYPAIR_PATH="$KEYPAIR_DIR$KEYPAIR_FILE"
+    PUBKEY=$("$SOLANA_KEYGEN_BIN" pubkey "$KEYPAIR_PATH")
+    upload_file "merkle-root for $PUBKEY" "merkle-root-$LAST_EPOCH_FINAL_SLOT-$PUBKEY"
+  done
+}
+
+clean_old_stake_metas () {
+  ls "$SNAPSHOT_DIR"stake-meta* | grep -v "$LAST_EPOCH_FINAL_SLOT" | xargs rm
+}
+
+clean_old_merkle_roots () {
+  ls "$SNAPSHOT_DIR"merkle-root* | grep -v "$LAST_EPOCH_FINAL_SLOT" | xargs rm
+}
+
 check_params
 fetch_last_epoch_final_slot
 echo "last confirmed slot in previous epoch: $LAST_EPOCH_FINAL_SLOT"
 
 generate_stake_meta
+upload_file "stake-meta" "stake-meta-$LAST_EPOCH_FINAL_SLOT"
 generate_merkle_trees
+upload_merkle_roots
+clean_old_stake_metas
+clean_old_merkle_roots
 claim_tips

@@ -7,6 +7,7 @@ RPC_URL=$1
 LEDGER_LOCATION=$2
 SNAPSHOT_DIR=/home/core/autosnapshot/
 LEDGER_TOOL_PATH=/home/core/jito-solana/docker-output/solana-ledger-tool
+GCLOUD_PATH=/home/core/google-cloud-sdk/bin/gcloud
 
 fetch_last_epoch_final_slot () {
   EPOCH_INFO=$(curl -s "http://$RPC_URL" -X POST -H "Content-Type: application/json" -d '
@@ -53,6 +54,25 @@ create_snapshot_for_slot () {
   fi
 }
 
+upload_snapshot () {
+  CURRENT_EPOCH=$(echo "$EPOCH_INFO" | jq .result.epoch)
+  LAST_EPOCH=$((CURRENT_EPOCH - 1))
+  UPLOAD_PATH="gs://jito-mainnet/$LAST_EPOCH/$FOUND_SNAPSHOT"
+  SNAPSHOT_UPLOADED=$(su core -c "$GCLOUD_PATH storage ls $UPLOAD_PATH | grep $UPLOAD_PATH")
+
+  if [ -z "$SNAPSHOT_UPLOADED" ]
+  then
+    echo "Snapshot not found in gcp bucket, uploading now."
+    su core -c "$GCLOUD_PATH storage cp $SNAPSHOT_DIR/$FOUND_SNAPSHOT $UPLOAD_PATH"
+  else
+    echo "Snapshot already uploaded to gcp."
+  fi
+}
+
+clean_old_snapshots () {
+  ls "$SNAPSHOT_DIR"snapshot* | grep -v "$LAST_EPOCH_FINAL_SLOT" | xargs rm
+}
+
 if [ -z "$RPC_URL" ]
 then
     echo "Please pass rpc url as first parameter to autosnapshot"
@@ -68,3 +88,5 @@ fi
 fetch_last_epoch_final_slot
 echo "last confirmed slot in previous epoch: $LAST_EPOCH_FINAL_SLOT"
 create_snapshot_for_slot "$LAST_EPOCH_FINAL_SLOT"
+upload_snapshot
+clean_old_snapshots
