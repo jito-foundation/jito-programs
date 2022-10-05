@@ -3,21 +3,21 @@ name = "claim-mev"
 description = "Claim MEV CLI"
 version = "0.1.0"
 edition = "2021"
-
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anchor-lang = { path = "../../../anchor/lang" }
 anchor-client = { path = "../../../anchor/client" }
-clap = {version = "3.2.5", features = ["derive", "env"]}
-tip-distribution = {path = "../../tip-payment/programs/tip-distribution", features = ["no-entrypoint"]}
-solana-merkle-tree = {path = "../../tip-payment/programs/merkle-tree"}
-solana-cli-config = { path = "../../../cli-config" }
-solana-client = { path = "../../../client" }
-solana-program = { path = "../../../sdk/program"}
-solana-runtime = { path = "../../../runtime" }
-solana-sdk = { path = "../../../sdk" }
+anchor-lang = { path = "../../../anchor/lang" }
+clap = { version = "3.2.5", features = ["derive", "env"] }
+csv = "1.1.6"
+log = "0.4.17"
+regex = "1.6.0"
 serde = "1.0.137"
 serde_json = "1.0.81"
-log = "0.4.17"
+solana-cli-config = { path = "../../../cli-config" }
+solana-client = { path = "../../../client" }
+solana-merkle-tree = { path = "../../tip-payment/programs/merkle-tree" }
+solana-program = { path = "../../../sdk/program" }
+solana-sdk = { path = "../../../sdk" }
 thiserror = "1.0.31"
+tip-distribution = { path = "../../tip-payment/programs/tip-distribution", features = ["no-entrypoint"] }
