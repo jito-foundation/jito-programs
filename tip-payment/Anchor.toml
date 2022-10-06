@@ -7,9 +7,11 @@ wallet = "~/.config/solana/id.json"
 tip_distribution = "7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh"
 tip_payment = "3jarB2NVZc9KouEppPHoAf3v9y77H5R88nyfMLDUzuwm"
 
+# Note: these are the keys in dev/ folder
+# do not use these keys in production or you'll get wrecked
 [programs.localnet]
-tip_distribution = "7QnFbRZajkym8mUh9rXuM5nKrPAPRfEU6W31izSWJDVh"
-tip_payment = "3jarB2NVZc9KouEppPHoAf3v9y77H5R88nyfMLDUzuwm"
+tip_distribution = "3PX9z1qPj37eNZqH7e5fyaVDyG7ARqkjkYEe1a4xsBkA"
+tip_payment = "6veFRUKJBNGMR58LEcKn5Bc6MR17WZF4rsgD4Lqq7fsU"
 
 [workspace]
 members = [
