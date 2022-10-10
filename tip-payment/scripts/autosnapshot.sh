@@ -70,7 +70,7 @@ upload_snapshot () {
 }
 
 clean_old_snapshots () {
-  ls "$SNAPSHOT_DIR"snapshot* | grep -v "$LAST_EPOCH_FINAL_SLOT" | xargs rm
+  ls "$SNAPSHOT_DIR"snapshot* | grep -E "$LAST_EPOCH_FINAL_SLOT" | xargs rm
 }
 
 if [ -z "$RPC_URL" ]
