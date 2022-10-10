@@ -5,7 +5,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anchor-lang = "0.25.0"
+anchor-lang = { path = "../../anchor/lang" }
 clap = { version = "3.2.5", features = ["derive", "env"] }
 env_logger = "0.9.0"
 futures = "0.3.21"
@@ -15,9 +15,9 @@ log = "0.4.17"
 num-traits = "0.2.15"
 serde = "1.0.137"
 serde_json = "1.0.81"
-solana-client = "~1.10.29"
-solana-program = "~1.10.29"
-solana-sdk = "~1.10.29"
+solana-client = { path = "../../client" }
+solana-program = { path = "../../sdk/program"}
+solana-sdk = { path = "../../sdk" }
 thiserror = "1.0.31"
 tip-distribution = { path = "../tip-payment/programs/tip-distribution", features = ["no-entrypoint"] }
 tokio = { version = "1.12.0", features = ["rt-multi-thread", "macros", "sync", "time", "full"] }
