@@ -139,7 +139,8 @@ claim_tips () {
         --fee-payer "$FEE_PAYER" \
         --merkle-tree "$MERKLE_ROOT_FILE" \
         --tip-distribution-pid "$TIP_DISTRIBUTION_PROGRAM_ID" \
-        --url "http://$RPC_URL"
+        --url "http://$RPC_URL" \
+        --log-dir "$SNAPSHOT_DIR"
     done
 }
 
