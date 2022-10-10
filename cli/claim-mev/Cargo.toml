@@ -7,16 +7,16 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anchor-lang = "0.25.0"
-anchor-client = "0.25.0"
+anchor-lang = { path = "../../../anchor/lang" }
+anchor-client = { path = "../../../anchor/client" }
 clap = {version = "3.2.5", features = ["derive", "env"]}
 tip-distribution = {path = "../../tip-payment/programs/tip-distribution", features = ["no-entrypoint"]}
 solana-merkle-tree = {path = "../../tip-payment/programs/merkle-tree"}
-solana-cli-config = "~1.10.33"
-solana-client = "~1.10.33"
-solana-program = "~1.10.33"
-solana-runtime = "~1.10.33"
-solana-sdk = "~1.10.33"
+solana-cli-config = { path = "../../../cli-config" }
+solana-client = { path = "../../../client" }
+solana-program = { path = "../../../sdk/program"}
+solana-runtime = { path = "../../../runtime" }
+solana-sdk = { path = "../../../sdk" }
 serde = "1.0.137"
 serde_json = "1.0.81"
 log = "0.4.17"
