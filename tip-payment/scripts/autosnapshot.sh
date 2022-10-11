@@ -5,7 +5,8 @@
 set -e
 
 DIR="$( cd "$( dirname "$0" )" && pwd )"
-source ./${DIR}/utils.sh
+# shellcheck disable=SC2039
+source "${DIR}"/utils.sh
 
 
 RPC_URL=$1

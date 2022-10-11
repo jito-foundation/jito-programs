@@ -4,7 +4,7 @@ set -e
 fetch_epoch_info() {
   local rpc_url=$1
 
-  EPOCH_INFO=$(curl -s "http://$rpc_url" -X POST -H "Content-Type: application/json" -d '
+  EPOCH_INFO=$(curl "http://$rpc_url" -X POST -H "Content-Type: application/json" -d '
       {"jsonrpc":"2.0","id":1, "method":"getEpochInfo"}
     ')
   if [ -z "$EPOCH_INFO" ]
@@ -31,7 +31,7 @@ fetch_highest_confirmed_slot() {
   # we check within a 40 slot range for the highest confirmed block
   local range_begin=$((last_epoch_end_slot - 40))
 
-  HIGHEST_CONFIRMED_SLOT=$(curl -s "http://$rpc_url" -X POST -H "Content-Type: application/json" -d "
+  HIGHEST_CONFIRMED_SLOT=$(curl "http://$rpc_url" -X POST -H "Content-Type: application/json" -d "
     {\"jsonrpc\": \"2.0\",\"id\":1,\"method\":\"getBlocks\",\"params\":[$range_begin, $last_epoch_end_slot]}
   " | jq '.result | last')
 
