@@ -13,6 +13,8 @@ RPC_URL=$1
 LEDGER_LOCATION=$2
 SNAPSHOT_DIR=$3
 LEDGER_TOOL_PATH=$4
+HOST_NAME=$5
+ENVIRONMENT=$6
 
 create_snapshot_for_slot() {
   local snapshot_slot=$1
@@ -42,7 +44,7 @@ upload_snapshot() {
 
   local current_epoch=$(echo "$epoch_info" | jq .result.epoch)
   local last_epoch=$((current_epoch - 1))
-  local upload_path="gs://jito-mainnet/$last_epoch/$snapshot_file"
+  local upload_path="gs://jito-$ENVIRONMENT/$last_epoch/$HOST_NAME/$snapshot_file"
   local snapshot_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
   if [ -z "$snapshot_uploaded" ]

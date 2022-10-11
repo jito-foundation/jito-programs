@@ -19,6 +19,8 @@ STAKE_META_BIN=$6
 MERKLE_ROOT_BIN=$7
 SOLANA_KEYGEN_BIN=$8
 CLAIM_TIPS_BIN=$9
+HOST_NAME=$10
+ENVIRONMENT=$11
 
 check_params() {
   if [ -z "$RPC_URL" ]
@@ -136,7 +138,7 @@ upload_file() {
 
   local epoch=$(echo "$epoch_info" | jq .result.epoch)
   local prev_epoch=$((epoch - 1))
-  local upload_path="gs://jito-mainnet/$prev_epoch/$file_name"
+  local upload_path="gs://jito-$ENVIRONMENT/$prev_epoch/$HOST_NAME/$file_name"
   local file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
   if [ -z "$file_uploaded" ]
