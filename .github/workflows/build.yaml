@@ -31,8 +31,10 @@ jobs:
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo install --git https://github.com/project-serum/anchor --tag v0.25.0 anchor-cli --locked --force
       - run: cd tip-payment && yarn
-      - run: yarn global add mocha@^9.0.3
-      - run: yarn global add ts-mocha@^10.0.0
+      - run: yarn global add mocha@^9.0.3 ts-mocha@^10.0.0
+      - name: Create reproducible build
+        working-directory: ./tip-payment
+        run: anchor build --verifiable
       - name: test
         working-directory: ./tip-payment
         run: anchor test
