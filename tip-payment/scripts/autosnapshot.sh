@@ -1,20 +1,50 @@
 #!/usr/bin/env sh
+# This script creates a snapshot for the last confirmed slot
+# in the previous epoch if one doesn't already exist.
+
+set -e
 
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 source ./${DIR}/utils.sh
 
-# This script creates a snapshot for the last confirmed slot
-# in the previous epoch if one doesn't already exist.
-# Ex: ./autosnapshot.sh 10.1.23.506:8899 /solana/ledger/
-
-set -e
 
 RPC_URL=$RPC_URL
 LEDGER_LOCATION=$LEDGER_LOCATION
 SNAPSHOT_DIR=$SNAPSHOT_DIR
-LEDGER_TOOL_PATH=$LEDGER_TOOL_PATH
 HOST_NAME=$HOST_NAME
 ENVIRONMENT=$ENVIRONMENT
+
+check_env() {
+  if [ -z "$RPC_URL" ]
+  then
+    echo "RPC_URL must be set"
+    exit
+  fi
+
+  if [ -z "$LEDGER_LOCATION" ]
+  then
+    echo "LEDGER_LOCATION must be set"
+    exit
+  fi
+
+  if [ -z "$SNAPSHOT_DIR" ]
+  then
+    echo "SNAPSHOT_DIR must be set"
+    exit
+  fi
+
+  if [ -z "$HOST_NAME" ]
+  then
+    echo "HOST_NAME must be set"
+    exit
+  fi
+
+  if [ -z "$ENVIRONMENT" ]
+  then
+    echo "ENVIRONMENT must be set"
+    exit
+  fi
+}
 
 create_snapshot_for_slot() {
   local snapshot_slot=$1
@@ -24,11 +54,11 @@ create_snapshot_for_slot() {
   if [ -z "$snapshot_file" ]
   then
     echo "Didn't find snapshot for slot $1, creating..."
-    RUST_LOG=info "$LEDGER_TOOL_PATH" -l "$LEDGER_LOCATION" create-snapshot "$snapshot_slot"
+    RUST_LOG=info solana-ledger-tool -l "$LEDGER_LOCATION" create-snapshot "$snapshot_slot"
     # ledger-tool by default updates snapshots in the existing ledger directory
     # and prunes old full/incremental snapshots. copy it out to our snapshot
     # directory when finished creating.
-    cp "$LEDGER_LOCATION"*"$snapshot_slot"* $SNAPSHOT_DIR
+    cp "$LEDGER_LOCATION"*"$snapshot_slot"* "$SNAPSHOT_DIR"
   else
     echo "Found snapshot, nothing to do."
   fi
@@ -84,6 +114,8 @@ then
   exit
 fi
 
+
+check_env
 epoch_info=$(fetch_epoch_info "$RPC_URL" | tail -n 1)
 epoch_final_slot=$(calculate_epoch_end_slot "$epoch_info" | tail -n 1)
 echo "last confirmed slot in previous epoch: $epoch_final_slot"

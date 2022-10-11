@@ -1,9 +1,7 @@
 #!/usr/bin/env sh
-
 # This script detects an unprocessed snapshot and
 # generates stake meta and merkle roots, before
 # claiming all tips on behalf of participants.
-# EX: TODO EXAMPLE
 
 set -e
 
@@ -15,29 +13,49 @@ TIP_DISTRIBUTION_PROGRAM_ID=$RPC_URL
 FEE_PAYER=$FEE_PAYER
 SNAPSHOT_DIR=$SNAPSHOT_DIR
 KEYPAIR_DIR=$KEYPAIR_DIR
-STAKE_META_BIN=$STAKE_META_BIN
-MERKLE_ROOT_BIN=$MERKLE_ROOT_BIN
-SOLANA_KEYGEN_BIN=$SOLANA_KEYGEN_BIN
-CLAIM_TIPS_BIN=$CLAIM_TIPS_BIN
 HOST_NAME=$HOST_NAME
 ENVIRONMENT=$ENVIRONMENT
 
-check_params() {
+check_env() {
   if [ -z "$RPC_URL" ]
   then
-    echo "Please pass rpc url as first parameter to autoclaim"
+    echo "RPC_URL must be set"
     exit
   fi
 
   if [ -z "$TIP_DISTRIBUTION_PROGRAM_ID" ]
   then
-    echo "Please pass tip distribution program id as second parameter to autoclaim"
+    echo "TIP_DISTRIBUTION_PROGRAM_ID must be set"
     exit
   fi
 
   if [ -z "$FEE_PAYER" ]
   then
-    echo "Please pass fee payer keypair file as third parameter to autoclaim"
+    echo "FEE_PAYER must be set"
+    exit
+  fi
+
+  if [ -z "$SNAPSHOT_DIR" ]
+  then
+    echo "SNAPSHOT_DIR must be set"
+    exit
+  fi
+
+  if [ -z "$KEYPAIR_DIR" ]
+  then
+    echo "KEYPAIR_DIR must be set"
+    exit
+  fi
+
+  if [ -z "$HOST_NAME" ]
+  then
+    echo "HOST_NAME must be set"
+    exit
+  fi
+
+  if [ -z "$ENVIRONMENT" ]
+  then
+    echo "ENVIRONMENT must be set"
     exit
   fi
 }
@@ -57,7 +75,7 @@ generate_stake_meta() {
     if [ -z "$maybe_stake_meta" ]
     then
       echo "Found snapshot $maybe_snapshot but no stake-meta-$slot, running stake-meta-generator."
-      RUST_LOG=info "$STAKE_META_BIN" \
+      RUST_LOG=info solana-stake-meta-generator \
         --ledger-path "$SNAPSHOT_DIR" \
         --tip-distribution-program-id "$TIP_DISTRIBUTION_PROGRAM_ID" \
         --out-path "$SNAPSHOT_DIR"stake-meta-"$LAST_EPOCH_FINAL_SLOT" \
@@ -86,10 +104,10 @@ generate_merkle_trees() {
       for keypair_file in $(ls "$KEYPAIR_DIR")
       do
         local keypair_path="$KEYPAIR_DIR$keypair_file"
-        local pubkey =$("$SOLANA_KEYGEN_BIN" pubkey "$KEYPAIR_PATH")
+        local pubkey =$(solana-keygen pubkey "$KEYPAIR_PATH")
         echo "Generating merkle root for $pubkey"
 
-        RUST_LOG=info "$MERKLE_ROOT_BIN" \
+        RUST_LOG=info solana-merkle-root-generator \
         --path-to-my-keypair "$KEYPAIR_PATH" \
         --rpc-url "http://$RPC_URL" \
         --stake-meta-coll-path "$SNAPSHOT_DIR"stake-meta-"$slot" \
@@ -123,7 +141,7 @@ claim_tips() {
   for merkle_root in $(ls "$SNAPSHOT_DIR"merkle-root-"$slot"*)
   do
     echo "Processing $merkle_root"
-    RUST_LOG=info "$CLAIM_TIPS_BIN" \
+    RUST_LOG=info claim-mev \
       --fee-payer "$FEE_PAYER" \
       --merkle-tree "$merkle_root" \
       --tip-distribution-pid "$TIP_DISTRIBUTION_PROGRAM_ID" \
@@ -160,7 +178,7 @@ upload_merkle_roots() {
   for keypair_file in $(ls "$KEYPAIR_DIR")
   do
     local keypair_path="$KEYPAIR_DIR$keypair_file"
-    local pubkey=$("$SOLANA_KEYGEN_BIN" pubkey "$keypair_path")
+    local pubkey=$(solana-keygen pubkey "$keypair_path")
     upload_file "merkle-root for $pubkey" "$epoch_info" "merkle-root-$slot-$pubkey"
   done
 }
@@ -180,7 +198,7 @@ rm_merkle_roots() {
   ls "$SNAPSHOT_DIR"merkle-root* | { grep -v "$slot" || true; } | xargs rm
 }
 
-check_params
+check_env
 
 epoch_info=$(fetch_epoch_info "$RPC_URL" | tail -n 1)
 epoch_final_slot=$(calculate_epoch_end_slot "$epoch_info" | tail -n 1)
