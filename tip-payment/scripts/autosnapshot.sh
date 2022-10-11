@@ -11,9 +11,8 @@ set -e
 
 RPC_URL=$1
 LEDGER_LOCATION=$2
-SNAPSHOT_DIR=/home/core/autosnapshot/
-LEDGER_TOOL_PATH=/home/core/jito-solana/docker-output/solana-ledger-tool
-GCLOUD_PATH=/home/core/google-cloud-sdk/bin/gcloud
+SNAPSHOT_DIR=$3
+LEDGER_TOOL_PATH=$4
 
 create_snapshot_for_slot() {
   local snapshot_slot=$1
@@ -44,14 +43,14 @@ upload_snapshot() {
   local current_epoch=$(echo "$epoch_info" | jq .result.epoch)
   local last_epoch=$((current_epoch - 1))
   local upload_path="gs://jito-mainnet/$last_epoch/$snapshot_file"
-  local snapshot_uploaded=$($GCLOUD_PATH storage ls "$upload_path" | { grep "$upload_path" || true; })
+  local snapshot_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
   if [ -z "$snapshot_uploaded" ]
   then
     echo "Snapshot not found in gcp bucket, uploading now."
     echo "snapshot_file: $snapshot_file"
     echo "upload_path: $upload_path"
-    $GCLOUD_PATH storage cp $SNAPSHOT_DIR/"$snapshot_file" "$upload_path"
+    gcloud storage cp $SNAPSHOT_DIR/"$snapshot_file" "$upload_path"
   else
     echo "Snapshot already uploaded to gcp."
   fi

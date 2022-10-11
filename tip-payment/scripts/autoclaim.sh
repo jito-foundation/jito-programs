@@ -13,13 +13,12 @@ source ./${DIR}/utils.sh
 RPC_URL=$1
 TIP_DISTRIBUTION_PROGRAM_ID=$2
 FEE_PAYER=$3
-SNAPSHOT_DIR=/home/core/autosnapshot/
-KEYPAIR_DIR=/home/core/autosnapshot/keypairs/
-STAKE_META_BIN=/home/core/jito-solana/docker-output/solana-stake-meta-generator
-MERKLE_ROOT_BIN=/home/core/jito-solana/docker-output/solana-merkle-root-generator
-SOLANA_KEYGEN_BIN=/home/core/jito-solana/docker-output/solana-keygen
-CLAIM_TIPS_BIN=/home/core/jito-solana/docker-output/claim-mev
-GCLOUD_PATH=/home/core/google-cloud-sdk/bin/gcloud
+SNAPSHOT_DIR=$4
+KEYPAIR_DIR=$5
+STAKE_META_BIN=$6
+MERKLE_ROOT_BIN=$7
+SOLANA_KEYGEN_BIN=$8
+CLAIM_TIPS_BIN=$9
 
 check_params() {
   if [ -z "$RPC_URL" ]
@@ -138,14 +137,14 @@ upload_file() {
   local epoch=$(echo "$epoch_info" | jq .result.epoch)
   local prev_epoch=$((epoch - 1))
   local upload_path="gs://jito-mainnet/$prev_epoch/$file_name"
-  local file_uploaded=$($GCLOUD_PATH storage ls "$upload_path" | { grep "$upload_path" || true; })
+  local file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
   if [ -z "$file_uploaded" ]
   then
     echo "$name not found in gcp bucket, uploading now."
     echo "upload_path: $upload_path"
     echo "upload_path: $file_name"
-    $GCLOUD_PATH storage cp $SNAPSHOT_DIR/"$file_name" "$upload_path"
+    gcloud storage cp $SNAPSHOT_DIR/"$file_name" "$upload_path"
   else
     echo "$name already uploaded to gcp."
   fi
