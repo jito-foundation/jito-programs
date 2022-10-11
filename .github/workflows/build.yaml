@@ -19,6 +19,7 @@ jobs:
       - run: cd tip-payment && yarn
       - run: yarn global add mocha@^9.0.3 ts-mocha@^10.0.0
       - name: Create reproducible build
+        working-directory: ./tip-payment
         run: anchor build --verifiable
       - name: test
         working-directory: ./tip-payment
