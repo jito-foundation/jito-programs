@@ -71,7 +71,7 @@ generate_stake_meta() {
   if [ -z "$maybe_snapshot" ]
   then
     echo "No snapshot found for slot $slot. Nothing to do. Exiting."
-    exit 1
+    exit 0
   else
     local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot" 2> /dev/null)
     if [ -z "$maybe_stake_meta" ]
@@ -96,7 +96,7 @@ generate_merkle_trees() {
   if [ -z "$maybe_stake_meta" ]
   then
     echo "No stake meta found for slot $slot. Nothing to do. Exiting."
-    exit 1
+    exit 0
   else
     local maybe_merkle_root=$(ls "$SNAPSHOT_DIR"merkle-root-"$slot"* 2> /dev/null)
     if [ -z "$maybe_merkle_root" ]

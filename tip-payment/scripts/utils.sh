@@ -37,7 +37,7 @@ fetch_highest_confirmed_slot() {
 
   if [[ "$HIGHEST_CONFIRMED_SLOT" == "null" ]]
   then
-    echo "Missing block range [$range_begin, $HIGHEST_CONFIRMED_SLOT] for last epoch. Nothing to do. Exiting."
+    echo "Missing block range [$range_begin, $HIGHEST_CONFIRMED_SLOT] for last epoch."
     exit 1
   fi
 }
