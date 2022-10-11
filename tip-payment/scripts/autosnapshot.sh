@@ -8,41 +8,41 @@ DIR="$( cd "$( dirname "$0" )" && pwd )"
 source ./${DIR}/utils.sh
 
 
-RPC_URL=$RPC_URL
+RPC_URL=$1
 LEDGER_LOCATION=$LEDGER_LOCATION
 SNAPSHOT_DIR=$SNAPSHOT_DIR
 HOST_NAME=$HOST_NAME
-ENVIRONMENT=$ENVIRONMENT
+SOLANA_CLUSTER=$SOLANA_CLUSTER
 
 check_env() {
   if [ -z "$RPC_URL" ]
   then
-    echo "RPC_URL must be set"
-    exit
+    echo "Must pass RPC URL as first arg"
+    exit 1
   fi
 
   if [ -z "$LEDGER_LOCATION" ]
   then
     echo "LEDGER_LOCATION must be set"
-    exit
+    exit 1
   fi
 
   if [ -z "$SNAPSHOT_DIR" ]
   then
     echo "SNAPSHOT_DIR must be set"
-    exit
+    exit 1
   fi
 
   if [ -z "$HOST_NAME" ]
   then
     echo "HOST_NAME must be set"
-    exit
+    exit 1
   fi
 
-  if [ -z "$ENVIRONMENT" ]
+  if [ -z "$SOLANA_CLUSTER" ]
   then
-    echo "ENVIRONMENT must be set"
-    exit
+    echo "SOLANA_CLUSTER must be set"
+    exit 1
   fi
 }
 
@@ -64,8 +64,7 @@ create_snapshot_for_slot() {
   fi
 
   # shellcheck disable=SC2012
-  local snapshot_file=$(ls "$SNAPSHOT_DIR" | { grep ".tar.zst" || true; } | { grep "$snapshot_slot" || true; })
-  echo "$snapshot_file"
+  SNAPSHOT_FILE=$(ls "$SNAPSHOT_DIR" | { grep ".tar.zst" || true; } | { grep "$snapshot_slot" || true; })
 }
 
 upload_snapshot() {
@@ -74,7 +73,7 @@ upload_snapshot() {
 
   local current_epoch=$(echo "$epoch_info" | jq .result.epoch)
   local last_epoch=$((current_epoch - 1))
-  local upload_path="gs://jito-$ENVIRONMENT/$last_epoch/$HOST_NAME/$snapshot_file"
+  local upload_path="gs://jito-$SOLANA_CLUSTER/$last_epoch/$HOST_NAME/$snapshot_file"
   local snapshot_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
   if [ -z "$snapshot_uploaded" ]
@@ -103,9 +102,10 @@ rm_snapshot_file() {
 }
 
 check_env
-epoch_info=$(fetch_epoch_info "$RPC_URL" | tail -n 1)
-epoch_final_slot=$(calculate_epoch_end_slot "$epoch_info" | tail -n 1)
-echo "last confirmed slot in previous epoch: $epoch_final_slot"
-snapshot_file=$(create_snapshot_for_slot "$epoch_final_slot" | tail -n 1)
-upload_snapshot "$epoch_info" "$snapshot_file"
-rm_snapshot_file "$epoch_final_slot"
+
+fetch_epoch_info "$RPC_URL"
+calculate_epoch_end_slot "$EPOCH_INFO"
+echo "last confirmed slot in previous epoch: $EPOCH_FINAL_SLOT"
+create_snapshot_for_slot "$EPOCH_FINAL_SLOT"
+upload_snapshot "$EPOCH_INFO" "$SNAPSHOT_FILE"
+rm_snapshot_file "$EPOCH_FINAL_SLOT"

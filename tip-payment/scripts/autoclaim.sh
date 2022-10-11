@@ -8,55 +8,55 @@ set -e
 DIR="$( cd "$( dirname "$0" )" && pwd )"
 source ./${DIR}/utils.sh
 
-RPC_URL=$RPC_URL
-TIP_DISTRIBUTION_PROGRAM_ID=$RPC_URL
+RPC_URL=$1
+TIP_DISTRIBUTION_PROGRAM_ID=$TIP_DISTRIBUTION_PROGRAM_ID
 FEE_PAYER=$FEE_PAYER
 SNAPSHOT_DIR=$SNAPSHOT_DIR
 KEYPAIR_DIR=$KEYPAIR_DIR
 HOST_NAME=$HOST_NAME
-ENVIRONMENT=$ENVIRONMENT
+SOLANA_CLUSTER=$SOLANA_CLUSTER
 
 check_env() {
   if [ -z "$RPC_URL" ]
   then
-    echo "RPC_URL must be set"
-    exit
+    echo "Must pass RPC URL as first arg"
+    exit 1
   fi
 
   if [ -z "$TIP_DISTRIBUTION_PROGRAM_ID" ]
   then
     echo "TIP_DISTRIBUTION_PROGRAM_ID must be set"
-    exit
+    exit 1
   fi
 
   if [ -z "$FEE_PAYER" ]
   then
     echo "FEE_PAYER must be set"
-    exit
+    exit 1
   fi
 
   if [ -z "$SNAPSHOT_DIR" ]
   then
     echo "SNAPSHOT_DIR must be set"
-    exit
+    exit 1
   fi
 
   if [ -z "$KEYPAIR_DIR" ]
   then
     echo "KEYPAIR_DIR must be set"
-    exit
+    exit 1
   fi
 
   if [ -z "$HOST_NAME" ]
   then
     echo "HOST_NAME must be set"
-    exit
+    exit 1
   fi
 
-  if [ -z "$ENVIRONMENT" ]
+  if [ -z "$SOLANA_CLUSTER" ]
   then
-    echo "ENVIRONMENT must be set"
-    exit
+    echo "SOLANA_CLUSTER must be set"
+    exit 1
   fi
 }
 
@@ -156,14 +156,14 @@ upload_file() {
 
   local epoch=$(echo "$epoch_info" | jq .result.epoch)
   local prev_epoch=$((epoch - 1))
-  local upload_path="gs://jito-$ENVIRONMENT/$prev_epoch/$HOST_NAME/$file_name"
+  local upload_path="gs://jito-$SOLANA_CLUSTER/$prev_epoch/$HOST_NAME/$file_name"
   local file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
   if [ -z "$file_uploaded" ]
   then
     echo "$name not found in gcp bucket, uploading now."
     echo "upload_path: $upload_path"
-    echo "upload_path: $file_name"
+    echo "file_name: $file_name"
     gcloud storage cp $SNAPSHOT_DIR/"$file_name" "$upload_path"
   else
     echo "$name already uploaded to gcp."
@@ -200,18 +200,18 @@ rm_merkle_roots() {
 
 check_env
 
-epoch_info=$(fetch_epoch_info "$RPC_URL" | tail -n 1)
-epoch_final_slot=$(calculate_epoch_end_slot "$epoch_info" | tail -n 1)
-echo "last confirmed slot in previous epoch: $epoch_final_slot"
+fetch_epoch_info "$RPC_URL"
+calculate_epoch_end_slot "$EPOCH_INFO"
+echo "last confirmed slot in previous epoch: $EPOCH_FINAL_SLOT"
 
-generate_stake_meta "$epoch_final_slot"
+generate_stake_meta "$EPOCH_FINAL_SLOT"
 
-upload_file "stake-meta" "$epoch_info" "stake-meta-$epoch_final_slot"
-generate_merkle_trees "$epoch_final_slot"
+upload_file "stake-meta" "$EPOCH_INFO" "stake-meta-$EPOCH_FINAL_SLOT"
+generate_merkle_trees "$EPOCH_FINAL_SLOT"
 
-upload_merkle_roots "$epoch_final_slot" "$epoch_info"
+upload_merkle_roots "$EPOCH_FINAL_SLOT" "$EPOCH_INFO"
 
-rm_stake_metas "$epoch_final_slot"
-rm_merkle_roots "$epoch_final_slot"
+rm_stake_metas "$EPOCH_FINAL_SLOT"
+rm_merkle_roots "$EPOCH_FINAL_SLOT"
 
-claim_tips "$epoch_final_slot"
+claim_tips "$EPOCH_FINAL_SLOT"
