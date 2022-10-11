@@ -9,17 +9,24 @@ DIR="$( cd "$( dirname "$0" )" && pwd )"
 source ./${DIR}/utils.sh
 
 RPC_URL=$1
+HOST_NAME=$2
+
 TIP_DISTRIBUTION_PROGRAM_ID=$TIP_DISTRIBUTION_PROGRAM_ID
 FEE_PAYER=$FEE_PAYER
 SNAPSHOT_DIR=$SNAPSHOT_DIR
 KEYPAIR_DIR=$KEYPAIR_DIR
-HOST_NAME=$HOST_NAME
 SOLANA_CLUSTER=$SOLANA_CLUSTER
 
 check_env() {
   if [ -z "$RPC_URL" ]
   then
     echo "Must pass RPC URL as first arg"
+    exit 1
+  fi
+
+  if [ -z "$HOST_NAME" ]
+  then
+    echo "Must pass host name as second arg"
     exit 1
   fi
 
@@ -44,12 +51,6 @@ check_env() {
   if [ -z "$KEYPAIR_DIR" ]
   then
     echo "KEYPAIR_DIR must be set"
-    exit 1
-  fi
-
-  if [ -z "$HOST_NAME" ]
-  then
-    echo "HOST_NAME must be set"
     exit 1
   fi
 
