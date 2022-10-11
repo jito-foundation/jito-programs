@@ -53,7 +53,7 @@ create_snapshot_for_slot() {
   local snapshot_file=$(ls "$SNAPSHOT_DIR" | { grep ".tar.zst" || true; } | { grep "$snapshot_slot" || true; })
   if [ -z "$snapshot_file" ]
   then
-    echo "Didn't find snapshot for slot $1, creating..."
+    echo "Didn't find snapshot for slot $snapshot_slot, creating..."
     RUST_LOG=info solana-ledger-tool -l "$LEDGER_LOCATION" create-snapshot "$snapshot_slot"
     # ledger-tool by default updates snapshots in the existing ledger directory
     # and prunes old full/incremental snapshots. copy it out to our snapshot
@@ -101,19 +101,6 @@ rm_snapshot_file() {
     rm "$maybe_snapshot"
   fi
 }
-
-if [ -z "$RPC_URL" ]
-then
-    echo "Please pass rpc url as first parameter to autosnapshot"
-    exit
-fi
-
-if [ -z "$LEDGER_LOCATION" ]
-then
-  echo "Please pass ledger path as second parameter to autosnapshot"
-  exit
-fi
-
 
 check_env
 epoch_info=$(fetch_epoch_info "$RPC_URL" | tail -n 1)
