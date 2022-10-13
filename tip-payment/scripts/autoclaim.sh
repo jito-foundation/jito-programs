@@ -6,8 +6,7 @@
 set -e
 
 DIR="$( cd "$( dirname "$0" )" && pwd )"
-# shellcheck disable=SC2039
-source "${DIR}"/utils.sh
+source ./${DIR}/utils.sh
 
 RPC_URL=$1
 HOST_NAME=$2
@@ -71,7 +70,7 @@ generate_stake_meta() {
   if [ -z "$maybe_snapshot" ]
   then
     echo "No snapshot found for slot $slot. Nothing to do. Exiting."
-    exit 0
+    exit 1
   else
     local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot" 2> /dev/null)
     if [ -z "$maybe_stake_meta" ]
@@ -80,7 +79,7 @@ generate_stake_meta() {
       RUST_LOG=info solana-stake-meta-generator \
         --ledger-path "$SNAPSHOT_DIR" \
         --tip-distribution-program-id "$TIP_DISTRIBUTION_PROGRAM_ID" \
-        --out-path "$SNAPSHOT_DIR"stake-meta-"$LAST_EPOCH_FINAL_SLOT" \
+        --out-path "$SNAPSHOT_DIR"stake-meta-"$slot" \
         --snapshot-slot "$slot" \
         --rpc-url http://"$RPC_URL"
       rm -rf "$SNAPSHOT_DIR"stake-meta.accounts
@@ -92,11 +91,11 @@ generate_stake_meta() {
 generate_merkle_trees() {
   local slot=$1
 
-  local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot")
+  local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot" 2> /dev/null)
   if [ -z "$maybe_stake_meta" ]
   then
     echo "No stake meta found for slot $slot. Nothing to do. Exiting."
-    exit 0
+    exit 1
   else
     local maybe_merkle_root=$(ls "$SNAPSHOT_DIR"merkle-root-"$slot"* 2> /dev/null)
     if [ -z "$maybe_merkle_root" ]
@@ -106,11 +105,13 @@ generate_merkle_trees() {
       for keypair_file in $(ls "$KEYPAIR_DIR")
       do
         local keypair_path="$KEYPAIR_DIR$keypair_file"
-        local pubkey =$(solana-keygen pubkey "$KEYPAIR_PATH")
+        echo "keypair_path: $keypair_path"
+
+        pubkey=$(solana-keygen pubkey "$keypair_path")
         echo "Generating merkle root for $pubkey"
 
         RUST_LOG=info solana-merkle-root-generator \
-        --path-to-my-keypair "$KEYPAIR_PATH" \
+        --path-to-my-keypair "$keypair_path" \
         --rpc-url "http://$RPC_URL" \
         --stake-meta-coll-path "$SNAPSHOT_DIR"stake-meta-"$slot" \
         --out-path "$SNAPSHOT_DIR"merkle-root-"$slot"-"$pubkey" \
@@ -166,7 +167,7 @@ upload_file() {
     echo "$name not found in gcp bucket, uploading now."
     echo "upload_path: $upload_path"
     echo "file_name: $file_name"
-    gcloud storage cp $SNAPSHOT_DIR/"$file_name" "$upload_path"
+    gcloud storage cp "$SNAPSHOT_DIR""$file_name" "$upload_path"
   else
     echo "$name already uploaded to gcp."
   fi
@@ -197,7 +198,7 @@ rm_merkle_roots() {
   local slot=$1
 
   # shellcheck disable=SC2012
-  ls "$SNAPSHOT_DIR"merkle-root* | { grep -v "$slot" || true; } | xargs rm
+  ls "$SNAPSHOT_DIR"merkle-root* | { grep -e "$slot" || true; } | xargs rm
 }
 
 check_env

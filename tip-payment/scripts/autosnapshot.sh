@@ -5,8 +5,7 @@
 set -e
 
 DIR="$( cd "$( dirname "$0" )" && pwd )"
-# shellcheck disable=SC2039
-source "${DIR}"/utils.sh
+source ./${DIR}/utils.sh
 
 
 RPC_URL=$1
@@ -55,6 +54,7 @@ create_snapshot_for_slot() {
   local snapshot_file=$(ls "$SNAPSHOT_DIR" | { grep ".tar.zst" || true; } | { grep "$snapshot_slot" || true; })
   if [ -z "$snapshot_file" ]
   then
+    clean_old_snapshot_files
     echo "Didn't find snapshot for slot $snapshot_slot, creating..."
     RUST_LOG=info solana-ledger-tool -l "$LEDGER_LOCATION" create-snapshot "$snapshot_slot"
     # ledger-tool by default updates snapshots in the existing ledger directory
@@ -89,15 +89,12 @@ upload_snapshot() {
   fi
 }
 
-rm_snapshot_file() {
-  local snapshot_slot=$1
-
+clean_old_snapshot_files() {
   # shellcheck disable=SC2012
-  maybe_snapshot=$(ls "$SNAPSHOT_DIR"snapshot* | { grep -E "$snapshot_slot" || true; })
+  maybe_snapshot=$(ls "$SNAPSHOT_DIR"snapshot* 2> /dev/null | { grep -E "snapshot" || true; })
   if [ -z "$maybe_snapshot" ]
   then
-    echo "Snapshot ${maybe_snapshot} not found, exiting."
-    exit 1
+    echo "No snapshots to clean up."
   else
     rm "$maybe_snapshot"
   fi
@@ -110,4 +107,3 @@ calculate_epoch_end_slot "$EPOCH_INFO"
 echo "last confirmed slot in previous epoch: $EPOCH_FINAL_SLOT"
 create_snapshot_for_slot "$EPOCH_FINAL_SLOT"
 upload_snapshot "$EPOCH_INFO" "$SNAPSHOT_FILE"
-rm_snapshot_file "$EPOCH_FINAL_SLOT"
