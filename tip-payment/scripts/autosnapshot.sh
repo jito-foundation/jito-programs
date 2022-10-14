@@ -4,44 +4,35 @@
 
 set -e
 
-DIR="$( cd "$( dirname "$0" )" && pwd )"
+DIR="$(cd "$(dirname "$0")" && pwd)"
 source ./${DIR}/utils.sh
-
 
 RPC_URL=$1
 HOST_NAME=$2
 
-LEDGER_LOCATION=$LEDGER_LOCATION
-SNAPSHOT_DIR=$SNAPSHOT_DIR
-SOLANA_CLUSTER=$SOLANA_CLUSTER
-
+# make sure all env vars are set for this script
 check_env() {
-  if [ -z "$RPC_URL" ]
-  then
+  if [ -z "$RPC_URL" ]; then
     echo "Must pass RPC URL as first arg"
     exit 1
   fi
 
-  if [ -z "$HOST_NAME" ]
-  then
+  if [ -z "$HOST_NAME" ]; then
     echo "Must pass host name as second arg"
     exit 1
   fi
 
-  if [ -z "$LEDGER_LOCATION" ]
-  then
+  if [ -z "$LEDGER_LOCATION" ]; then
     echo "LEDGER_LOCATION must be set"
     exit 1
   fi
 
-  if [ -z "$SNAPSHOT_DIR" ]
-  then
+  if [ -z "$SNAPSHOT_DIR" ]; then
     echo "SNAPSHOT_DIR must be set"
     exit 1
   fi
 
-  if [ -z "$SOLANA_CLUSTER" ]
-  then
+  if [ -z "$SOLANA_CLUSTER" ]; then
     echo "SOLANA_CLUSTER must be set"
     exit 1
   fi
@@ -52,8 +43,7 @@ create_snapshot_for_slot() {
 
   # shellcheck disable=SC2012
   local snapshot_file=$(ls "$SNAPSHOT_DIR" | { grep ".tar.zst" || true; } | { grep "$snapshot_slot" || true; })
-  if [ -z "$snapshot_file" ]
-  then
+  if [ -z "$snapshot_file" ]; then
     clean_old_snapshot_files
     echo "Didn't find snapshot for slot $snapshot_slot, creating..."
     RUST_LOG=info solana-ledger-tool -l "$LEDGER_LOCATION" create-snapshot "$snapshot_slot"
@@ -78,8 +68,7 @@ upload_snapshot() {
   local upload_path="gs://jito-$SOLANA_CLUSTER/$last_epoch/$HOST_NAME/$snapshot_file"
   local snapshot_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
-  if [ -z "$snapshot_uploaded" ]
-  then
+  if [ -z "$snapshot_uploaded" ]; then
     echo "Snapshot not found in gcp bucket, uploading now."
     echo "snapshot_file: $snapshot_file"
     echo "upload_path: $upload_path"
@@ -91,9 +80,8 @@ upload_snapshot() {
 
 clean_old_snapshot_files() {
   # shellcheck disable=SC2012
-  maybe_snapshot=$(ls "$SNAPSHOT_DIR"snapshot* 2> /dev/null | { grep -E "snapshot" || true; })
-  if [ -z "$maybe_snapshot" ]
-  then
+  maybe_snapshot=$(ls "$SNAPSHOT_DIR"snapshot* 2>/dev/null | { grep -E "snapshot" || true; })
+  if [ -z "$maybe_snapshot" ]; then
     echo "No snapshots to clean up."
   else
     rm "$maybe_snapshot"
