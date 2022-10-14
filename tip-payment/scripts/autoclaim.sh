@@ -5,57 +5,56 @@
 
 set -e
 
-DIR="$( cd "$( dirname "$0" )" && pwd )"
+DIR="$(cd "$(dirname "$0")" && pwd)"
 source ./${DIR}/utils.sh
 
 RPC_URL=$1
 HOST_NAME=$2
 
 TIP_DISTRIBUTION_PROGRAM_ID=$TIP_DISTRIBUTION_PROGRAM_ID
+TIP_PAYMENT_PROGRAM_ID=$TIP_PAYMENT_PROGRAM_ID
 FEE_PAYER=$FEE_PAYER
 SNAPSHOT_DIR=$SNAPSHOT_DIR
 KEYPAIR_DIR=$KEYPAIR_DIR
 SOLANA_CLUSTER=$SOLANA_CLUSTER
 
 check_env() {
-  if [ -z "$RPC_URL" ]
-  then
+  if [ -z "$RPC_URL" ]; then
     echo "Must pass RPC URL as first arg"
     exit 1
   fi
 
-  if [ -z "$HOST_NAME" ]
-  then
+  if [ -z "$HOST_NAME" ]; then
     echo "Must pass host name as second arg"
     exit 1
   fi
 
-  if [ -z "$TIP_DISTRIBUTION_PROGRAM_ID" ]
-  then
+  if [ -z "$TIP_DISTRIBUTION_PROGRAM_ID" ]; then
     echo "TIP_DISTRIBUTION_PROGRAM_ID must be set"
     exit 1
   fi
 
-  if [ -z "$FEE_PAYER" ]
-  then
+  if [ -z "$TIP_PAYMENT_PROGRAM_ID" ]; then
+    echo "TIP_PAYMENT_PROGRAM_ID must be set"
+    exit 1
+  fi
+
+  if [ -z "$FEE_PAYER" ]; then
     echo "FEE_PAYER must be set"
     exit 1
   fi
 
-  if [ -z "$SNAPSHOT_DIR" ]
-  then
+  if [ -z "$SNAPSHOT_DIR" ]; then
     echo "SNAPSHOT_DIR must be set"
     exit 1
   fi
 
-  if [ -z "$KEYPAIR_DIR" ]
-  then
+  if [ -z "$KEYPAIR_DIR" ]; then
     echo "KEYPAIR_DIR must be set"
     exit 1
   fi
 
-  if [ -z "$SOLANA_CLUSTER" ]
-  then
+  if [ -z "$SOLANA_CLUSTER" ]; then
     echo "SOLANA_CLUSTER must be set"
     exit 1
   fi
@@ -67,21 +66,19 @@ generate_stake_meta() {
   # shellcheck disable=SC2012
   local maybe_snapshot=$(ls "$SNAPSHOT_DIR" | { grep "$slot" || true; })
 
-  if [ -z "$maybe_snapshot" ]
-  then
+  if [ -z "$maybe_snapshot" ]; then
     echo "No snapshot found for slot $slot. Nothing to do. Exiting."
     exit 1
   else
-    local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot" 2> /dev/null)
-    if [ -z "$maybe_stake_meta" ]
-    then
+    local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot" 2>/dev/null)
+    if [ -z "$maybe_stake_meta" ]; then
       echo "Found snapshot $maybe_snapshot but no stake-meta-$slot, running stake-meta-generator."
       RUST_LOG=info solana-stake-meta-generator \
         --ledger-path "$SNAPSHOT_DIR" \
         --tip-distribution-program-id "$TIP_DISTRIBUTION_PROGRAM_ID" \
         --out-path "$SNAPSHOT_DIR"stake-meta-"$slot" \
         --snapshot-slot "$slot" \
-        --rpc-url http://"$RPC_URL"
+        --tip-payment-program-id "$TIP_PAYMENT_PROGRAM_ID"
       rm -rf "$SNAPSHOT_DIR"stake-meta.accounts
       rm -rf "$SNAPSHOT_DIR"tmp*
     fi
@@ -91,19 +88,16 @@ generate_stake_meta() {
 generate_merkle_trees() {
   local slot=$1
 
-  local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot" 2> /dev/null)
-  if [ -z "$maybe_stake_meta" ]
-  then
+  local maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$slot" 2>/dev/null)
+  if [ -z "$maybe_stake_meta" ]; then
     echo "No stake meta found for slot $slot. Nothing to do. Exiting."
     exit 1
   else
-    local maybe_merkle_root=$(ls "$SNAPSHOT_DIR"merkle-root-"$slot"* 2> /dev/null)
-    if [ -z "$maybe_merkle_root" ]
-    then
+    local maybe_merkle_root=$(ls "$SNAPSHOT_DIR"merkle-root-"$slot"* 2>/dev/null)
+    if [ -z "$maybe_merkle_root" ]; then
       echo "Found stake-meta-$slot but no merkle root, running merkle-root-generator."
       # shellcheck disable=SC2045
-      for keypair_file in $(ls "$KEYPAIR_DIR")
-      do
+      for keypair_file in $(ls "$KEYPAIR_DIR"); do
         local keypair_path="$KEYPAIR_DIR$keypair_file"
         echo "keypair_path: $keypair_path"
 
@@ -111,14 +105,13 @@ generate_merkle_trees() {
         echo "Generating merkle root for $pubkey"
 
         RUST_LOG=info solana-merkle-root-generator \
-        --path-to-my-keypair "$keypair_path" \
-        --rpc-url "http://$RPC_URL" \
-        --stake-meta-coll-path "$SNAPSHOT_DIR"stake-meta-"$slot" \
-        --out-path "$SNAPSHOT_DIR"merkle-root-"$slot"-"$pubkey" \
-        --upload-roots \
-        --force-upload-root true
-        if [ $? -ne 0 ]
-        then
+          --path-to-my-keypair "$keypair_path" \
+          --rpc-url "http://$RPC_URL" \
+          --stake-meta-coll-path "$SNAPSHOT_DIR"stake-meta-"$slot" \
+          --out-path "$SNAPSHOT_DIR"merkle-root-"$slot"-"$pubkey" \
+          --upload-roots \
+          --force-upload-root true
+        if [ $? -ne 0 ]; then
           echo "Detected non-zero exit code. Deleting merkle root."
           rm "$SNAPSHOT_DIR"merkle-root-"$slot$pubkey"
         else
@@ -132,17 +125,15 @@ generate_merkle_trees() {
 claim_tips() {
   local slot=$1
 
-  local maybe_merkle_roots=$(ls "$SNAPSHOT_DIR"merkle-root-"$slot"* 2> /dev/null)
-  if [ -z "$maybe_merkle_roots" ]
-  then
+  local maybe_merkle_roots=$(ls "$SNAPSHOT_DIR"merkle-root-"$slot"* 2>/dev/null)
+  if [ -z "$maybe_merkle_roots" ]; then
     echo "No merkle roots found, unable to claim tips."
     exit 1
   fi
   echo "Found merkle roots for slot $slot! Claiming tips."
 
   # shellcheck disable=SC2045
-  for merkle_root in $(ls "$SNAPSHOT_DIR"merkle-root-"$slot"*)
-  do
+  for merkle_root in $(ls "$SNAPSHOT_DIR"merkle-root-"$slot"*); do
     echo "Processing $merkle_root"
     RUST_LOG=info claim-mev \
       --fee-payer "$FEE_PAYER" \
@@ -162,8 +153,7 @@ upload_file() {
   local upload_path="gs://jito-$SOLANA_CLUSTER/$prev_epoch/$HOST_NAME/$file_name"
   local file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
-  if [ -z "$file_uploaded" ]
-  then
+  if [ -z "$file_uploaded" ]; then
     echo "$name not found in gcp bucket, uploading now."
     echo "upload_path: $upload_path"
     echo "file_name: $file_name"
@@ -178,8 +168,7 @@ upload_merkle_roots() {
   local epoch_info=$2
 
   # shellcheck disable=SC2045
-  for keypair_file in $(ls "$KEYPAIR_DIR")
-  do
+  for keypair_file in $(ls "$KEYPAIR_DIR"); do
     local keypair_path="$KEYPAIR_DIR$keypair_file"
     local pubkey=$(solana-keygen pubkey "$keypair_path")
     upload_file "merkle-root for $pubkey" "$epoch_info" "merkle-root-$slot-$pubkey"
