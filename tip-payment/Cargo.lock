@@ -160,7 +160,11 @@ dependencies = [
  "bincode",
  "borsh",
  "bytemuck",
+<<<<<<< HEAD
  "solana-program",
+=======
+ "solana-program 1.15.0",
+>>>>>>> 01fc552 (fix lockfile)
  "thiserror",
 ]
 
@@ -1152,7 +1156,43 @@ dependencies = [
  "serde_bytes",
  "serde_derive",
  "sha2 0.10.6",
+<<<<<<< HEAD
  "solana-frozen-abi-macro",
+=======
+ "solana-frozen-abi-macro 1.10.40",
+ "thiserror",
+]
+
+[[package]]
+name = "solana-frozen-abi"
+version = "1.15.0"
+dependencies = [
+ "ahash",
+ "blake3",
+ "block-buffer 0.9.0",
+ "bs58 0.4.0",
+ "bv",
+ "byteorder",
+ "cc",
+ "either",
+ "generic-array",
+ "getrandom 0.1.16",
+ "hashbrown 0.12.3",
+ "im",
+ "lazy_static",
+ "log",
+ "memmap2",
+ "once_cell",
+ "rand_core 0.6.4",
+ "rustc_version",
+ "serde",
+ "serde_bytes",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.10.6",
+ "solana-frozen-abi-macro 1.15.0",
+ "subtle",
+>>>>>>> 01fc552 (fix lockfile)
  "thiserror",
 ]
 
@@ -1169,6 +1209,19 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+=======
+name = "solana-frozen-abi-macro"
+version = "1.15.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "rustc_version",
+ "syn",
+]
+
+[[package]]
+>>>>>>> 01fc552 (fix lockfile)
 name = "solana-merkle-tree"
 version = "1.12.0"
 dependencies = [
@@ -1221,6 +1274,56 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+=======
+name = "solana-program"
+version = "1.15.0"
+dependencies = [
+ "base64 0.13.0",
+ "bincode",
+ "bitflags",
+ "blake3",
+ "borsh",
+ "borsh-derive",
+ "bs58 0.4.0",
+ "bv",
+ "bytemuck",
+ "cc",
+ "console_error_panic_hook",
+ "console_log",
+ "curve25519-dalek",
+ "getrandom 0.2.7",
+ "itertools",
+ "js-sys",
+ "lazy_static",
+ "libc",
+ "libsecp256k1",
+ "log",
+ "memoffset",
+ "num-derive",
+ "num-traits",
+ "parking_lot",
+ "rand",
+ "rand_chacha",
+ "rustc_version",
+ "rustversion",
+ "serde",
+ "serde_bytes",
+ "serde_derive",
+ "serde_json",
+ "sha2 0.10.6",
+ "sha3",
+ "solana-frozen-abi 1.15.0",
+ "solana-frozen-abi-macro 1.15.0",
+ "solana-sdk-macro 1.15.0",
+ "thiserror",
+ "tiny-bip39",
+ "wasm-bindgen",
+ "zeroize",
+]
+
+[[package]]
+>>>>>>> 01fc552 (fix lockfile)
 name = "solana-sdk-macro"
 version = "1.10.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1234,6 +1337,20 @@ dependencies = [
 ]
 
 [[package]]
+<<<<<<< HEAD
+=======
+name = "solana-sdk-macro"
+version = "1.15.0"
+dependencies = [
+ "bs58 0.4.0",
+ "proc-macro2",
+ "quote",
+ "rustversion",
+ "syn",
+]
+
+[[package]]
+>>>>>>> 01fc552 (fix lockfile)
 name = "subtle"
 version = "2.4.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1275,7 +1392,11 @@ name = "tip-distribution"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+<<<<<<< HEAD
  "solana-program",
+=======
+ "solana-program 1.15.0",
+>>>>>>> 01fc552 (fix lockfile)
 ]
 
 [[package]]
