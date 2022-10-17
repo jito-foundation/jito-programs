@@ -183,24 +183,16 @@ generate_merkle_trees() {
 }
 
 claim_tips() {
-  local slot=$1
+  local merkle_trees_path=$1
+  local rpc_url=$2
+  local tip_distribution_program_id=$3
+  local keypair_path=$4
 
-  local maybe_merkle_roots=$(ls "$SNAPSHOT_DIR"merkle-root-"$slot"* 2>/dev/null)
-  if [ -z "$maybe_merkle_roots" ]; then
-    echo "No merkle roots found, unable to claim tips."
-    exit 1
-  fi
-  echo "Found merkle roots for slot $slot! Claiming tips."
-
-  # shellcheck disable=SC2045
-  for merkle_root in $(ls "$SNAPSHOT_DIR"merkle-root-"$slot"*); do
-    echo "Processing $merkle_root"
-    RUST_LOG=info claim-mev \
-      --fee-payer "$FEE_PAYER" \
-      --merkle-tree "$merkle_root" \
-      --tip-distribution-pid "$TIP_DISTRIBUTION_PROGRAM_ID" \
-      --url "http://$RPC_URL"
-  done
+  RUST_LOG=info solana-claim-mev-tips \
+    --merkle-trees-path "$merkle_trees_path" \
+    --rpc-url "$rpc_url" \
+    --tip-distribution-program-id "$tip_distribution_program_id" \
+    --keypair-path "$keypair_path"
 }
 
 get_gcloud_path() {
@@ -358,6 +350,8 @@ main() {
   fi
 
   upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
+
+  claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
 
   # ---------------------------------------------------------------------------
   # Claim mev tips
