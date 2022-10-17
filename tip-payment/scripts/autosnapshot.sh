@@ -146,13 +146,17 @@ get_gcloud_path() {
   local epoch=$2
   local file_name=$3
 
+  local upload_path
+
   upload_path="gs://jito-$solana_cluster/$epoch/$(hostname)/$file_name"
 
   echo "$upload_path"
 }
 
 get_filepath_in_gcloud() {
-  upload_path=$1
+  local upload_path=$1
+
+  local file_uploaded
 
   file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
@@ -162,6 +166,7 @@ get_filepath_in_gcloud() {
 upload_file_to_gcloud() {
   local filepath=$1
   local gcloud_path=$2
+
   gcloud storage cp "$filepath" "$gcloud_path"
 }
 
@@ -219,6 +224,12 @@ main() {
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
     echo "creating snapshot at slot $snapshot_slot"
+
+    # note: make sure these filenames match everywhere else in the file
+    rm "$SNAPSHOT_DIR/snapshot-*.tar.zst" || true
+    rm "$SNAPSHOT_DIR/stake-meta-*.json" || true
+    rm "$SNAPSHOT_DIR/merkle-tree-*.json" || true
+
     snapshot_file=$(create_snapshot_for_slot "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$LEDGER_DIR")
   else
     echo "snapshot file already exists: $SNAPSHOT_DIR/$snapshot_file"
@@ -227,13 +238,7 @@ main() {
   snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
   snapshot_in_gcloud=$(get_filepath_in_gcloud "$snapshot_gcloud_path") || true
   if [ -z "$snapshot_in_gcloud" ]; then
-    echo "uploading $SNAPSHOT_DIR/$snapshot_file to gcloud path $upload_path"
-
-    # note: make sure these filenames match everywhere else in the file
-    rm "$SNAPSHOT_DIR/snapshot-*.tar.zst" || true
-    rm "$SNAPSHOT_DIR/stake-meta-*.json" || true
-    rm "$SNAPSHOT_DIR/merkle-tree-*.json" || true
-
+    echo "uploading $SNAPSHOT_DIR/$snapshot_file to gcloud path $snapshot_gcloud_path"
     upload_file_to_gcloud "$SNAPSHOT_DIR/$snapshot_file" "$snapshot_gcloud_path"
   else
     echo "snapshot file already uploaded to gcloud at: $snapshot_in_gcloud"
@@ -288,21 +293,11 @@ main() {
 
   upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
 
-  claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
+  # ---------------------------------------------------------------------------
+  # Claim MEV tips
+  # ---------------------------------------------------------------------------
 
-  # ---------------------------------------------------------------------------
-  # Claim mev tips
-  # ---------------------------------------------------------------------------
-  #  generate_merkle_trees "$EPOCH_FINAL_SLOT" "$SNAPSHOT_DIR"
-  #
-  #  upload_snapshot "$epoch_info" "$SNAPSHOT_DIR" "$SOLANA_CLUSTER" "$snapshot_file"
-  #  upload_stake_meta "stake-meta" "$epoch_info" "stake-meta-$EPOCH_FINAL_SLOT"
-  #  upload_merkle_roots "$EPOCH_FINAL_SLOT" "$epoch_info"
-  #
-  #  rm_stake_metas "$EPOCH_FINAL_SLOT"
-  #  rm_merkle_roots "$EPOCH_FINAL_SLOT"
-  #
-  #  claim_tips "$EPOCH_FINAL_SLOT"
+  claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
 }
 
 main
