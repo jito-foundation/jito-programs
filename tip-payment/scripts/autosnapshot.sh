@@ -12,6 +12,11 @@ RPC_URL=$1
 
 # make sure all env vars are set for this script
 check_env_vars_set() {
+  if [ -z "$RPC_URL" ]; then
+    echo "RPC_URL must be set"
+    exit 1
+  fi
+
   if [ -z "$LEDGER_LOCATION" ]; then
     echo "LEDGER_LOCATION must be set"
     exit 1
