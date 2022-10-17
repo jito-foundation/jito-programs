@@ -36,13 +36,8 @@ check_env_vars_set() {
     exit 1
   fi
 
-  if [ -z "$FEE_PAYER" ]; then
-    echo "FEE_PAYER must be set"
-    exit 1
-  fi
-
-  if [ -z "$KEYPAIR_DIR" ]; then
-    echo "KEYPAIR_DIR must be set"
+  if [ -z "$KEYPAIR" ]; then
+    echo "KEYPAIR must be set"
     exit 1
   fi
 
@@ -58,7 +53,7 @@ get_epoch_info() {
 
   local epoch_info
 
-  epoch_info=$(curl "http://$rpc_url" -X POST -H "Content-Type: application/json" -d '
+  epoch_info=$(curl "$rpc_url" -X POST -H "Content-Type: application/json" -d '
       {"jsonrpc":"2.0","id":1, "method":"getEpochInfo"}
     ')
   if [ -z "$epoch_info" ]; then
@@ -90,7 +85,7 @@ fetch_highest_confirmed_slot() {
   # we check within a 40 slot range for the highest confirmed block
   local range_begin=$((last_epoch_end_slot - 40))
 
-  HIGHEST_CONFIRMED_SLOT=$(curl "http://$rpc_url" -X POST -H "Content-Type: application/json" -d "
+  HIGHEST_CONFIRMED_SLOT=$(curl "$rpc_url" -X POST -H "Content-Type: application/json" -d "
     {\"jsonrpc\": \"2.0\",\"id\":1,\"method\":\"getBlocks\",\"params\":[$range_begin, $last_epoch_end_slot]}
   " | jq '.result | last')
 
@@ -131,14 +126,7 @@ create_snapshot_for_slot() {
   echo "$snapshot_file"
 }
 
-get_snapshot_gcloud_file() {
-  local upload_path=$1
-
-  snapshot_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
-  echo "$snapshot_uploaded"
-}
-
-get_gcloud_upload_path() {
+get_gcloud_snapshot_upload_path() {
   local solana_cluster=$1
   local last_epoch=$2
   local snapshot_file=$3
@@ -146,19 +134,6 @@ get_gcloud_upload_path() {
   upload_path="gs://jito-$solana_cluster/$last_epoch/$(hostname)/$snapshot_file"
 
   echo "$upload_path"
-}
-
-upload_snapshot() {
-  local last_epoch=$1
-  local snapshot_dir=$2
-  local solana_cluster=$3
-  local snapshot_file=$4
-
-  local upload_path
-  local snapshot_uploaded
-
-  upload_path=$(get_gcloud_upload_path "$solana_cluster" "$last_epoch" "$snapshot_file")
-  gcloud storage cp "$snapshot_dir/$snapshot_file" "$upload_path"
 }
 
 clean_old_snapshot_files() {
@@ -176,53 +151,35 @@ clean_old_snapshot_files() {
 generate_stake_meta() {
   local slot=$1
   local snapshot_dir=$2
-  local tip_distribution_program_id=$3
-  local tip_payment_program_id=$4
+  local stake_meta_filename=$3
+  local tip_distribution_program_id=$4
+  local tip_payment_program_id=$5
 
   local maybe_snapshot
   local maybe_stake_meta
 
-  rm -rf "$snapshot_dir"stake-meta.accounts
-  rm -rf "$snapshot_dir"tmp*
+  rm -rf "$snapshot_dir"/stake-meta.accounts || true
+  rm -rf "$snapshot_dir"/tmp* || true
+  rm -r /tmp/.tmp* || true # calculate hash stuff stored here
 
   RUST_LOG=info solana-stake-meta-generator \
     --ledger-path "$snapshot_dir" \
     --tip-distribution-program-id "$tip_distribution_program_id" \
-    --out-path "$snapshot_dir"stake-meta-"$slot".json \
+    --out-path "$snapshot_dir/$stake_meta_filename" \
     --snapshot-slot "$slot" \
     --tip-payment-program-id "$tip_payment_program_id"
 
-  rm -rf "$snapshot_dir"stake-meta.accounts
-  rm -rf "$snapshot_dir"tmp*
+  rm -rf "$snapshot_dir"/stake-meta.accounts || true
+  rm -rf "$snapshot_dir"/tmp* || true
+  rm -r /tmp/.tmp* || true # calculate hash stuff stored here
 }
 
 generate_merkle_trees() {
-  local slot=$1
-  local snapshot_dir=$2
-  local rpc_url=$4
-    echo "Found stake-meta-$slot but no merkle root, running merkle-root-generator."
-          # shellcheck disable=SC2045
-          for keypair_file in $(ls "$keypair_dir"); do
-            local keypair_path="$keypair_dir$keypair_file"
-            echo "keypair_path: $keypair_path"
-
-            pubkey=$(solana-keygen pubkey "$keypair_path")
-            echo "Generating merkle root for $pubkey"
-
-            RUST_LOG=info solana-merkle-root-generator \
-              --path-to-my-keypair "$keypair_path" \
-              --rpc-url "http://$rpc_url" \
-              --stake-meta-coll-path "$snapshot_dir"stake-meta-"$slot" \
-              --out-path "$snapshot_dir"merkle-root-"$slot"-"$pubkey" \
-              --upload-roots \
-              --force-upload-root true
-            if [ $? -ne 0 ]; then
-              echo "Detected non-zero exit code. Deleting merkle root."
-              rm "$snapshot_dir"merkle-root-"$slot$pubkey"
-            else
-              echo "Successfully uploaded merkle roots for $pubkey"
-            fi
-          done
+  local stake_meta_filepath=$1
+  local merkle_tree_filepath=$2
+  RUST_LOG=info solana-merkle-root-generator \
+    --stake-meta-coll-path $stake_meta_filepath \
+    --out-path "$merkle_tree_filepath"
 }
 
 claim_tips() {
@@ -246,43 +203,42 @@ claim_tips() {
   done
 }
 
-upload_stake_meta() {
-  local name=$1
-  local epoch_info=$2
+get_gcloud_path() {
+  local solana_cluster=$1
+  local epoch=$2
   local file_name=$3
-  local solana_cluster=$4
-  local snapshot_dir=$5
 
-  local epoch
-  local prev_epoch
-  local upload_path
-  local file_uploaded
+  upload_path="gs://jito-$solana_cluster/$epoch/$(hostname)/$file_name"
 
-  epoch=$(echo "$epoch_info" | jq .result.epoch)
-  prev_epoch=$((epoch - 1))
-  upload_path="gs://jito-$solana_cluster/$prev_epoch/$(hostname)/$file_name"
+  echo "$upload_path"
+}
+
+get_snapshot_in_gcloud() {
+  upload_path=$1
+
   file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
 
-  if [ -z "$file_uploaded" ]; then
-    echo "stake meta $name not found in gcp bucket, uploading now."
-    echo "upload_path: $upload_path"
-    echo "file_name: $file_name"
-    gcloud storage cp "$snapshot_dir""$file_name" "$upload_path"
-  else
-    echo "$name already uploaded to gcp."
-  fi
+  echo "$file_uploaded"
+}
+
+upload_file_to_gcloud() {
+  local filepath=$1
+  local gcloud_path=$2
+  gcloud storage cp "$filepath" "$gcloud_path"
 }
 
 upload_merkle_roots() {
-  local slot=$1
-  local epoch_info=$2
+  local merkle_root_path=$1
+  local keypair_path=$2
+  local rpc_url=$3
+  local tip_distribution_program_id=$4
 
-  # shellcheck disable=SC2045
-  for keypair_file in $(ls "$KEYPAIR_DIR"); do
-    local keypair_path="$KEYPAIR_DIR$keypair_file"
-    local pubkey=$(solana-keygen pubkey "$keypair_path")
-    upload_stake_meta "merkle-root for $pubkey" "$epoch_info" "merkle-root-$slot-$pubkey"
-  done
+  RUST_LOG=info \
+    solana-merkle-root-uploader \
+    --merkle-root-path "$merkle_root_path" \
+    --keypair-path "$keypair_path" \
+    --rpc-url "$rpc_url" \
+    --tip-distribution-program-id "$tip_distribution_program_id"
 }
 
 ## TODO: loop over
@@ -304,11 +260,23 @@ main() {
   local epoch_info
   local previous_epoch_final_slot
   local snapshot_file
-  local gcloud_upload_path
+  local snapshot_gcloud_path
   local maybe_stake_meta
-  local maybe_merkle_root
+  local stake_meta_gcloud_path
+  local stake_meta_filename
+  local merkle_tree_filename
+  local merkle_tree_filepath
+  local maybe_merkle_tree
 
   check_env_vars_set
+
+  # make sure snapshot location exists and has a genesis file in it
+  mkdir -p $SNAPSHOT_DIR
+  cp $LEDGER_DIR/genesis.bin $SNAPSHOT_DIR
+
+  # ---------------------------------------------------------------------------
+  # Read epoch info off RPC and calculate previous epoch + previous epoch's last slot
+  # ---------------------------------------------------------------------------
 
   epoch_info=$(get_epoch_info "$RPC_URL")
   current_epoch=$(echo "$epoch_info" | jq .result.epoch)
@@ -321,39 +289,79 @@ main() {
   echo "epoch_info: $epoch_info"
   echo "previous_epoch_final_slot: $previous_epoch_final_slot"
 
+  # ---------------------------------------------------------------------------
+  # Take snapshot and upload to gcloud
+  # ---------------------------------------------------------------------------
+
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
     echo "creating snapshot at slot $snapshot_slot"
     snapshot_file=$(create_snapshot_for_slot "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$LEDGER_DIR")
   else
-    echo "snapshot file already exists: $snapshot_file"
+    echo "snapshot file already exists: $SNAPSHOT_DIR/$snapshot_file"
   fi
 
-  gcloud_upload_path=$(get_gcloud_upload_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
-  if [ -z "$gcloud_upload_path" ]; then
-    echo "uploading $snapshot_dir/$snapshot_file to gcloud path $upload_path"
-    upload_snapshot "$last_epoch" "$SNAPSHOT_DIR" "$SOLANA_CLUSTER" "$snapshot_file"
+  snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
+  snapshot_in_gcloud=$(get_snapshot_in_gcloud "$snapshot_gcloud_path") || true
+  if [ -z "$snapshot_in_gcloud" ]; then
+    echo "uploading $SNAPSHOT_DIR/$snapshot_file to gcloud path $upload_path"
+    upload_file_to_gcloud "$SNAPSHOT_DIR/$snapshot_file" "$snapshot_gcloud_path"
   else
-    echo "snapshot file already uploaded to gcloud at: $gcloud_upload_path"
+    echo "snapshot file already uploaded to gcloud at: $snapshot_in_gcloud"
   fi
 
-  maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$previous_epoch_final_slot".json 2>/dev/null || true)
+  # ---------------------------------------------------------------------------
+  # Load in snapshot, produce stake metadata, and upload to gcloud
+  # ---------------------------------------------------------------------------
+
+  stake_meta_filename=stake-meta-"$previous_epoch_final_slot".json
+  stake_meta_filepath="$SNAPSHOT_DIR/$stake_meta_filename"
+  maybe_stake_meta=$(ls "$stake_meta_filepath" 2>/dev/null || true)
   if [ -z "$maybe_stake_meta" ]; then
-    echo "Running stake-meta-generator for slot $$previous_epoch_final_slot"
-    generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
-    maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$previous_epoch_final_slot".json 2>/dev/null)
+    echo "Running stake-meta-generator for slot $previous_epoch_final_slot"
+    generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$stake_meta_filename" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
   else
-    echo "stake-meta already exists at: $maybe_stake_meta"
+    echo "stake-meta already exists: $stake_meta_filepath"
   fi
 
-  maybe_merkle_root=$(ls "$snapshot_dir"merkle-root-"$slot".json 2>/dev/null || true)
-  if [ -z "$maybe_merkle_root" ]; then
-    echo "Running stake-meta-generator for slot $$previous_epoch_final_slot"
-    generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
-    maybe_stake_meta=$(ls "$SNAPSHOT_DIR"stake-meta-"$previous_epoch_final_slot".json 2>/dev/null)
+  stake_meta_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$stake_meta_filename")
+  stake_meta_in_gcloud=$(get_snapshot_in_gcloud "$stake_meta_gcloud_path") || true
+  if [ -z "$stake_meta_in_gcloud" ]; then
+    echo "uploading $stake_meta_filepath to gcloud path $stake_meta_gcloud_path"
+    upload_file_to_gcloud "$stake_meta_filepath" "$stake_meta_gcloud_path"
   else
-    echo "stake-meta already exists at: $maybe_stake_meta"
+    echo "stake meta already uploaded to gcloud at: $stake_meta_in_gcloud"
   fi
+
+  # ---------------------------------------------------------------------------
+  # Produce merkle tree, upload to gcloud, and upload merkle roots on-chain for
+  # the provided keypairs
+  # ---------------------------------------------------------------------------
+
+  merkle_tree_filename=merkle-tree-"$previous_epoch_final_slot".json
+  merkle_tree_filepath="$SNAPSHOT_DIR/$merkle_tree_filename"
+  maybe_merkle_tree=$(ls "$merkle_tree_filepath" 2>/dev/null || true)
+  if [ -z "$maybe_merkle_tree" ]; then
+    echo "Running merkle-root-generator for slot $previous_epoch_final_slot"
+    generate_merkle_trees "$stake_meta_filepath" "$merkle_tree_filepath"
+  else
+    echo "stake-meta already exists at: $merkle_tree_filepath"
+  fi
+
+  merkle_tree_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$merkle_tree_filename")
+  merkle_tree_in_gcloud=$(get_snapshot_in_gcloud "$merkle_tree_gcloud_path") || true
+  if [ -z "$merkle_tree_in_gcloud" ]; then
+    echo "uploading $merkle_tree_filepath to gcloud path $merkle_tree_gcloud_path"
+    upload_file_to_gcloud "$merkle_tree_filepath" "$merkle_tree_gcloud_path"
+  else
+    echo "merkle tree already uploaded to gcloud at: $merkle_tree_gcloud_path"
+  fi
+
+  upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
+
+  # ---------------------------------------------------------------------------
+  # Claim mev tips
+  # ---------------------------------------------------------------------------
   #  generate_merkle_trees "$EPOCH_FINAL_SLOT" "$SNAPSHOT_DIR"
   #
   #  upload_snapshot "$epoch_info" "$SNAPSHOT_DIR" "$SOLANA_CLUSTER" "$snapshot_file"
