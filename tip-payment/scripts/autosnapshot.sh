@@ -3,6 +3,7 @@
 # in the previous epoch if one doesn't already exist.
 # After creating a snapshot, it creates a snapshot of metadata
 # and merkle roots before uploading them on-chain
+# NOTE: this file depends on binaries being built in jito-solana
 
 # error out, unset variables are errors, and echo commands
 set -eux
@@ -63,38 +64,8 @@ get_epoch_info() {
   echo "$epoch_info"
 }
 
-# returns the previous epoch's last slot
-calculate_previous_epoch_last_slot() {
-  local epoch_info=$1
-
-  local current_slot_index
-  local current_absolute_slot
-  local epoch_start_slot
-
-  current_absolute_slot=$(echo "$epoch_info" | jq .result.absoluteSlot)
-  current_slot_index=$(echo "$epoch_info" | jq .result.slotIndex)
-  epoch_start_slot=$((current_absolute_slot - current_slot_index))
-
-  echo "$((epoch_start_slot - 1))"
-}
-
-fetch_highest_confirmed_slot() {
-  local epoch_end_slot=$1
-
-  # Due to possible forking / disconnected blocks at the end of the last epoch
-  # we check within a 40 slot range for the highest confirmed block
-  local range_begin=$((last_epoch_end_slot - 40))
-
-  HIGHEST_CONFIRMED_SLOT=$(curl "$rpc_url" -X POST -H "Content-Type: application/json" -d "
-    {\"jsonrpc\": \"2.0\",\"id\":1,\"method\":\"getBlocks\",\"params\":[$range_begin, $last_epoch_end_slot]}
-  " | jq '.result | last')
-
-  if [[ "$HIGHEST_CONFIRMED_SLOT" == "null" ]]; then
-    echo "Missing block range [$range_begin, $HIGHEST_CONFIRMED_SLOT] for last epoch."
-    exit 1
-  fi
-}
-
+# gets the snapshot filename, assuming it's present
+# cant be known ahead of time because the snapshot filename includes a hash
 get_snapshot_filename() {
   local snapshot_dir=$1
   local snapshot_slot=$2
@@ -126,37 +97,12 @@ create_snapshot_for_slot() {
   echo "$snapshot_file"
 }
 
-get_gcloud_snapshot_upload_path() {
-  local solana_cluster=$1
-  local last_epoch=$2
-  local snapshot_file=$3
-
-  upload_path="gs://jito-$solana_cluster/$last_epoch/$(hostname)/$snapshot_file"
-
-  echo "$upload_path"
-}
-
-clean_old_snapshot_files() {
-  local snapshot_dir=$1
-
-  # shellcheck disable=SC2012
-  maybe_snapshot=$(ls "$snapshot_dir"snapshot* 2>/dev/null | { grep -E "snapshot" || true; })
-  if [ -z "$maybe_snapshot" ]; then
-    echo "No snapshots to clean up."
-  else
-    rm "$maybe_snapshot"
-  fi
-}
-
 generate_stake_meta() {
   local slot=$1
   local snapshot_dir=$2
   local stake_meta_filename=$3
   local tip_distribution_program_id=$4
   local tip_payment_program_id=$5
-
-  local maybe_snapshot
-  local maybe_stake_meta
 
   rm -rf "$snapshot_dir"/stake-meta.accounts || true
   rm -rf "$snapshot_dir"/tmp* || true
@@ -178,7 +124,7 @@ generate_merkle_trees() {
   local stake_meta_filepath=$1
   local merkle_tree_filepath=$2
   RUST_LOG=info solana-merkle-root-generator \
-    --stake-meta-coll-path $stake_meta_filepath \
+    --stake-meta-coll-path "$stake_meta_filepath" \
     --out-path "$merkle_tree_filepath"
 }
 
@@ -205,7 +151,7 @@ get_gcloud_path() {
   echo "$upload_path"
 }
 
-get_snapshot_in_gcloud() {
+get_filepath_in_gcloud() {
   upload_path=$1
 
   file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
@@ -233,21 +179,6 @@ upload_merkle_roots() {
     --tip-distribution-program-id "$tip_distribution_program_id"
 }
 
-## TODO: loop over
-rm_stake_metas() {
-  local slot=$1
-
-  # shellcheck disable=SC2012
-  ls "$SNAPSHOT_DIR"stake-meta* | { grep -e "$slot" || true; } | xargs rm
-}
-
-rm_merkle_roots() {
-  local slot=$1
-
-  # shellcheck disable=SC2012
-  ls "$SNAPSHOT_DIR"merkle-root* | { grep -e "$slot" || true; } | xargs rm
-}
-
 main() {
   local epoch_info
   local previous_epoch_final_slot
@@ -263,8 +194,8 @@ main() {
   check_env_vars_set
 
   # make sure snapshot location exists and has a genesis file in it
-  mkdir -p $SNAPSHOT_DIR
-  cp $LEDGER_DIR/genesis.bin $SNAPSHOT_DIR
+  mkdir -p "$SNAPSHOT_DIR"
+  cp "$LEDGER_DIR"/genesis.bin "$SNAPSHOT_DIR"
 
   # ---------------------------------------------------------------------------
   # Read epoch info off RPC and calculate previous epoch + previous epoch's last slot
@@ -294,9 +225,15 @@ main() {
   fi
 
   snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
-  snapshot_in_gcloud=$(get_snapshot_in_gcloud "$snapshot_gcloud_path") || true
+  snapshot_in_gcloud=$(get_filepath_in_gcloud "$snapshot_gcloud_path") || true
   if [ -z "$snapshot_in_gcloud" ]; then
     echo "uploading $SNAPSHOT_DIR/$snapshot_file to gcloud path $upload_path"
+
+    # note: make sure these filenames match everywhere else in the file
+    rm "$SNAPSHOT_DIR/snapshot-*.tar.zst" || true
+    rm "$SNAPSHOT_DIR/stake-meta-*.json" || true
+    rm "$SNAPSHOT_DIR/merkle-tree-*.json" || true
+
     upload_file_to_gcloud "$SNAPSHOT_DIR/$snapshot_file" "$snapshot_gcloud_path"
   else
     echo "snapshot file already uploaded to gcloud at: $snapshot_in_gcloud"
@@ -317,7 +254,7 @@ main() {
   fi
 
   stake_meta_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$stake_meta_filename")
-  stake_meta_in_gcloud=$(get_snapshot_in_gcloud "$stake_meta_gcloud_path") || true
+  stake_meta_in_gcloud=$(get_filepath_in_gcloud "$stake_meta_gcloud_path") || true
   if [ -z "$stake_meta_in_gcloud" ]; then
     echo "uploading $stake_meta_filepath to gcloud path $stake_meta_gcloud_path"
     upload_file_to_gcloud "$stake_meta_filepath" "$stake_meta_gcloud_path"
@@ -341,7 +278,7 @@ main() {
   fi
 
   merkle_tree_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$merkle_tree_filename")
-  merkle_tree_in_gcloud=$(get_snapshot_in_gcloud "$merkle_tree_gcloud_path") || true
+  merkle_tree_in_gcloud=$(get_filepath_in_gcloud "$merkle_tree_gcloud_path") || true
   if [ -z "$merkle_tree_in_gcloud" ]; then
     echo "uploading $merkle_tree_filepath to gcloud path $merkle_tree_gcloud_path"
     upload_file_to_gcloud "$merkle_tree_filepath" "$merkle_tree_gcloud_path"
