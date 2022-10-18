@@ -14,7 +14,7 @@ const tipSeed6 = 'TIP_ACCOUNT_6'
 const tipSeed7 = 'TIP_ACCOUNT_7'
 let configAccount, configAccountBump, tipPaymentAccount0, tipBump0, tipPaymentAccount1, tipBump1, tipPaymentAccount2,
     tipBump2, tipPaymentAccount3, tipBump3, tipPaymentAccount4, tipBump4, tipPaymentAccount5, tipBump5,
-    tipPaymentAccount6, tipBump6, tipPaymentAccount7, tipBump7
+    tipPaymentAccount6, tipBump6, tipPaymentAccount7, tipBump7, tipAccounts
 
 const provider = anchor.AnchorProvider.local(null, {commitment: 'confirmed', preflightCommitment: 'confirmed'},)
 anchor.setProvider(provider)
@@ -62,6 +62,17 @@ describe('tests tip_payment', () => {
         tipPaymentAccount7 = _tipPaymentAccount7
         tipBump7 = _tipBump7
 
+        tipAccounts = {
+            tipPaymentAccount0: tipPaymentAccount0,
+            tipPaymentAccount1: tipPaymentAccount1,
+            tipPaymentAccount2: tipPaymentAccount2,
+            tipPaymentAccount3: tipPaymentAccount3,
+            tipPaymentAccount4: tipPaymentAccount4,
+            tipPaymentAccount5: tipPaymentAccount5,
+            tipPaymentAccount6: tipPaymentAccount6,
+            tipPaymentAccount7: tipPaymentAccount7,
+        }
+
         await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(initializerKeys.publicKey, 100000000000000), 'confirmed',)
         await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(blockProducerKeys.publicKey, 100000000000000), 'confirmed',)
     })
@@ -87,16 +98,8 @@ describe('tests tip_payment', () => {
             }, {
                 accounts: {
                     config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
                     systemProgram: SystemProgram.programId,
-                    payer: initializerKeys.publicKey,
+                    payer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             },)
         } catch (e) {
@@ -116,15 +119,7 @@ describe('tests tip_payment', () => {
                 oldTipReceiver,
                 newTipReceiver: newTipReceiver.publicKey,
                 blockBuilder,
-                tipPaymentAccount0: tipPaymentAccount0,
-                tipPaymentAccount1: tipPaymentAccount1,
-                tipPaymentAccount2: tipPaymentAccount2,
-                tipPaymentAccount3: tipPaymentAccount3,
-                tipPaymentAccount4: tipPaymentAccount4,
-                tipPaymentAccount5: tipPaymentAccount5,
-                tipPaymentAccount6: tipPaymentAccount6,
-                tipPaymentAccount7: tipPaymentAccount7,
-                signer: initializerKeys.publicKey,
+                signer: initializerKeys.publicKey, ...tipAccounts
             }, signers: [initializerKeys],
         },)
         await assertRentExemptAccounts(tipPaymentAccount0)
@@ -145,15 +140,7 @@ describe('tests tip_payment', () => {
                     oldTipReceiver: badOldTipReceiver,
                     newTipReceiver: newTipReceiver.publicKey,
                     blockBuilder,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
-                    signer: initializerKeys.publicKey,
+                    signer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             },)
             assert.fail('expected exception to be thrown')
@@ -175,15 +162,7 @@ describe('tests tip_payment', () => {
                     oldTipReceiver: oldTipReceiver,
                     newTipReceiver: oldTipReceiver,
                     blockBuilder: badBlockBuilder,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
-                    signer: initializerKeys.publicKey,
+                    signer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             },)
             assert.fail('expected exception to be thrown')
@@ -201,18 +180,8 @@ describe('tests tip_payment', () => {
         try {
             await tipPaymentProg.rpc.claimTips({
                 accounts: {
-                    config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
-                    tipReceiver: badTipReceiver,
-                    blockBuilder,
-                    signer: initializerKeys.publicKey,
+                    config: configAccount, tipReceiver: badTipReceiver, blockBuilder,
+                    signer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             },)
             assert(false)
@@ -230,17 +199,9 @@ describe('tests tip_payment', () => {
             await tipPaymentProg.rpc.claimTips({
                 accounts: {
                     config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
                     tipReceiver: tipReceiver,
                     blockBuilder: badBlockBuilder,
-                    signer: initializerKeys.publicKey,
+                    signer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             },)
             assert(false)
@@ -259,18 +220,10 @@ describe('tests tip_payment', () => {
             await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(0), {
                 accounts: {
                     config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
                     tipReceiver: badTipReceiver,
                     oldBlockBuilder: oldBlockBuilder,
                     newBlockBuilder: oldBlockBuilder,
-                    signer: initializerKeys.publicKey,
+                    signer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             })
             assert(false)
@@ -289,18 +242,10 @@ describe('tests tip_payment', () => {
             await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(0), {
                 accounts: {
                     config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
                     tipReceiver,
                     oldBlockBuilder: badBlockBuilder,
                     newBlockBuilder: badBlockBuilder,
-                    signer: initializerKeys.publicKey,
+                    signer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             })
             assert(false)
@@ -317,18 +262,10 @@ describe('tests tip_payment', () => {
             await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(101), {
                 accounts: {
                     config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
                     tipReceiver,
                     oldBlockBuilder: blockBuilder,
                     newBlockBuilder: blockBuilder,
-                    signer: initializerKeys.publicKey,
+                    signer: initializerKeys.publicKey, ...tipAccounts
                 }, signers: [initializerKeys],
             })
             assert(false)
@@ -366,18 +303,10 @@ describe('tests tip_payment', () => {
         await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(50), {
             accounts: {
                 config: configAccount,
-                tipPaymentAccount0: tipPaymentAccount0,
-                tipPaymentAccount1: tipPaymentAccount1,
-                tipPaymentAccount2: tipPaymentAccount2,
-                tipPaymentAccount3: tipPaymentAccount3,
-                tipPaymentAccount4: tipPaymentAccount4,
-                tipPaymentAccount5: tipPaymentAccount5,
-                tipPaymentAccount6: tipPaymentAccount6,
-                tipPaymentAccount7: tipPaymentAccount7,
                 tipReceiver,
                 oldBlockBuilder: blockBuilder,
                 newBlockBuilder: blockBuilder,
-                signer: initializerKeys.publicKey,
+                signer: initializerKeys.publicKey, ...tipAccounts
             }, signers: [initializerKeys],
         })
 
@@ -392,17 +321,9 @@ describe('tests tip_payment', () => {
         await tipPaymentProg.rpc.claimTips({
             accounts: {
                 config: configAccount,
-                tipPaymentAccount1: tipPaymentAccount1,
-                tipPaymentAccount2: tipPaymentAccount2,
-                tipPaymentAccount3: tipPaymentAccount3,
-                tipPaymentAccount4: tipPaymentAccount4,
-                tipPaymentAccount5: tipPaymentAccount5,
-                tipPaymentAccount6: tipPaymentAccount6,
-                tipPaymentAccount7: tipPaymentAccount7,
-                tipPaymentAccount0: tipPaymentAccount0,
                 tipReceiver: tipReceiver,
                 blockBuilder,
-                signer: initializerKeys.publicKey,
+                signer: initializerKeys.publicKey, ...tipAccounts
             }, signers: [initializerKeys],
         },)
 
@@ -432,15 +353,7 @@ describe('tests tip_payment', () => {
                 newTipReceiver: newTipReceiver.publicKey,
                 config: configAccount,
                 blockBuilder,
-                tipPaymentAccount1: tipPaymentAccount1,
-                tipPaymentAccount2: tipPaymentAccount2,
-                tipPaymentAccount3: tipPaymentAccount3,
-                tipPaymentAccount4: tipPaymentAccount4,
-                tipPaymentAccount5: tipPaymentAccount5,
-                tipPaymentAccount6: tipPaymentAccount6,
-                tipPaymentAccount7: tipPaymentAccount7,
-                tipPaymentAccount0: tipPaymentAccount0,
-                signer: initializerKeys.publicKey,
+                signer: initializerKeys.publicKey, ...tipAccounts
             }, signers: [initializerKeys],
         },)
         await assertRentExemptAccounts(tipPaymentAccount0)
@@ -473,15 +386,7 @@ describe('tests tip_payment', () => {
                 tipReceiver,
                 oldBlockBuilder: blockBuilder,
                 newBlockBuilder: newBlockBuilder.publicKey,
-                tipPaymentAccount1: tipPaymentAccount1,
-                tipPaymentAccount2: tipPaymentAccount2,
-                tipPaymentAccount3: tipPaymentAccount3,
-                tipPaymentAccount4: tipPaymentAccount4,
-                tipPaymentAccount5: tipPaymentAccount5,
-                tipPaymentAccount6: tipPaymentAccount6,
-                tipPaymentAccount7: tipPaymentAccount7,
-                tipPaymentAccount0: tipPaymentAccount0,
-                signer: initializerKeys.publicKey,
+                signer: initializerKeys.publicKey, ...tipAccounts
             }, signers: [initializerKeys],
         },)
         await assertRentExemptAccounts(tipPaymentAccount0)
@@ -492,7 +397,7 @@ describe('tests tip_payment', () => {
 
         configState = await tipPaymentProg.account.config.fetch(configAccount)
         assert.equal(configState.blockBuilder.toString(), newBlockBuilder.publicKey.toString())
-        assert.equal(configState.blockBuilderCommission.toString(), new anchor.BN(75).toString())
+        assert.equal(configState.blockBuilderCommissionPct.toString(), new anchor.BN(75).toString())
     })
 })
 
@@ -502,48 +407,38 @@ describe('tests tip_payment', () => {
 const getBadTipPaymentAccounts = async (n) => {
     const badTipPaymentAccount = anchor.web3.Keypair.generate().publicKey
     await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(badTipPaymentAccount, 100000000000), 'confirmed',)
-    let accs = {
-        tipPaymentAccount0: tipPaymentAccount0,
-        tipPaymentAccount1: tipPaymentAccount1,
-        tipPaymentAccount2: tipPaymentAccount2,
-        tipPaymentAccount3: tipPaymentAccount3,
-        tipPaymentAccount4: tipPaymentAccount4,
-        tipPaymentAccount5: tipPaymentAccount5,
-        tipPaymentAccount6: tipPaymentAccount6,
-        tipPaymentAccount7: tipPaymentAccount7,
-    }
     switch (n) {
         case 0:
             return {
-                ...accs, tipPaymentAccount0: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount0: badTipPaymentAccount,
             }
         case 1:
             return {
-                ...accs, tipPaymentAccount1: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount1: badTipPaymentAccount,
             }
         case 2:
             return {
-                ...accs, tipPaymentAccount2: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount2: badTipPaymentAccount,
             }
         case 3:
             return {
-                ...accs, tipPaymentAccount3: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount3: badTipPaymentAccount,
             }
         case 4:
             return {
-                ...accs, tipPaymentAccount4: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount4: badTipPaymentAccount,
             }
         case 5:
             return {
-                ...accs, tipPaymentAccount5: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount5: badTipPaymentAccount,
             }
         case 6:
             return {
-                ...accs, tipPaymentAccount6: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount6: badTipPaymentAccount,
             }
         case 7:
             return {
-                ...accs, tipPaymentAccount7: badTipPaymentAccount,
+                ...tipAccounts, tipPaymentAccount7: badTipPaymentAccount,
             }
         default:
             return undefined

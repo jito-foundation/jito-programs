@@ -40,7 +40,7 @@ pub mod tip_payment {
             tip_payment_account_7: *ctx.bumps.get("tip_payment_account_7").unwrap(),
         };
         cfg.bumps = bumps;
-        cfg.block_builder_commission = 0;
+        cfg.block_builder_commission_pct = 0;
 
         Ok(())
     }
@@ -49,8 +49,8 @@ pub mod tip_payment {
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_commission)
-            .expect("block_builder_commission overflow")
+            .checked_mul(ctx.accounts.config.block_builder_commission_pct)
+            .expect("block_builder_commission_pct overflow")
             .checked_div(100)
             .unwrap();
 
@@ -94,8 +94,8 @@ pub mod tip_payment {
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_commission)
-            .expect("block_builder_commission overflow")
+            .checked_mul(ctx.accounts.config.block_builder_commission_pct)
+            .expect("block_builder_commission_pct overflow")
             .checked_div(100)
             .unwrap();
 
@@ -147,8 +147,8 @@ pub mod tip_payment {
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_commission)
-            .expect("block_builder_commission overflow")
+            .checked_mul(ctx.accounts.config.block_builder_commission_pct)
+            .expect("block_builder_commission_pct overflow")
             .checked_div(100)
             .unwrap();
 
@@ -185,7 +185,7 @@ pub mod tip_payment {
 
         // set new funding account
         ctx.accounts.config.block_builder = ctx.accounts.new_block_builder.key();
-        ctx.accounts.config.block_builder_commission = block_builder_commission;
+        ctx.accounts.config.block_builder_commission_pct = block_builder_commission;
         Ok(())
     }
 }
@@ -599,14 +599,15 @@ pub struct Config {
 
     /// Block builder that receives a % of fees
     pub block_builder: Pubkey,
-    pub block_builder_commission: u64,
+    pub block_builder_commission_pct: u64,
 
     /// Bumps used to derive PDAs
     pub bumps: InitBumps,
 }
 
 impl Config {
-    pub const SIZE: usize = 8 + 32 + 32 + 8 + 8 + InitBumps::SIZE;
+    // header, fields, and InitBumps
+    pub const SIZE: usize = 8 + 32 + 32 + 8 + InitBumps::SIZE;
 }
 
 /// Account that searchers will need to tip for their bundles to be accepted.
