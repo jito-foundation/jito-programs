@@ -228,7 +228,7 @@ main() {
 
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
-    echo "creating snapshot at slot $snapshot_slot"
+    echo "creating snapshot at slot $previous_epoch_final_slot"
 
     # note: make sure these filenames match everywhere else in the file
     rm "$SNAPSHOT_DIR/snapshot-*.tar.zst" || true
