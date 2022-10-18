@@ -315,8 +315,8 @@ describe('tests tip_payment', () => {
         await sendTip(tipPaymentAccount2, tipAmount)
         const totalTips = tipAmount * 2
 
-        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)) || {lamports: 0}).lamports
-        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) || {lamports: 0}).lamports
+        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)) ?? {lamports: 0}).lamports
+        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) ?? {lamports: 0}).lamports
 
         await tipPaymentProg.rpc.claimTips({
             accounts: {
@@ -343,8 +343,8 @@ describe('tests tip_payment', () => {
         const oldTipReceiver = configState.tipReceiver
 
         const blockBuilder = configState.blockBuilder
-        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(oldTipReceiver)) || {lamports: 0}).lamports
-        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) || {lamports: 0}).lamports
+        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(oldTipReceiver)) ?? {lamports: 0}).lamports
+        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) ?? {lamports: 0}).lamports
 
         const newTipReceiver = anchor.web3.Keypair.generate()
         await tipPaymentProg.rpc.changeTipReceiver({
@@ -376,8 +376,8 @@ describe('tests tip_payment', () => {
         const tipReceiver = configState.tipReceiver
 
         const blockBuilder = configState.blockBuilder
-        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)) || {lamports: 0}).lamports
-        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) || {lamports: 0}).lamports
+        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)) ?? {lamports: 0}).lamports
+        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) ?? {lamports: 0}).lamports
 
         const newBlockBuilder = anchor.web3.Keypair.generate()
         await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(75), {
