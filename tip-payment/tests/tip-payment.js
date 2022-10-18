@@ -14,9 +14,9 @@ const tipSeed4 = 'TIP_ACCOUNT_4'
 const tipSeed5 = 'TIP_ACCOUNT_5'
 const tipSeed6 = 'TIP_ACCOUNT_6'
 const tipSeed7 = 'TIP_ACCOUNT_7'
-let configAccount, configAccountBump, tipPaymentAccount0, tipBump0, tipPaymentAccount1, tipBump1, tipPaymentAccount2, tipBump2, tipPaymentAccount3,
-    tipBump3, tipPaymentAccount4, tipBump4, tipPaymentAccount5, tipBump5, tipPaymentAccount6, tipBump6,
-    tipPaymentAccount7, tipBump7
+let configAccount, configAccountBump, tipPaymentAccount0, tipBump0, tipPaymentAccount1, tipBump1, tipPaymentAccount2,
+    tipBump2, tipPaymentAccount3, tipBump3, tipPaymentAccount4, tipBump4, tipPaymentAccount5, tipBump5,
+    tipPaymentAccount6, tipBump6, tipPaymentAccount7, tipBump7
 
 const provider = anchor.AnchorProvider.local(null, {commitment: 'confirmed', preflightCommitment: 'confirmed'},)
 anchor.setProvider(provider)
