@@ -40,8 +40,7 @@ pub mod tip_payment {
             tip_payment_account_7: *ctx.bumps.get("tip_payment_account_7").unwrap(),
         };
         cfg.bumps = bumps;
-        cfg.block_builder_fee_numerator = 0;
-        cfg.block_builder_fee_denominator = 1;
+        cfg.block_builder_commission = 0;
 
         Ok(())
     }
@@ -50,10 +49,10 @@ pub mod tip_payment {
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_fee_numerator)
-            .expect("block_builder_fee_numerator overflow")
-            .checked_div(ctx.accounts.config.block_builder_fee_denominator)
-            .expect("block_builder_fee_denominator = 0");
+            .checked_mul(ctx.accounts.config.block_builder_commission)
+            .expect("block_builder_commission overflow")
+            .checked_div(100)
+            .unwrap();
 
         let tip_receiver_fee = total_tips
             .checked_sub(block_builder_fee)
@@ -95,10 +94,10 @@ pub mod tip_payment {
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_fee_numerator)
-            .expect("block_builder_fee_numerator overflow")
-            .checked_div(ctx.accounts.config.block_builder_fee_denominator)
-            .expect("block_builder_fee_denominator = 0");
+            .checked_mul(ctx.accounts.config.block_builder_commission)
+            .expect("block_builder_commission overflow")
+            .checked_div(100)
+            .unwrap();
 
         let tip_receiver_fee = total_tips
             .checked_sub(block_builder_fee)
@@ -141,20 +140,17 @@ pub mod tip_payment {
     /// drained.
     pub fn change_block_builder(
         ctx: Context<ChangeBlockBuilder>,
-        fee_numerator: u64,
-        fee_denominator: u64,
+        block_builder_commission: u64,
     ) -> Result<()> {
-        require_gte!(fee_denominator, fee_numerator, TipPaymentError::InvalidFee);
-        require_gte!(100, fee_denominator, TipPaymentError::InvalidFee);
-        require_neq!(fee_denominator, 0, TipPaymentError::InvalidFee);
+        require_gte!(100, block_builder_commission, TipPaymentError::InvalidFee);
 
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_fee_numerator)
-            .expect("block_builder_fee_numerator overflow")
-            .checked_div(ctx.accounts.config.block_builder_fee_denominator)
-            .expect("block_builder_fee_denominator = 0");
+            .checked_mul(ctx.accounts.config.block_builder_commission)
+            .expect("block_builder_commission overflow")
+            .checked_div(100)
+            .unwrap();
 
         let tip_receiver_fee = total_tips
             .checked_sub(block_builder_fee)
@@ -189,8 +185,7 @@ pub mod tip_payment {
 
         // set new funding account
         ctx.accounts.config.block_builder = ctx.accounts.new_block_builder.key();
-        ctx.accounts.config.block_builder_fee_numerator = fee_numerator;
-        ctx.accounts.config.block_builder_fee_denominator = fee_denominator;
+        ctx.accounts.config.block_builder_commission = block_builder_commission;
         Ok(())
     }
 }
@@ -604,8 +599,7 @@ pub struct Config {
 
     /// Block builder that receives a % of fees
     pub block_builder: Pubkey,
-    pub block_builder_fee_numerator: u64,
-    pub block_builder_fee_denominator: u64,
+    pub block_builder_commission: u64,
 
     /// Bumps used to derive PDAs
     pub bumps: InitBumps,

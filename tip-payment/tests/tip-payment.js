@@ -256,7 +256,7 @@ describe('tests tip_payment', () => {
         const oldBlockBuilder = configState.blockBuilder
 
         try {
-            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(1), {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(0), {
                 accounts: {
                     config: configAccount,
                     tipPaymentAccount0: tipPaymentAccount0,
@@ -286,7 +286,7 @@ describe('tests tip_payment', () => {
         const tipReceiver = configState.tipReceiver
 
         try {
-            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(1), {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(0), {
                 accounts: {
                     config: configAccount,
                     tipPaymentAccount0: tipPaymentAccount0,
@@ -309,68 +309,12 @@ describe('tests tip_payment', () => {
             assert.equal(e.error.origin, 'old_block_builder')
         }
     })
-    it('#change_block_builder numerator greater than denominator fails', async () => {
-        let configState = await tipPaymentProg.account.config.fetch(configAccount)
-        const tipReceiver = configState.tipReceiver
-        const blockBuilder = configState.blockBuilder
-
-        try {
-            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(100), new anchor.BN(1), {
-                accounts: {
-                    config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
-                    tipReceiver,
-                    oldBlockBuilder: blockBuilder,
-                    newBlockBuilder: blockBuilder,
-                    signer: initializerKeys.publicKey,
-                }, signers: [initializerKeys],
-            })
-            assert(false)
-        } catch (e) {
-            assert.equal(e.error.errorMessage, 'InvalidFee')
-        }
-    })
-    it('#change_block_builder denominator of 0', async () => {
-        let configState = await tipPaymentProg.account.config.fetch(configAccount)
-        const tipReceiver = configState.tipReceiver
-        const blockBuilder = configState.blockBuilder
-
-        try {
-            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(0), {
-                accounts: {
-                    config: configAccount,
-                    tipPaymentAccount0: tipPaymentAccount0,
-                    tipPaymentAccount1: tipPaymentAccount1,
-                    tipPaymentAccount2: tipPaymentAccount2,
-                    tipPaymentAccount3: tipPaymentAccount3,
-                    tipPaymentAccount4: tipPaymentAccount4,
-                    tipPaymentAccount5: tipPaymentAccount5,
-                    tipPaymentAccount6: tipPaymentAccount6,
-                    tipPaymentAccount7: tipPaymentAccount7,
-                    tipReceiver,
-                    oldBlockBuilder: blockBuilder,
-                    newBlockBuilder: blockBuilder,
-                    signer: initializerKeys.publicKey,
-                }, signers: [initializerKeys],
-            })
-            assert(false)
-        } catch (e) {
-            assert.equal(e.error.errorMessage, 'InvalidFee')
-        }
-    })
     it('#change_block_builder denominator greater than 100', async () => {
         let configState = await tipPaymentProg.account.config.fetch(configAccount)
         const tipReceiver = configState.tipReceiver
         const blockBuilder = configState.blockBuilder
         try {
-            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(101), {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(101), {
                 accounts: {
                     config: configAccount,
                     tipPaymentAccount0: tipPaymentAccount0,
@@ -419,7 +363,7 @@ describe('tests tip_payment', () => {
         const blockBuilder = configState.blockBuilder
 
         // Set block builder to take 50% cut
-        await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(5), new anchor.BN(10), {
+        await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(50), {
             accounts: {
                 config: configAccount,
                 tipPaymentAccount0: tipPaymentAccount0,
@@ -523,7 +467,7 @@ describe('tests tip_payment', () => {
         const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) || {lamports: 0}).lamports
 
         const newBlockBuilder = anchor.web3.Keypair.generate()
-        await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(3), new anchor.BN(4),{
+        await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(75), {
             accounts: {
                 config: configAccount,
                 tipReceiver,
@@ -548,8 +492,7 @@ describe('tests tip_payment', () => {
 
         configState = await tipPaymentProg.account.config.fetch(configAccount)
         assert.equal(configState.blockBuilder.toString(), newBlockBuilder.publicKey.toString())
-        assert.equal(configState.blockBuilderFeeNumerator.toString(), new anchor.BN(3).toString())
-        assert.equal(configState.blockBuilderFeeDenominator.toString(), new anchor.BN(4).toString())
+        assert.equal(configState.blockBuilderCommission.toString(), new anchor.BN(75).toString())
     })
 })
 
