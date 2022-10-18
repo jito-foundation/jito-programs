@@ -39,26 +39,51 @@ pub mod tip_payment {
             tip_payment_account_7: *ctx.bumps.get("tip_payment_account_7").unwrap(),
         };
         cfg.bumps = bumps;
+        cfg.block_builder_fee_numerator = 0;
+        cfg.block_builder_fee_denominator = 1;
 
         Ok(())
     }
 
     pub fn claim_tips(ctx: Context<ClaimTips>) -> Result<()> {
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
-        let pre_lamports = ctx.accounts.tip_receiver.lamports();
-        **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? =
-            pre_lamports.checked_add(total_tips).expect(&*format!(
-                "claim_tips overflow: [tip_receiver: {}, pre_lamports: {}, total_tips: {}]",
-                ctx.accounts.tip_receiver.key(),
-                pre_lamports,
-                total_tips,
-            ));
 
-        emit!(TipsClaimed {
-            by: ctx.accounts.signer.key(),
-            to: ctx.accounts.tip_receiver.key(),
-            amount: total_tips,
-        });
+        let block_builder_fee = total_tips
+            .checked_mul(ctx.accounts.config.block_builder_fee_numerator)
+            .expect("block_builder_fee_numerator overflow")
+            .checked_div(ctx.accounts.config.block_builder_fee_denominator)
+            .expect("block_builder_fee_denominator = 0");
+
+        let tip_receiver_fee = total_tips
+            .checked_sub(block_builder_fee)
+            .expect("tip_receiver_fee underflow");
+
+        if tip_receiver_fee > 0 {
+            **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? = ctx
+                .accounts
+                .tip_receiver
+                .lamports()
+                .checked_add(tip_receiver_fee)
+                .expect("overflow adding tips to tip_receiver");
+        }
+
+        if block_builder_fee > 0 {
+            **ctx.accounts.block_builder.try_borrow_mut_lamports()? = ctx
+                .accounts
+                .block_builder
+                .lamports()
+                .checked_add(block_builder_fee)
+                .expect("overflow adding tips to block_builder");
+        }
+
+        if block_builder_fee > 0 || tip_receiver_fee > 0 {
+            emit!(TipsClaimed {
+                tip_receiver: ctx.accounts.tip_receiver.key(),
+                tip_receiver_amount: tip_receiver_fee,
+                block_builder: ctx.accounts.block_builder.key(),
+                block_builder_amount: block_builder_fee,
+            });
+        }
 
         Ok(())
     }
@@ -68,24 +93,99 @@ pub mod tip_payment {
     pub fn change_tip_receiver(ctx: Context<ChangeTipReceiver>) -> Result<()> {
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
-        if total_tips > 0 {
-            let pre_lamports = ctx.accounts.old_tip_receiver.lamports();
-            **ctx.accounts.old_tip_receiver.try_borrow_mut_lamports()? =
-                pre_lamports.checked_add(total_tips).expect(&*format!(
-                    "change_tip_receiver overflow: [old_tip_receiver: {}, pre_lamports: {}, total_tips: {}]",
-                    ctx.accounts.old_tip_receiver.key(),
-                    pre_lamports,
-                    total_tips,
-                ));
+        let block_builder_fee = total_tips
+            .checked_mul(ctx.accounts.config.block_builder_fee_numerator)
+            .expect("block_builder_fee_numerator overflow")
+            .checked_div(ctx.accounts.config.block_builder_fee_denominator)
+            .expect("block_builder_fee_denominator = 0");
+
+        let tip_receiver_fee = total_tips
+            .checked_sub(block_builder_fee)
+            .expect("tip_receiver_fee underflow");
+
+        if tip_receiver_fee > 0 {
+            **ctx.accounts.old_tip_receiver.try_borrow_mut_lamports()? = ctx
+                .accounts
+                .old_tip_receiver
+                .lamports()
+                .checked_add(tip_receiver_fee)
+                .expect("overflow adding tips to tip_receiver");
+        }
+
+        if block_builder_fee > 0 {
+            **ctx.accounts.block_builder.try_borrow_mut_lamports()? = ctx
+                .accounts
+                .block_builder
+                .lamports()
+                .checked_add(block_builder_fee)
+                .expect("overflow adding tips to block_builder");
+        }
+
+        if block_builder_fee > 0 || tip_receiver_fee > 0 {
             emit!(TipsClaimed {
-                by: ctx.accounts.signer.key(),
-                to: ctx.accounts.old_tip_receiver.key(),
-                amount: total_tips,
+                tip_receiver: ctx.accounts.old_tip_receiver.key(),
+                tip_receiver_amount: tip_receiver_fee,
+                block_builder: ctx.accounts.block_builder.key(),
+                block_builder_amount: block_builder_fee,
             });
         }
 
         // set new funding account
         ctx.accounts.config.tip_receiver = ctx.accounts.new_tip_receiver.key();
+        Ok(())
+    }
+
+    /// Changes the block builder. The block builder takes a cut on tips transferred out by
+    /// this program. In order for the block builder to be changed, all previous tips must have been
+    /// drained.
+    pub fn change_block_builder(
+        ctx: Context<ChangeBlockBuilder>,
+        fee_numerator: u64,
+        fee_denominator: u64,
+    ) -> Result<()> {
+        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
+
+        let block_builder_fee = total_tips
+            .checked_mul(ctx.accounts.config.block_builder_fee_numerator)
+            .expect("block_builder_fee_numerator overflow")
+            .checked_div(ctx.accounts.config.block_builder_fee_denominator)
+            .expect("block_builder_fee_denominator = 0");
+
+        let tip_receiver_fee = total_tips
+            .checked_sub(block_builder_fee)
+            .expect("tip_receiver_fee underflow");
+
+        if tip_receiver_fee > 0 {
+            **ctx.accounts.old_tip_receiver.try_borrow_mut_lamports()? = ctx
+                .accounts
+                .old_tip_receiver
+                .lamports()
+                .checked_add(tip_receiver_fee)
+                .expect("overflow adding tips to tip_receiver");
+        }
+
+        if block_builder_fee > 0 {
+            **ctx.accounts.old_block_builder.try_borrow_mut_lamports()? = ctx
+                .accounts
+                .old_block_builder
+                .lamports()
+                .checked_add(block_builder_fee)
+                .expect("overflow adding tips to block_builder");
+        }
+
+        if block_builder_fee > 0 || tip_receiver_fee > 0 {
+            emit!(TipsClaimed {
+                tip_receiver: ctx.accounts.old_tip_receiver.key(),
+                tip_receiver_amount: tip_receiver_fee,
+                block_builder: ctx.accounts.old_block_builder.key(),
+                block_builder_amount: block_builder_fee,
+            });
+        }
+
+        // set new funding account
+        ctx.accounts.config.block_builder = ctx.accounts.new_block_builder.key();
+        ctx.accounts.config.block_builder_fee_numerator = fee_numerator;
+        ctx.accounts.config.block_builder_fee_denominator = fee_denominator;
         Ok(())
     }
 }
@@ -260,12 +360,22 @@ pub struct ClaimTips<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
+
     /// CHECK: this is the account that is configured to receive tips, which is constantly rotating and
     /// can be an account with a private key to a PDA owned by some other program.
-    #[account(mut,
+    #[account(
+        mut,
         constraint = config.tip_receiver == tip_receiver.key(),
     )]
     pub tip_receiver: AccountInfo<'info>,
+
+    /// CHECK: only the current block builder can get tips
+    #[account(
+        mut,
+        constraint = config.block_builder == block_builder.key(),
+    )]
+    pub block_builder: AccountInfo<'info>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
@@ -287,19 +397,22 @@ impl<'info> ClaimTips<'info> {
 
 #[derive(Accounts)]
 pub struct ChangeTipReceiver<'info> {
-    #[account(
-        mut,
-        constraint = old_tip_receiver.key() == config.tip_receiver,
-    )]
+    #[account(mut)]
     pub config: Account<'info, Config>,
 
-    /// CHECK: constraint check above. old tip receiver gets tokens transferred to them before
-    /// new tip receiver.
-    #[account(mut)]
+    /// CHECK: old_tip_receiver receives the funds in the TipPaymentAccount accounts, so
+    /// ensure its the one that's expected
+    #[account(mut, constraint = old_tip_receiver.key() == config.tip_receiver)]
     pub old_tip_receiver: AccountInfo<'info>,
 
     /// CHECK: any new account is allowed as a tip receiver.
     pub new_tip_receiver: AccountInfo<'info>,
+
+    /// CHECK: old_block_builder receives a % of funds in the TipPaymentAccount accounts, so
+    /// ensure it's the account that's expected
+    #[account(mut, constraint = block_builder.key() == config.block_builder)]
+    pub block_builder: AccountInfo<'info>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_0],
@@ -375,7 +488,98 @@ impl<'info> ChangeTipReceiver<'info> {
     }
 }
 
-/// accounts
+#[derive(Accounts)]
+pub struct ChangeBlockBuilder<'info> {
+    #[account(mut)]
+    pub config: Account<'info, Config>,
+
+    /// CHECK: old_tip_receiver receives the funds in the TipPaymentAccount accounts, so
+    /// ensure its the one that's expected
+    #[account(mut, constraint = old_tip_receiver.key() == config.tip_receiver)]
+    pub old_tip_receiver: AccountInfo<'info>,
+
+    /// CHECK: old_block_builder receives a % of funds in the TipPaymentAccount accounts, so
+    /// ensure it's the account that's expected
+    #[account(mut, constraint = old_block_builder.key() == config.block_builder)]
+    pub old_block_builder: AccountInfo<'info>,
+
+    /// CHECK: any new account is allowed as block builder
+    pub new_block_builder: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_0],
+        bump = config.bumps.tip_payment_account_0,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_0: Account<'info, TipPaymentAccount>,
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_1],
+        bump = config.bumps.tip_payment_account_1,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_1: Account<'info, TipPaymentAccount>,
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_2],
+        bump = config.bumps.tip_payment_account_2,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_2: Account<'info, TipPaymentAccount>,
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_3],
+        bump = config.bumps.tip_payment_account_3,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_3: Account<'info, TipPaymentAccount>,
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_4],
+        bump = config.bumps.tip_payment_account_4,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_4: Account<'info, TipPaymentAccount>,
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_5],
+        bump = config.bumps.tip_payment_account_5,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_5: Account<'info, TipPaymentAccount>,
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_6],
+        bump = config.bumps.tip_payment_account_6,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_6: Account<'info, TipPaymentAccount>,
+    #[account(
+        mut,
+        seeds = [TIP_ACCOUNT_SEED_7],
+        bump = config.bumps.tip_payment_account_7,
+        rent_exempt = enforce
+    )]
+    pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
+
+impl<'info> ChangeBlockBuilder<'info> {
+    fn get_tip_accounts(&self) -> Vec<AccountInfo<'info>> {
+        vec![
+            self.tip_payment_account_0.to_account_info(),
+            self.tip_payment_account_1.to_account_info(),
+            self.tip_payment_account_2.to_account_info(),
+            self.tip_payment_account_3.to_account_info(),
+            self.tip_payment_account_4.to_account_info(),
+            self.tip_payment_account_5.to_account_info(),
+            self.tip_payment_account_6.to_account_info(),
+            self.tip_payment_account_7.to_account_info(),
+        ]
+    }
+}
 
 /// Stores program config metadata.
 #[account]
@@ -383,6 +587,11 @@ impl<'info> ChangeTipReceiver<'info> {
 pub struct Config {
     /// The account claiming tips from the mev_payment accounts.
     pub tip_receiver: Pubkey,
+
+    /// Block builder that receives a % of fees
+    pub block_builder: Pubkey,
+    pub block_builder_fee_numerator: u64,
+    pub block_builder_fee_denominator: u64,
 
     /// Bumps used to derive PDAs
     pub bumps: InitBumps,
@@ -444,7 +653,8 @@ impl TipPaymentAccount {
 /// events
 #[event]
 pub struct TipsClaimed {
-    by: Pubkey,
-    to: Pubkey,
-    amount: u64,
+    tip_receiver: Pubkey,
+    tip_receiver_amount: u64,
+    block_builder: Pubkey,
+    block_builder_amount: u64,
 }
