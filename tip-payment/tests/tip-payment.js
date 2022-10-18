@@ -1,9 +1,7 @@
 const anchor = require('@project-serum/anchor')
 const assert = require('assert')
+const {config} = require("chai");
 const {SystemProgram, Transaction} = anchor.web3
-
-const CONFIG_ACCOUNT_LEN = 8 + 9 + 32 // 8 for anchor header, 9 for bumps, 32 for pubkey
-const TIP_PAYMENT_ACCOUNT_LEN = 8  // 8 for header
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
 const tipSeed0 = 'TIP_ACCOUNT_0'
@@ -34,6 +32,7 @@ describe('tests tip_payment', () => {
         await anchor.web3.sendAndConfirmTransaction(tipPaymentProg.provider.connection, tipTx, [searcherKP],)
     }
     const initializerKeys = anchor.web3.Keypair.generate()
+    const blockProducerKeys = anchor.web3.Keypair.generate()
     before(async () => {
         const [_configAccount, _configAccountBump] = await anchor.web3.PublicKey.findProgramAddress([Buffer.from(configAccountSeed, 'utf8')], tipPaymentProg.programId,)
         configAccount = _configAccount
@@ -64,21 +63,14 @@ describe('tests tip_payment', () => {
         tipBump7 = _tipBump7
 
         await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(initializerKeys.publicKey, 100000000000000), 'confirmed',)
+        await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(blockProducerKeys.publicKey, 100000000000000), 'confirmed',)
     })
 
     // utility function asserting all expected rent exempt accounts are indeed exempt
-    const assertRentExemptAccounts = async () => {
-        let minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(CONFIG_ACCOUNT_LEN)
-        let accInfo = await tipPaymentProg.provider.connection.getAccountInfo(configAccount)
-        assert.equal(accInfo.lamports, minRentExempt)
-
-        minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(TIP_PAYMENT_ACCOUNT_LEN)
-        accInfo = await tipPaymentProg.provider.connection.getAccountInfo(tipPaymentAccount1)
-        assert.equal(accInfo.lamports, minRentExempt)
-
-        minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(TIP_PAYMENT_ACCOUNT_LEN)
-        accInfo = await tipPaymentProg.provider.connection.getAccountInfo(tipPaymentAccount2)
-        assert.equal(accInfo.lamports, minRentExempt)
+    const assertRentExemptAccounts = async (tip_payment_account_pubkey) => {
+        let tip_payment_account = await tipPaymentProg.provider.connection.getAccountInfo(tip_payment_account_pubkey)
+        minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(tip_payment_account.data.length)
+        assert.equal(tip_payment_account.lamports, minRentExempt)
     }
     it('#initialize happy path', async () => {
         try {
@@ -95,6 +87,7 @@ describe('tests tip_payment', () => {
             }, {
                 accounts: {
                     config: configAccount,
+                    tipPaymentAccount0: tipPaymentAccount0,
                     tipPaymentAccount1: tipPaymentAccount1,
                     tipPaymentAccount2: tipPaymentAccount2,
                     tipPaymentAccount3: tipPaymentAccount3,
@@ -102,13 +95,11 @@ describe('tests tip_payment', () => {
                     tipPaymentAccount5: tipPaymentAccount5,
                     tipPaymentAccount6: tipPaymentAccount6,
                     tipPaymentAccount7: tipPaymentAccount7,
-                    tipPaymentAccount0: tipPaymentAccount0,
                     systemProgram: SystemProgram.programId,
                     payer: initializerKeys.publicKey,
                 }, signers: [initializerKeys],
             },)
         } catch (e) {
-            console.log('error', e)
             assert.fail()
         }
         const configState = await tipPaymentProg.account.config.fetch(configAccount)
@@ -117,12 +108,15 @@ describe('tests tip_payment', () => {
     it('#change_tip_receiver with 0 total tips succeeds', async () => {
         let configState = await tipPaymentProg.account.config.fetch(configAccount)
         const oldTipReceiver = configState.tipReceiver
+        const blockBuilder = configState.blockBuilder
         const newTipReceiver = anchor.web3.Keypair.generate()
         await tipPaymentProg.rpc.changeTipReceiver({
             accounts: {
                 config: configAccount,
                 oldTipReceiver,
                 newTipReceiver: newTipReceiver.publicKey,
+                blockBuilder,
+                tipPaymentAccount0: tipPaymentAccount0,
                 tipPaymentAccount1: tipPaymentAccount1,
                 tipPaymentAccount2: tipPaymentAccount2,
                 tipPaymentAccount3: tipPaymentAccount3,
@@ -130,23 +124,28 @@ describe('tests tip_payment', () => {
                 tipPaymentAccount5: tipPaymentAccount5,
                 tipPaymentAccount6: tipPaymentAccount6,
                 tipPaymentAccount7: tipPaymentAccount7,
-                tipPaymentAccount0: tipPaymentAccount0,
                 signer: initializerKeys.publicKey,
             }, signers: [initializerKeys],
         },)
-        await assertRentExemptAccounts()
+        await assertRentExemptAccounts(tipPaymentAccount0)
         configState = await tipPaymentProg.account.config.fetch(configAccount)
         assert.equal(configState.tipReceiver.toString(), newTipReceiver.publicKey.toString())
     })
     it('#change_tip_receiver `constraint = old_tip_receiver.key() == config.tip_receiver`', async () => {
         const badOldTipReceiver = anchor.web3.Keypair.generate().publicKey
         const newTipReceiver = anchor.web3.Keypair.generate()
+
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const blockBuilder = configState.blockBuilder
+
         try {
             await tipPaymentProg.rpc.changeTipReceiver({
                 accounts: {
                     config: configAccount,
                     oldTipReceiver: badOldTipReceiver,
                     newTipReceiver: newTipReceiver.publicKey,
+                    blockBuilder,
+                    tipPaymentAccount0: tipPaymentAccount0,
                     tipPaymentAccount1: tipPaymentAccount1,
                     tipPaymentAccount2: tipPaymentAccount2,
                     tipPaymentAccount3: tipPaymentAccount3,
@@ -154,21 +153,29 @@ describe('tests tip_payment', () => {
                     tipPaymentAccount5: tipPaymentAccount5,
                     tipPaymentAccount6: tipPaymentAccount6,
                     tipPaymentAccount7: tipPaymentAccount7,
-                    tipPaymentAccount0: tipPaymentAccount0,
                     signer: initializerKeys.publicKey,
                 }, signers: [initializerKeys],
             },)
             assert.fail('expected exception to be thrown')
         } catch (e) {
             assert.equal(e.error.errorMessage, 'A raw constraint was violated')
+            assert.equal(e.error.origin, 'old_tip_receiver')
         }
     })
-    it('#claim_tips `constraint = tip_receiver.key() == config.tip_receiver`', async () => {
-        const badTipReceiver = anchor.web3.Keypair.generate().publicKey
+    it('#change_tip_receiver `constraint = block_builder.key() == config.block_builder`', async () => {
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const oldTipReceiver = configState.tipReceiver
+
+        const badBlockBuilder = anchor.web3.Keypair.generate().publicKey
+
         try {
-            await tipPaymentProg.rpc.claimTips({
+            await tipPaymentProg.rpc.changeTipReceiver({
                 accounts: {
                     config: configAccount,
+                    oldTipReceiver: oldTipReceiver,
+                    newTipReceiver: oldTipReceiver,
+                    blockBuilder: badBlockBuilder,
+                    tipPaymentAccount0: tipPaymentAccount0,
                     tipPaymentAccount1: tipPaymentAccount1,
                     tipPaymentAccount2: tipPaymentAccount2,
                     tipPaymentAccount3: tipPaymentAccount3,
@@ -176,23 +183,225 @@ describe('tests tip_payment', () => {
                     tipPaymentAccount5: tipPaymentAccount5,
                     tipPaymentAccount6: tipPaymentAccount6,
                     tipPaymentAccount7: tipPaymentAccount7,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            },)
+            assert.fail('expected exception to be thrown')
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'A raw constraint was violated')
+            assert.equal(e.error.origin, 'block_builder')
+        }
+    })
+    it('#claim_tips `constraint = tip_receiver.key() == config.tip_receiver`', async () => {
+        const badTipReceiver = anchor.web3.Keypair.generate().publicKey
+
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const blockBuilder = configState.blockBuilder
+
+        try {
+            await tipPaymentProg.rpc.claimTips({
+                accounts: {
+                    config: configAccount,
                     tipPaymentAccount0: tipPaymentAccount0,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
                     tipReceiver: badTipReceiver,
+                    blockBuilder,
                     signer: initializerKeys.publicKey,
                 }, signers: [initializerKeys],
             },)
             assert(false)
-        } catch (err) {
-            assert.equal(err.error.errorMessage, 'A raw constraint was violated')
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'A raw constraint was violated')
+            assert.equal(e.error.origin, 'tip_receiver')
+        }
+    })
+    it('#claim_tips `constraint = config.block_builder == block_builder.key()`', async () => {
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+        const badBlockBuilder = anchor.web3.Keypair.generate().publicKey
+
+        try {
+            await tipPaymentProg.rpc.claimTips({
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount0: tipPaymentAccount0,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipReceiver: tipReceiver,
+                    blockBuilder: badBlockBuilder,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            },)
+            assert(false)
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'A raw constraint was violated')
+            assert.equal(e.error.origin, 'block_builder')
+        }
+    })
+    it('#change_block_builder constraint = old_tip_receiver.key() == config.tip_receiver', async () => {
+        const badTipReceiver = anchor.web3.Keypair.generate().publicKey
+
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const oldBlockBuilder = configState.blockBuilder
+
+        try {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(1), {
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount0: tipPaymentAccount0,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipReceiver: badTipReceiver,
+                    oldBlockBuilder: oldBlockBuilder,
+                    newBlockBuilder: oldBlockBuilder,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            })
+            assert(false)
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'A raw constraint was violated')
+            assert.equal(e.error.origin, 'tip_receiver')
+        }
+    })
+    it('#change_block_builder constraint = old_block_builder.key() == config.block_builder', async () => {
+        const badBlockBuilder = anchor.web3.Keypair.generate().publicKey
+
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+
+        try {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(1), {
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount0: tipPaymentAccount0,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipReceiver,
+                    oldBlockBuilder: badBlockBuilder,
+                    newBlockBuilder: badBlockBuilder,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            })
+            assert(false)
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'A raw constraint was violated')
+            assert.equal(e.error.origin, 'old_block_builder')
+        }
+    })
+    it('#change_block_builder numerator greater than denominator fails', async () => {
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+        const blockBuilder = configState.blockBuilder
+
+        try {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(100), new anchor.BN(1), {
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount0: tipPaymentAccount0,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipReceiver,
+                    oldBlockBuilder: blockBuilder,
+                    newBlockBuilder: blockBuilder,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            })
+            assert(false)
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'InvalidFee')
+        }
+    })
+    it('#change_block_builder denominator of 0', async () => {
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+        const blockBuilder = configState.blockBuilder
+
+        try {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(0), {
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount0: tipPaymentAccount0,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipReceiver,
+                    oldBlockBuilder: blockBuilder,
+                    newBlockBuilder: blockBuilder,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            })
+            assert(false)
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'InvalidFee')
+        }
+    })
+    it('#change_block_builder denominator greater than 100', async () => {
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+        const blockBuilder = configState.blockBuilder
+        try {
+            await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(1), new anchor.BN(101), {
+                accounts: {
+                    config: configAccount,
+                    tipPaymentAccount0: tipPaymentAccount0,
+                    tipPaymentAccount1: tipPaymentAccount1,
+                    tipPaymentAccount2: tipPaymentAccount2,
+                    tipPaymentAccount3: tipPaymentAccount3,
+                    tipPaymentAccount4: tipPaymentAccount4,
+                    tipPaymentAccount5: tipPaymentAccount5,
+                    tipPaymentAccount6: tipPaymentAccount6,
+                    tipPaymentAccount7: tipPaymentAccount7,
+                    tipReceiver,
+                    oldBlockBuilder: blockBuilder,
+                    newBlockBuilder: blockBuilder,
+                    signer: initializerKeys.publicKey,
+                }, signers: [initializerKeys],
+            })
+            assert(false)
+        } catch (e) {
+            assert.equal(e.error.errorMessage, 'InvalidFee')
         }
     })
     it('#claim_tips with bad tipPaymentAccountN', async () => {
         const configState = await tipPaymentProg.account.config.fetch(configAccount)
+
         const tipReceiver = configState.tipReceiver
+        const blockBuilder = configState.blockBuilder
+
         for (let i = 0; i < 8; i++) {
             let accounts = await getBadTipPaymentAccounts(i)
             accounts = {
-                ...accounts, signer: initializerKeys.publicKey, config: configAccount, tipReceiver,
+                ...accounts, signer: initializerKeys.publicKey, config: configAccount, tipReceiver, blockBuilder
             }
             try {
                 await tipPaymentProg.rpc.claimTips({
@@ -204,16 +413,38 @@ describe('tests tip_payment', () => {
             }
         }
     })
-    it('#claim_tips moves funds to correct account', async () => {
-        const signer = anchor.web3.Keypair.generate()
-        const tipAmount = 1000000
-        await sendTip(tipPaymentAccount1, tipAmount)
-        await sendTip(tipPaymentAccount2, tipAmount)
-        const totalTip = tipAmount * 2
-
+    it('#claim_tips moves funds to the tip receiver and block builder', async () => {
         let configState = await tipPaymentProg.account.config.fetch(configAccount)
         const tipReceiver = configState.tipReceiver
+        const blockBuilder = configState.blockBuilder
+
+        // Set block builder to take 50% cut
+        await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(5), new anchor.BN(10), {
+            accounts: {
+                config: configAccount,
+                tipPaymentAccount0: tipPaymentAccount0,
+                tipPaymentAccount1: tipPaymentAccount1,
+                tipPaymentAccount2: tipPaymentAccount2,
+                tipPaymentAccount3: tipPaymentAccount3,
+                tipPaymentAccount4: tipPaymentAccount4,
+                tipPaymentAccount5: tipPaymentAccount5,
+                tipPaymentAccount6: tipPaymentAccount6,
+                tipPaymentAccount7: tipPaymentAccount7,
+                tipReceiver,
+                oldBlockBuilder: blockBuilder,
+                newBlockBuilder: blockBuilder,
+                signer: initializerKeys.publicKey,
+            }, signers: [initializerKeys],
+        })
+
+        const tipAmount = 100000000
+        await sendTip(tipPaymentAccount1, tipAmount)
+        await sendTip(tipPaymentAccount2, tipAmount)
+        const totalTips = tipAmount * 2
+
         const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)) || {lamports: 0}).lamports
+        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) || {lamports: 0}).lamports
+
         await tipPaymentProg.rpc.claimTips({
             accounts: {
                 config: configAccount,
@@ -226,15 +457,18 @@ describe('tests tip_payment', () => {
                 tipPaymentAccount7: tipPaymentAccount7,
                 tipPaymentAccount0: tipPaymentAccount0,
                 tipReceiver: tipReceiver,
-                signer: signer.publicKey,
-            }, signers: [signer],
+                blockBuilder,
+                signer: initializerKeys.publicKey,
+            }, signers: [initializerKeys],
         },)
 
-        await assertRentExemptAccounts()
+        await assertRentExemptAccounts(tipPaymentAccount0)
         const tipReceiverLamportsAfter = (await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)).lamports
-        assert.equal(tipReceiverLamportsAfter - tipReceiverLamportsBefore, totalTip)
+        const blockBuilderLamportsAfter = (await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)).lamports
+        assert.equal(tipReceiverLamportsAfter - tipReceiverLamportsBefore, totalTips / 2)
+        assert.equal(blockBuilderLamportsAfter - blockBuilderLamportsBefore, totalTips / 2)
     })
-    it('#set_tip_receiver transfers funds to previous tip_receiver', async () => {
+    it('#set_tip_receiver transfers funds to previous tip_receiver and block builder', async () => {
         const tipAmount = 10000000
         await sendTip(tipPaymentAccount1, tipAmount)
         await sendTip(tipPaymentAccount2, tipAmount)
@@ -242,15 +476,18 @@ describe('tests tip_payment', () => {
 
         let configState = await tipPaymentProg.account.config.fetch(configAccount)
         const oldTipReceiver = configState.tipReceiver
-        const oldTipReceiverBalanceBefore = (await tipPaymentProg.provider.connection.getAccountInfo(oldTipReceiver)).lamports
+
+        const blockBuilder = configState.blockBuilder
+        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(oldTipReceiver)) || {lamports: 0}).lamports
+        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) || {lamports: 0}).lamports
+
         const newTipReceiver = anchor.web3.Keypair.generate()
-        const newLeader = anchor.web3.Keypair.generate()
         await tipPaymentProg.rpc.changeTipReceiver({
             accounts: {
                 oldTipReceiver,
                 newTipReceiver: newTipReceiver.publicKey,
                 config: configAccount,
-                signer: newLeader.publicKey,
+                blockBuilder,
                 tipPaymentAccount1: tipPaymentAccount1,
                 tipPaymentAccount2: tipPaymentAccount2,
                 tipPaymentAccount3: tipPaymentAccount3,
@@ -259,11 +496,60 @@ describe('tests tip_payment', () => {
                 tipPaymentAccount6: tipPaymentAccount6,
                 tipPaymentAccount7: tipPaymentAccount7,
                 tipPaymentAccount0: tipPaymentAccount0,
-            }, signers: [newLeader],
+                signer: initializerKeys.publicKey,
+            }, signers: [initializerKeys],
         },)
-        await assertRentExemptAccounts()
+        await assertRentExemptAccounts(tipPaymentAccount0)
         const oldTipReceiverBalanceAfter = (await tipPaymentProg.provider.connection.getAccountInfo(oldTipReceiver)).lamports
-        assert.equal(oldTipReceiverBalanceAfter, totalTip + oldTipReceiverBalanceBefore)
+        const blockBuilderBalanceAfter = (await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)).lamports
+        assert.equal(oldTipReceiverBalanceAfter - tipReceiverLamportsBefore, totalTip / 2)
+        assert.equal(blockBuilderBalanceAfter - blockBuilderLamportsBefore, totalTip / 2)
+
+        configState = await tipPaymentProg.account.config.fetch(configAccount)
+        assert.equal(configState.tipReceiver.toString(), newTipReceiver.publicKey.toString())
+    })
+
+    it('#change_block_builder transfers funds to previous tip_receiver and block builder', async () => {
+        const tipAmount = 10000000
+        await sendTip(tipPaymentAccount1, tipAmount)
+        await sendTip(tipPaymentAccount2, tipAmount)
+        const totalTip = tipAmount * 2
+
+        let configState = await tipPaymentProg.account.config.fetch(configAccount)
+        const tipReceiver = configState.tipReceiver
+
+        const blockBuilder = configState.blockBuilder
+        const tipReceiverLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)) || {lamports: 0}).lamports
+        const blockBuilderLamportsBefore = ((await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)) || {lamports: 0}).lamports
+
+        const newBlockBuilder = anchor.web3.Keypair.generate()
+        await tipPaymentProg.rpc.changeBlockBuilder(new anchor.BN(3), new anchor.BN(4),{
+            accounts: {
+                config: configAccount,
+                tipReceiver,
+                oldBlockBuilder: blockBuilder,
+                newBlockBuilder: newBlockBuilder.publicKey,
+                tipPaymentAccount1: tipPaymentAccount1,
+                tipPaymentAccount2: tipPaymentAccount2,
+                tipPaymentAccount3: tipPaymentAccount3,
+                tipPaymentAccount4: tipPaymentAccount4,
+                tipPaymentAccount5: tipPaymentAccount5,
+                tipPaymentAccount6: tipPaymentAccount6,
+                tipPaymentAccount7: tipPaymentAccount7,
+                tipPaymentAccount0: tipPaymentAccount0,
+                signer: initializerKeys.publicKey,
+            }, signers: [initializerKeys],
+        },)
+        await assertRentExemptAccounts(tipPaymentAccount0)
+        const oldTipReceiverBalanceAfter = (await tipPaymentProg.provider.connection.getAccountInfo(tipReceiver)).lamports
+        const blockBuilderBalanceAfter = (await tipPaymentProg.provider.connection.getAccountInfo(blockBuilder)).lamports
+        assert.equal(oldTipReceiverBalanceAfter - tipReceiverLamportsBefore, totalTip / 2)
+        assert.equal(blockBuilderBalanceAfter - blockBuilderLamportsBefore, totalTip / 2)
+
+        configState = await tipPaymentProg.account.config.fetch(configAccount)
+        assert.equal(configState.blockBuilder.toString(), newBlockBuilder.publicKey.toString())
+        assert.equal(configState.blockBuilderFeeNumerator.toString(), new anchor.BN(3).toString())
+        assert.equal(configState.blockBuilderFeeDenominator.toString(), new anchor.BN(4).toString())
     })
 })
 

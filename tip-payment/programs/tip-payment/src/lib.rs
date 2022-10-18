@@ -26,6 +26,7 @@ pub mod tip_payment {
     pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumps) -> Result<()> {
         let cfg = &mut ctx.accounts.config;
         cfg.tip_receiver = ctx.accounts.payer.key();
+        cfg.block_builder = ctx.accounts.payer.key();
 
         let bumps = InitBumps {
             config: *ctx.bumps.get("config").unwrap(),
@@ -143,6 +144,10 @@ pub mod tip_payment {
         fee_numerator: u64,
         fee_denominator: u64,
     ) -> Result<()> {
+        require_gte!(fee_denominator, fee_numerator, TipPaymentError::InvalidFee);
+        require_gte!(100, fee_denominator, TipPaymentError::InvalidFee);
+        require_neq!(fee_denominator, 0, TipPaymentError::InvalidFee);
+
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
@@ -156,9 +161,9 @@ pub mod tip_payment {
             .expect("tip_receiver_fee underflow");
 
         if tip_receiver_fee > 0 {
-            **ctx.accounts.old_tip_receiver.try_borrow_mut_lamports()? = ctx
+            **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? = ctx
                 .accounts
-                .old_tip_receiver
+                .tip_receiver
                 .lamports()
                 .checked_add(tip_receiver_fee)
                 .expect("overflow adding tips to tip_receiver");
@@ -175,7 +180,7 @@ pub mod tip_payment {
 
         if block_builder_fee > 0 || tip_receiver_fee > 0 {
             emit!(TipsClaimed {
-                tip_receiver: ctx.accounts.old_tip_receiver.key(),
+                tip_receiver: ctx.accounts.tip_receiver.key(),
                 tip_receiver_amount: tip_receiver_fee,
                 block_builder: ctx.accounts.old_block_builder.key(),
                 block_builder_amount: block_builder_fee,
@@ -190,6 +195,11 @@ pub mod tip_payment {
     }
 }
 
+#[error_code]
+pub enum TipPaymentError {
+    InvalidFee,
+}
+
 /// Bumps used during initialization
 #[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct InitBumps {
@@ -202,6 +212,10 @@ pub struct InitBumps {
     pub tip_payment_account_5: u8,
     pub tip_payment_account_6: u8,
     pub tip_payment_account_7: u8,
+}
+
+impl InitBumps {
+    const SIZE: usize = 9;
 }
 
 #[derive(Accounts)]
@@ -495,8 +509,8 @@ pub struct ChangeBlockBuilder<'info> {
 
     /// CHECK: old_tip_receiver receives the funds in the TipPaymentAccount accounts, so
     /// ensure its the one that's expected
-    #[account(mut, constraint = old_tip_receiver.key() == config.tip_receiver)]
-    pub old_tip_receiver: AccountInfo<'info>,
+    #[account(mut, constraint = tip_receiver.key() == config.tip_receiver)]
+    pub tip_receiver: AccountInfo<'info>,
 
     /// CHECK: old_block_builder receives a % of funds in the TipPaymentAccount accounts, so
     /// ensure it's the account that's expected
@@ -598,7 +612,7 @@ pub struct Config {
 }
 
 impl Config {
-    pub const SIZE: usize = 8 + 32 + 9; // 8 for header, 32 for pubkey, 9 for bumps
+    pub const SIZE: usize = 8 + 32 + 32 + 8 + 8 + InitBumps::SIZE;
 }
 
 /// Account that searchers will need to tip for their bundles to be accepted.
