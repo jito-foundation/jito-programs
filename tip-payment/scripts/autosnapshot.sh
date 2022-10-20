@@ -104,7 +104,7 @@ create_snapshot_for_slot() {
   # ledger-tool by default updates snapshots in the existing ledger directory
   # and prunes old full/incremental snapshots. copy it out to our snapshot
   # directory when finished creating.
-  cp "$ledger_location"*"$snapshot_slot"* "$snapshot_dir"
+  cp "$ledger_location"/*"$snapshot_slot"* "$snapshot_dir"
 
   # snapshot file should exist now, grab the filename here (snapshot-$slot-$hash.tar.zst)
   snapshot_file=$(get_snapshot_filename "$snapshot_dir" "$snapshot_slot")
