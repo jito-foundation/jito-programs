@@ -90,8 +90,9 @@ create_snapshot_for_slot() {
   local snapshot_file
   local exit_status
 
+  # produces snapshot in $snapshot_dir
   # shellcheck disable=SC2012
-  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot "$snapshot_slot"
+  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot "$snapshot_slot" "$snapshot_dir"
 
   # TODO: figure this out
   # for some reason solana-ledger-tool error doesn't cause this script to exit out, so check status here
@@ -100,11 +101,6 @@ create_snapshot_for_slot() {
       echo "solana-ledger-tool returned $exit_status"
       exit $exit_status
   fi
-
-  # ledger-tool by default updates snapshots in the existing ledger directory
-  # and prunes old full/incremental snapshots. copy it out to our snapshot
-  # directory when finished creating.
-  cp "$ledger_location"*"$snapshot_slot"* "$snapshot_dir"
 
   # snapshot file should exist now, grab the filename here (snapshot-$slot-$hash.tar.zst)
   snapshot_file=$(get_snapshot_filename "$snapshot_dir" "$snapshot_slot")
