@@ -16,9 +16,9 @@ pub mod tip_distribution {
     use super::*;
     use crate::ErrorCode::{
         ExceedsMaxClaim, ExceedsMaxNumNodes, ExpiredTipDistributionAccount, FundsAlreadyClaimed,
-        InvalidProof, MaxValidatorCommissionFeeBpsExceeded, PrematureCloseClaimStatus,
-        PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload, RootNotUploaded,
-        Unauthorized,
+        InvalidEpochForTipDistributionAccount, InvalidProof, MaxValidatorCommissionFeeBpsExceeded,
+        PrematureCloseClaimStatus, PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload,
+        RootNotUploaded, Unauthorized,
     };
 
     /// Initialize a singleton instance of the [Config] account.
@@ -81,6 +81,10 @@ pub mod tip_distribution {
         SetValidatorCommissionBps::auth(&ctx)?;
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
+        if Clock::get()?.epoch != distribution_acc.epoch_created_at {
+            return Err(InvalidEpochForTipDistributionAccount.into());
+        }
+
         if new_validator_commission_bps > ctx.accounts.config.max_validator_commission_bps {
             return Err(MaxValidatorCommissionFeeBpsExceeded.into());
         }
@@ -348,6 +352,9 @@ pub enum ErrorCode {
     #[msg("The funds for the given index and TipDistributionAccount have already been claimed.")]
     FundsAlreadyClaimed,
 
+    #[msg("The current epoch is past the acceptable epoch for the given TipDistributionAccount.")]
+    InvalidEpochForTipDistributionAccount,
+
     #[msg("The given proof is invalid.")]
     InvalidProof,
 
@@ -454,6 +461,18 @@ pub struct SetValidatorCommissionBps<'info> {
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
+    // #[account(
+    // init,
+    // seeds = [
+    // TipDistributionAccount::SEED,
+    // validator_vote_account.as_ref(),
+    // Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
+    // ],
+    // bump,
+    // payer = payer,
+    // space = TipDistributionAccount::SIZE,
+    // rent_exempt = enforce
+    // )]
     #[account(mut)]
     pub signer: Signer<'info>,
 }
