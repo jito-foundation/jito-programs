@@ -461,6 +461,7 @@ pub struct SetValidatorCommissionBps<'info> {
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
+    #[account(mut)]
     pub signer: Signer<'info>,
 }
 
