@@ -461,19 +461,6 @@ pub struct SetValidatorCommissionBps<'info> {
     )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
-    // #[account(
-    // init,
-    // seeds = [
-    // TipDistributionAccount::SEED,
-    // validator_vote_account.as_ref(),
-    // Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
-    // ],
-    // bump,
-    // payer = payer,
-    // space = TipDistributionAccount::SIZE,
-    // rent_exempt = enforce
-    // )]
-    #[account(mut)]
     pub signer: Signer<'info>,
 }
 

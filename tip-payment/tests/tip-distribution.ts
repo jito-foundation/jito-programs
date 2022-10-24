@@ -61,22 +61,22 @@ describe( 'tests tip_distribution', () => {
                     signers: [initializer],
                 },
             )
-        } catch (e) {
-            assert.fail('unexpected error: ' + e)
+        } catch ( e ) {
+            assert.fail( 'unexpected error: ' + e )
         }
 
         // expect
-        const actualConfig = await tipDistribution.account.config.fetch(configAccount)
+        const actualConfig = await tipDistribution.account.config.fetch( configAccount )
         const expected = {
             authority: authority.publicKey,
             expiredFundsAccount: expiredFundsAccount.publicKey,
             numEpochsValid,
             maxValidatorCommissionBps,
         }
-        assertConfigState(actualConfig, expected)
+        assertConfigState( actualConfig, expected )
     })
 
-    it.skip('#init_tip_distribution_account happy path', async () => {
+    it('#init_tip_distribution_account happy path', async () => {
         // given
         const {
             validatorVoteAccount,
@@ -113,7 +113,7 @@ describe( 'tests tip_distribution', () => {
         assertDistributionAccount(actual, expected)
     })
 
-    it.skip('#set_validator_commission_bps happy path', async () => {
+    it('#set_validator_commission_bps happy path', async () => {
         // given
         const {
             validatorVoteAccount,
@@ -192,7 +192,7 @@ describe( 'tests tip_distribution', () => {
         expect(tdaAfter.validatorCommissionBps).to.equal(tdaBefore.validatorCommissionBps)
     })
 
-    it.skip('#init_tip_distribution_account fails with [ErrorCode::InvalidValidatorCommissionFeeBps]', async () => {
+    it('#init_tip_distribution_account fails with [ErrorCode::InvalidValidatorCommissionFeeBps]', async () => {
         // given
         const {
             validatorVoteAccount,
@@ -219,7 +219,7 @@ describe( 'tests tip_distribution', () => {
         }
     })
 
-    it.skip('#close_tip_distribution_account happy path', async () => {
+    it('#close_tip_distribution_account happy path', async () => {
         // given
         const {
             validatorVoteAccount,
@@ -272,7 +272,7 @@ describe( 'tests tip_distribution', () => {
     })
 
 
-    it.skip('#set_merkle_root_upload_authority happy path', async () => {
+    it('#set_merkle_root_upload_authority happy path', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -317,7 +317,7 @@ describe( 'tests tip_distribution', () => {
         assertDistributionAccount( actual, expected )
     })
 
-    it.skip('#set_merkle_root_upload_authority fails with ErrorCode::Unauthorized', async () => {
+    it('#set_merkle_root_upload_authority fails with ErrorCode::Unauthorized', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -364,7 +364,7 @@ describe( 'tests tip_distribution', () => {
         assertDistributionAccount(actual, expected)
     })
 
-    it.skip('#upload_merkle_root happy path', async () => {
+    it('#upload_merkle_root happy path', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -431,7 +431,7 @@ describe( 'tests tip_distribution', () => {
         assertDistributionAccount(actual, expected)
     })
 
-    it.skip('#claim happy path', async () => {
+    it('#claim happy path', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -509,7 +509,7 @@ describe( 'tests tip_distribution', () => {
         assert.equal(user0Info.lamports, preBalance0 + amount0)
     })
 
-    it.skip('#close_claim_status works even if TipDistributionAccount already closed', async () => {
+    it('#close_claim_status works even if TipDistributionAccount already closed', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -611,7 +611,7 @@ describe( 'tests tip_distribution', () => {
         assert(balEnd - balStart === minRentExempt)
     })
 
-    it.skip('#close_claim_status fails incorrect claimant', async () => {
+    it('#close_claim_status fails incorrect claimant', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -701,7 +701,7 @@ describe( 'tests tip_distribution', () => {
         }
     })
 
-    it.skip('#close_claim_status fails before TipDistributionAccount has expired with ErrorCode::PrematureCloseClaimStatus', async () => {
+    it('#close_claim_status fails before TipDistributionAccount has expired with ErrorCode::PrematureCloseClaimStatus', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -794,7 +794,7 @@ describe( 'tests tip_distribution', () => {
         assert(balEnd === balStart)
     })
 
-    it.skip('#close_claim_status fails when user tries to drain TipDistributionAccount', async () => {
+    it('#close_claim_status fails when user tries to drain TipDistributionAccount', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
@@ -898,7 +898,7 @@ describe( 'tests tip_distribution', () => {
     })
 
     // keep this test at end, else follow test will fail with `Error: Raw transaction failed ({"err":{"InstructionError":[0,"PrivilegeEscalation"]}})`
-    it.skip('#close_claim_status happy path', async () => {
+    it('#close_claim_status happy path', async () => {
         const {
             validatorVoteAccount,
             maxValidatorCommissionBps,
