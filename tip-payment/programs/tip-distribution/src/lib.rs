@@ -1,13 +1,13 @@
-pub mod merkle_proof;
-pub mod sdk;
-pub mod state;
-
 use anchor_lang::prelude::*;
 
 use crate::{
     state::{ClaimStatus, Config, MerkleRoot, TipDistributionAccount},
     ErrorCode::Unauthorized,
 };
+
+pub mod merkle_proof;
+pub mod sdk;
+pub mod state;
 
 declare_id!("3PX9z1qPj37eNZqH7e5fyaVDyG7ARqkjkYEe1a4xsBkA");
 
@@ -16,8 +16,9 @@ pub mod tip_distribution {
     use super::*;
     use crate::ErrorCode::{
         ExceedsMaxClaim, ExceedsMaxNumNodes, ExpiredTipDistributionAccount, FundsAlreadyClaimed,
-        InvalidProof, MaxValidatorCommissionFeeBpsExceeded, PrematureCloseTipDistributionAccount,
-        PrematureMerkleRootUpload, RootNotUploaded, Unauthorized,
+        InvalidProof, MaxValidatorCommissionFeeBpsExceeded, PrematureCloseClaimStatus,
+        PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload, RootNotUploaded,
+        Unauthorized,
     };
 
     /// Initialize a singleton instance of the [Config] account.
@@ -54,11 +55,13 @@ pub mod tip_distribution {
         }
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
+        let current_epoch = Clock::get()?.epoch;
         distribution_acc.validator_vote_account = validator_vote_account;
-        distribution_acc.epoch_created_at = Clock::get()?.epoch;
+        distribution_acc.epoch_created_at = current_epoch;
         distribution_acc.validator_commission_bps = validator_commission_bps;
         distribution_acc.merkle_root_upload_authority = merkle_root_upload_authority;
         distribution_acc.merkle_root = None;
+        distribution_acc.expires_at = current_epoch + ctx.accounts.config.num_epochs_valid;
         distribution_acc.bump = bump;
         distribution_acc.validate()?;
 
@@ -152,7 +155,7 @@ pub mod tip_distribution {
     ) -> Result<()> {
         UploadMerkleRoot::auth(&ctx)?;
 
-        let current_epoch = Clock::get().unwrap().epoch;
+        let current_epoch = Clock::get()?.epoch;
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
 
         if let Some(merkle_root) = &distribution_acc.merkle_root {
@@ -160,11 +163,12 @@ pub mod tip_distribution {
                 return Err(Unauthorized.into());
             }
         }
-        if distribution_acc.is_expired(&ctx.accounts.config, current_epoch) {
-            return Err(ExpiredTipDistributionAccount.into());
-        }
-        if distribution_acc.epoch_created_at >= current_epoch {
+        if current_epoch <= distribution_acc.epoch_created_at {
             return Err(PrematureMerkleRootUpload.into());
+        }
+
+        if current_epoch > distribution_acc.expires_at {
+            return Err(ExpiredTipDistributionAccount.into());
         }
 
         distribution_acc.merkle_root = Some(MerkleRoot {
@@ -184,6 +188,44 @@ pub mod tip_distribution {
         Ok(())
     }
 
+    #[derive(Accounts)]
+    pub struct CloseClaimStatus<'info> {
+        #[account(seeds = [Config::SEED], bump)]
+        pub config: Account<'info, Config>,
+
+        // bypass seed check since owner check prevents attacker from passing in invalid data
+        // account can only be transferred to us if it is zeroed, failing the deserialization check
+        #[account(
+            mut,
+            close = claim_status_payer,
+            constraint = claim_status_payer.key() == claim_status.claim_status_payer
+        )]
+        pub claim_status: Account<'info, ClaimStatus>,
+
+        /// CHECK: This is checked against claim_status in the constraint
+        /// Receiver of the funds.
+        #[account(mut)]
+        pub claim_status_payer: UncheckedAccount<'info>,
+    }
+
+    /// Anyone can invoke this only after the [TipDistributionAccount] has expired.
+    /// This instruction will return any rent back to `claimant` and close the account
+    pub fn close_claim_status(ctx: Context<CloseClaimStatus>) -> Result<()> {
+        let claim_status = &ctx.accounts.claim_status;
+
+        // can only claim after TDA has expired to prevent draining.
+        if Clock::get()?.epoch <= claim_status.expires_at {
+            return Err(PrematureCloseClaimStatus.into());
+        }
+
+        emit!(ClaimStatusClosedEvent {
+            claim_status_payer: ctx.accounts.claim_status_payer.key(),
+            claim_status_account: claim_status.key(),
+        });
+
+        Ok(())
+    }
+
     /// Anyone can invoke this only after the [TipDistributionAccount] has expired.
     /// This instruction will send any unclaimed funds to the designated `expired_funds_account`
     /// before closing and returning the rent exempt funds to the validator.
@@ -193,26 +235,25 @@ pub mod tip_distribution {
     ) -> Result<()> {
         CloseTipDistributionAccount::auth(&ctx)?;
 
-        let current_epoch = Clock::get().unwrap().epoch;
-
         let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
-        if tip_distribution_account.is_expired(&ctx.accounts.config, current_epoch) {
-            let expired_amount = TipDistributionAccount::claim_expired(
-                tip_distribution_account.to_account_info(),
-                ctx.accounts.expired_funds_account.to_account_info(),
-            )?;
-            tip_distribution_account.validate()?;
 
-            emit!(TipDistributionAccountClosedEvent {
-                expired_funds_account: ctx.accounts.expired_funds_account.key(),
-                tip_distribution_account: tip_distribution_account.key(),
-                expired_amount,
-            });
-
-            Ok(())
-        } else {
-            Err(PrematureCloseTipDistributionAccount.into())
+        if Clock::get()?.epoch <= tip_distribution_account.expires_at {
+            return Err(PrematureCloseTipDistributionAccount.into());
         }
+
+        let expired_amount = TipDistributionAccount::claim_expired(
+            tip_distribution_account.to_account_info(),
+            ctx.accounts.expired_funds_account.to_account_info(),
+        )?;
+        tip_distribution_account.validate()?;
+
+        emit!(TipDistributionAccountClosedEvent {
+            expired_funds_account: ctx.accounts.expired_funds_account.key(),
+            tip_distribution_account: tip_distribution_account.key(),
+            expired_amount,
+        });
+
+        Ok(())
     }
 
     /// Claims tokens from the [TipDistributionAccount].
@@ -222,7 +263,11 @@ pub mod tip_distribution {
 
         let claimant_account = &mut ctx.accounts.claimant;
         let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
+
         let clock = Clock::get()?;
+        if clock.epoch > tip_distribution_account.expires_at {
+            return Err(ExpiredTipDistributionAccount.into());
+        }
 
         // Redundant check since we shouldn't be able to init a claim status account using the same seeds.
         if claim_status.is_claimed {
@@ -230,6 +275,7 @@ pub mod tip_distribution {
         }
 
         let tip_distribution_info = tip_distribution_account.to_account_info();
+        let tip_distribution_epoch_expires_at = tip_distribution_account.expires_at;
         let merkle_root = tip_distribution_account
             .merkle_root
             .as_mut()
@@ -260,6 +306,8 @@ pub mod tip_distribution {
         claim_status.is_claimed = true;
         claim_status.slot_claimed_at = clock.slot;
         claim_status.claimant = claimant_account.key();
+        claim_status.claim_status_payer = ctx.accounts.payer.key();
+        claim_status.expires_at = tip_distribution_epoch_expires_at;
 
         merkle_root.total_funds_claimed =
             merkle_root.total_funds_claimed.checked_add(amount).unwrap();
@@ -310,6 +358,9 @@ pub enum ErrorCode {
 
     #[msg("The given TipDistributionAccount is not ready to be closed.")]
     PrematureCloseTipDistributionAccount,
+
+    #[msg("The given ClaimStatus account is not ready to be closed.")]
+    PrematureCloseClaimStatus,
 
     #[msg("Must wait till at least one epoch after the tip distribution account was created to upload the merkle root.")]
     PrematureMerkleRootUpload,
@@ -600,4 +651,13 @@ pub struct TipDistributionAccountClosedEvent {
 
     /// Unclaimed amount transferred.
     pub expired_amount: u64,
+}
+
+#[event]
+pub struct ClaimStatusClosedEvent {
+    /// Account where funds were transferred to.
+    pub claim_status_payer: Pubkey,
+
+    /// [ClaimStatus] account that was closed.
+    pub claim_status_account: Pubkey,
 }

@@ -2,7 +2,7 @@
 
 use std::mem::size_of;
 
-use anchor_lang::{prelude::*, solana_program::stake_history::Epoch};
+use anchor_lang::prelude::*;
 
 use crate::ErrorCode::{AccountValidationFailure, RentExemptViolation};
 
@@ -30,7 +30,7 @@ pub struct Config {
 #[account]
 #[derive(Default)]
 pub struct TipDistributionAccount {
-    /// The validator's vote account, also the recepient of remaining lamports after
+    /// The validator's vote account, also the recipient of remaining lamports after
     /// upon closing this account.
     pub validator_vote_account: Pubkey,
 
@@ -45,6 +45,9 @@ pub struct TipDistributionAccount {
 
     /// The commission basis points this validator charges.
     pub validator_commission_bps: u16,
+
+    /// The epoch (upto and including) that tip funds can be claimed.
+    pub expires_at: u64,
 
     /// The bump used to generate this account
     pub bump: u8,
@@ -107,10 +110,6 @@ impl TipDistributionAccount {
         Ok(())
     }
 
-    pub fn is_expired(&self, config: &Config, current_epoch: Epoch) -> bool {
-        self.epoch_created_at + config.num_epochs_valid <= current_epoch
-    }
-
     pub fn claim_expired(from: AccountInfo, to: AccountInfo) -> Result<u64> {
         let rent = Rent::get()?;
         let min_rent_lamports = rent.minimum_balance(TipDistributionAccount::SIZE);
@@ -160,22 +159,28 @@ impl TipDistributionAccount {
     }
 }
 
-// TODO(seg): add an `expires_at` field so we can safely close this account and return rent money.
-/// Gives us an audit trail of who and what was claimed; also enforces and only-once claim by any party.  
+/// Gives us an audit trail of who and what was claimed; also enforces and only-once claim by any party.
 #[account]
 #[derive(Default)]
 pub struct ClaimStatus {
     /// If true, the tokens have been claimed.
     pub is_claimed: bool,
 
-    /// Authority that claimed the tokens.
+    /// Authority that claimed the tokens. Allows for delegated rewards claiming.
     pub claimant: Pubkey,
+
+    /// The payer who created the claim.
+    pub claim_status_payer: Pubkey,
 
     /// When the funds were claimed.
     pub slot_claimed_at: u64,
 
     /// Amount of funds claimed.
     pub amount: u64,
+
+    /// The epoch (upto and including) that tip funds can be claimed.
+    /// Copied since TDA can be closed, need to track to avoid making multiple claims
+    pub expires_at: u64,
 
     /// The bump used to generate this account
     pub bump: u8,
