@@ -252,6 +252,12 @@ main() {
   echo "epoch_info: $epoch_info"
   echo "previous_epoch_final_slot: $previous_epoch_final_slot"
 
+  FILE="$SNAPSHOT_DIR/$last_epoch.done"
+  if [ -f "$FILE" ]; then
+      echo "epoch $last_epoch finished uploading, exiting"
+      exit 0
+  fi
+
   # ---------------------------------------------------------------------------
   # Take snapshot and upload to gcloud
   # ---------------------------------------------------------------------------
@@ -327,13 +333,17 @@ main() {
     echo "merkle tree already uploaded to gcloud at: $merkle_tree_gcloud_path"
   fi
 
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root on-chain epoch: $last_epoch slot: $previous_epoch_final_slot"
   upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
 
   # ---------------------------------------------------------------------------
   # Claim MEV tips
   # ---------------------------------------------------------------------------
 
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
+
+  touch "$SNAPSHOT_DIR/$last_epoch.done"
 }
 
 main
