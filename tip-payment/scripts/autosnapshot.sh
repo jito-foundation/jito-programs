@@ -258,7 +258,7 @@ main() {
 
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot at slot $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot epoch: $last_epoch slot: $previous_epoch_final_slot"
 
     # note: make sure these filenames match everywhere else in the file
     rm "$SNAPSHOT_DIR/snapshot-*.tar.zst" || true
@@ -273,7 +273,7 @@ main() {
   snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
   snapshot_in_gcloud=$(get_filepath_in_gcloud "$snapshot_gcloud_path") || true
   if [ -z "$snapshot_in_gcloud" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading $SNAPSHOT_DIR/$snapshot_file to gcloud path $snapshot_gcloud_path"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading snapshot to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
 
     upload_file_to_gcloud "$SNAPSHOT_DIR/$snapshot_file" "$snapshot_gcloud_path"
   else
@@ -288,7 +288,7 @@ main() {
   stake_meta_filepath="$SNAPSHOT_DIR/$stake_meta_filename"
   maybe_stake_meta=$(ls "$stake_meta_filepath" 2>/dev/null || true)
   if [ -z "$maybe_stake_meta" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running stake-meta-generator for slot $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running stake-meta-generator epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$stake_meta_filename" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
   else
     echo "stake-meta already exists: $stake_meta_filepath"
@@ -297,7 +297,7 @@ main() {
   stake_meta_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$stake_meta_filename")
   stake_meta_in_gcloud=$(get_filepath_in_gcloud "$stake_meta_gcloud_path") || true
   if [ -z "$stake_meta_in_gcloud" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading $stake_meta_filepath to gcloud path $stake_meta_gcloud_path"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading stake-meta to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
     upload_file_to_gcloud "$stake_meta_filepath" "$stake_meta_gcloud_path"
   else
     echo "stake meta already uploaded to gcloud at: $stake_meta_in_gcloud"
@@ -312,7 +312,7 @@ main() {
   merkle_tree_filepath="$SNAPSHOT_DIR/$merkle_tree_filename"
   maybe_merkle_tree=$(ls "$merkle_tree_filepath" 2>/dev/null || true)
   if [ -z "$maybe_merkle_tree" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running merkle-root-generator for slot $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running merkle-root-generator epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_merkle_trees "$stake_meta_filepath" "$merkle_tree_filepath"
   else
     echo "stake-meta already exists at: $merkle_tree_filepath"
@@ -321,7 +321,7 @@ main() {
   merkle_tree_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$merkle_tree_filename")
   merkle_tree_in_gcloud=$(get_filepath_in_gcloud "$merkle_tree_gcloud_path") || true
   if [ -z "$merkle_tree_in_gcloud" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root $merkle_tree_filepath to gcloud path $merkle_tree_gcloud_path"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
     upload_file_to_gcloud "$merkle_tree_filepath" "$merkle_tree_gcloud_path"
   else
     echo "merkle tree already uploaded to gcloud at: $merkle_tree_gcloud_path"
