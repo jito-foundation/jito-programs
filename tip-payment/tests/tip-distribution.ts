@@ -190,7 +190,6 @@ describe( 'tests tip_distribution', () => {
         }
         const tdaAfter = await tipDistribution.account.tipDistributionAccount.fetch(tipDistributionAccount);
         expect(tdaAfter.validatorCommissionBps).to.equal(tdaBefore.validatorCommissionBps)
-        assertDistributionAccount( actual, expected )
     })
 
     it('#init_tip_distribution_account fails with [ErrorCode::InvalidValidatorCommissionFeeBps]', async () => {
