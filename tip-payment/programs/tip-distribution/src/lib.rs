@@ -217,7 +217,7 @@ pub mod tip_distribution {
     pub fn close_claim_status(ctx: Context<CloseClaimStatus>) -> Result<()> {
         let claim_status = &ctx.accounts.claim_status;
 
-        // can only claim after TDA has expired to prevent draining.
+        // can only claim after claim_status has expired to prevent draining.
         if Clock::get()?.epoch <= claim_status.expires_at {
             return Err(PrematureCloseClaimStatus.into());
         }
