@@ -10,6 +10,20 @@ set -eux
 
 RPC_URL=$1
 
+post_slack_message() {
+  local bearer=$1
+  local channel=$2
+  local msg=$3
+
+  local hostname
+
+  hostname=$(hostname)
+
+  echo $msg
+
+  curl -d "text=$hostname: $msg" -d "channel=$channel" -H "Authorization: Bearer $bearer" -X POST https://slack.com/api/chat.postMessage
+}
+
 # make sure all env vars are set for this script
 check_env_vars_set() {
   if [ -z "$RPC_URL" ]; then
@@ -49,6 +63,16 @@ check_env_vars_set() {
 
   if [ -z "$LEDGER_DIR" ]; then
     echo "LEDGER_DIR must be set"
+    exit 1
+  fi
+
+  if [ -z "$SLACK_APP_TOKEN" ]; then
+    echo "SLACK_APP_TOKEN must be set"
+    exit 1
+  fi
+
+  if [ -z "$SLACK_CHANNEL" ]; then
+    echo "SLACK_CHANNEL must be set"
     exit 1
   fi
 }
@@ -228,13 +252,19 @@ main() {
   echo "epoch_info: $epoch_info"
   echo "previous_epoch_final_slot: $previous_epoch_final_slot"
 
+  FILE="$SNAPSHOT_DIR/$last_epoch.done"
+  if [ -f "$FILE" ]; then
+      echo "epoch $last_epoch finished uploading, exiting"
+      exit 0
+  fi
+
   # ---------------------------------------------------------------------------
   # Take snapshot and upload to gcloud
   # ---------------------------------------------------------------------------
 
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
-    echo "creating snapshot at slot $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot epoch: $last_epoch slot: $previous_epoch_final_slot"
 
     # note: make sure these filenames match everywhere else in the file
     rm "$SNAPSHOT_DIR/snapshot-*.tar.zst" || true
@@ -249,7 +279,8 @@ main() {
   snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
   snapshot_in_gcloud=$(get_filepath_in_gcloud "$snapshot_gcloud_path") || true
   if [ -z "$snapshot_in_gcloud" ]; then
-    echo "uploading $SNAPSHOT_DIR/$snapshot_file to gcloud path $snapshot_gcloud_path"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading snapshot to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
+
     upload_file_to_gcloud "$SNAPSHOT_DIR/$snapshot_file" "$snapshot_gcloud_path"
   else
     echo "snapshot file already uploaded to gcloud at: $snapshot_in_gcloud"
@@ -263,7 +294,7 @@ main() {
   stake_meta_filepath="$SNAPSHOT_DIR/$stake_meta_filename"
   maybe_stake_meta=$(ls "$stake_meta_filepath" 2>/dev/null || true)
   if [ -z "$maybe_stake_meta" ]; then
-    echo "Running stake-meta-generator for slot $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running stake-meta-generator epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$stake_meta_filename" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
   else
     echo "stake-meta already exists: $stake_meta_filepath"
@@ -272,7 +303,7 @@ main() {
   stake_meta_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$stake_meta_filename")
   stake_meta_in_gcloud=$(get_filepath_in_gcloud "$stake_meta_gcloud_path") || true
   if [ -z "$stake_meta_in_gcloud" ]; then
-    echo "uploading $stake_meta_filepath to gcloud path $stake_meta_gcloud_path"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading stake-meta to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
     upload_file_to_gcloud "$stake_meta_filepath" "$stake_meta_gcloud_path"
   else
     echo "stake meta already uploaded to gcloud at: $stake_meta_in_gcloud"
@@ -287,7 +318,7 @@ main() {
   merkle_tree_filepath="$SNAPSHOT_DIR/$merkle_tree_filename"
   maybe_merkle_tree=$(ls "$merkle_tree_filepath" 2>/dev/null || true)
   if [ -z "$maybe_merkle_tree" ]; then
-    echo "Running merkle-root-generator for slot $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running merkle-root-generator epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_merkle_trees "$stake_meta_filepath" "$merkle_tree_filepath"
   else
     echo "stake-meta already exists at: $merkle_tree_filepath"
@@ -296,19 +327,23 @@ main() {
   merkle_tree_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$merkle_tree_filename")
   merkle_tree_in_gcloud=$(get_filepath_in_gcloud "$merkle_tree_gcloud_path") || true
   if [ -z "$merkle_tree_in_gcloud" ]; then
-    echo "uploading $merkle_tree_filepath to gcloud path $merkle_tree_gcloud_path"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
     upload_file_to_gcloud "$merkle_tree_filepath" "$merkle_tree_gcloud_path"
   else
     echo "merkle tree already uploaded to gcloud at: $merkle_tree_gcloud_path"
   fi
 
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root on-chain epoch: $last_epoch slot: $previous_epoch_final_slot"
   upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
 
   # ---------------------------------------------------------------------------
   # Claim MEV tips
   # ---------------------------------------------------------------------------
 
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
+
+  touch "$SNAPSHOT_DIR/$last_epoch.done"
 }
 
 main
