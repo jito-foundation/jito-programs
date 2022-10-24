@@ -24,7 +24,7 @@ exclude = ["programs/merkle-tree"]
 url = "https://anchor.projectserum.com"
 
 [scripts]
-test = "yarn ts-mocha -p ./tsconfig.json -t 1000000 tests/"
+test = "yarn ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.{ts,js}"
 
 [test.validator]
 slots_per_epoch = "32"
