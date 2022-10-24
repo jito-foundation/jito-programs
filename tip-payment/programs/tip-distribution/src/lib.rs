@@ -313,11 +313,13 @@ pub mod tip_distribution {
         claim_status.claim_status_payer = ctx.accounts.payer.key();
         claim_status.expires_at = tip_distribution_epoch_expires_at;
 
-        merkle_root.total_funds_claimed.checked_add(amount).unwrap();
+        merkle_root.total_funds_claimed =
+            merkle_root.total_funds_claimed.checked_add(amount).unwrap();
         if merkle_root.total_funds_claimed > merkle_root.max_total_claim {
             return Err(ExceedsMaxClaim.into());
         }
-        merkle_root.num_nodes_claimed.checked_add(1).unwrap();
+
+        merkle_root.num_nodes_claimed = merkle_root.num_nodes_claimed.checked_add(1).unwrap();
         if merkle_root.num_nodes_claimed > merkle_root.max_num_nodes {
             return Err(ExceedsMaxNumNodes.into());
         }
