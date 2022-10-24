@@ -72,7 +72,7 @@ check_env_vars_set() {
   fi
 
   if [ -z "$SLACK_CHANNEL" ]; then
-    echo "SLACK_APP_TOKEN must be set"
+    echo "SLACK_CHANNEL must be set"
     exit 1
   fi
 }
