@@ -67,13 +67,13 @@ describe( 'tests tip_distribution', () => {
 
         // expect
         const actualConfig = await tipDistribution.account.config.fetch( configAccount )
-        const exptected = {
+        const expected = {
             authority: authority.publicKey,
             expiredFundsAccount: expiredFundsAccount.publicKey,
             numEpochsValid,
             maxValidatorCommissionBps,
         }
-        assertConfigState( actualConfig, exptected )
+        assertConfigState( actualConfig, expected )
     })
 
     it('#init_tip_distribution_account happy path', async () => {
@@ -110,7 +110,86 @@ describe( 'tests tip_distribution', () => {
             merkleRootUploadAuthority: validatorVoteAccount.publicKey,
             validatorCommissionBps,
         }
-        assertDistributionAccount( actual, expected )
+        assertDistributionAccount(actual, expected)
+    })
+
+    it('#set_validator_commission_bps happy path', async () => {
+        // given
+        const {
+            validatorVoteAccount,
+            maxValidatorCommissionBps: validatorCommissionBps,
+            tipDistributionAccount,
+            epochInfo,
+            bump,
+        } = await setup_initTipDistributionAccount()
+
+        await call_initTipDistributionAccount({
+            merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+            validatorCommissionBps,
+            config: configAccount,
+            systemProgram: SystemProgram.programId,
+            validatorVoteAccount,
+            tipDistributionAccount,
+            bump,
+        })
+
+        const tdaBefore = await tipDistribution.account.tipDistributionAccount.fetch(tipDistributionAccount);
+        expect(tdaBefore.validatorCommissionBps).to.equal(validatorCommissionBps)
+
+        await tipDistribution.methods
+            .setValidatorCommissionBps(99)
+            .accounts({
+                config: configAccount,
+                tipDistributionAccount,
+                signer: validatorVoteAccount.publicKey,
+            })
+            .signers([validatorVoteAccount])
+            .rpc()
+
+        const tdaAfter = await tipDistribution.account.tipDistributionAccount.fetch(tipDistributionAccount);
+        expect(tdaAfter.validatorCommissionBps).to.equal(99)
+    })
+
+    it('#set_validator_commission_bps fails after the current epoch', async () => {
+        // given
+        const {
+            validatorVoteAccount,
+            maxValidatorCommissionBps: validatorCommissionBps,
+            tipDistributionAccount,
+            epochInfo,
+            bump,
+        } = await setup_initTipDistributionAccount()
+
+        await call_initTipDistributionAccount({
+            merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+            validatorCommissionBps,
+            config: configAccount,
+            systemProgram: SystemProgram.programId,
+            validatorVoteAccount,
+            tipDistributionAccount,
+            bump,
+        })
+        const tdaBefore = await tipDistribution.account.tipDistributionAccount.fetch(tipDistributionAccount);
+
+        await sleepForEpochs(1);
+
+        try {
+            await tipDistribution.methods
+                .setValidatorCommissionBps(99)
+                .accounts({
+                    config: configAccount,
+                    tipDistributionAccount,
+                    signer: validatorVoteAccount.publicKey,
+                })
+                .signers([validatorVoteAccount])
+                .rpc()
+            assert.fail()
+        } catch (e) {
+            const err: AnchorError = e;
+            assert(err.error.errorCode.code === 'InvalidEpochForTipDistributionAccount')
+        }
+        const tdaAfter = await tipDistribution.account.tipDistributionAccount.fetch(tipDistributionAccount);
+        expect(tdaAfter.validatorCommissionBps).to.equal(tdaBefore.validatorCommissionBps)
     })
 
     it('#init_tip_distribution_account fails with [ErrorCode::InvalidValidatorCommissionFeeBps]', async () => {
