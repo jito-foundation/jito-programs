@@ -79,9 +79,7 @@ impl Config {
 
     pub fn validate(&self) -> Result<()> {
         let default_pubkey = Pubkey::default();
-        // validators cannot set commission to be greater than 100%
-        if self.max_validator_commission_bps > 10000 ||
-            // prevent from accidentally setting these to the System program
+        if self.max_validator_commission_bps > 10000
             || self.expired_funds_account == default_pubkey
             || self.authority == default_pubkey
         {
