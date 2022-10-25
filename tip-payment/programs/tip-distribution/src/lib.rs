@@ -9,7 +9,7 @@ pub mod merkle_proof;
 pub mod sdk;
 pub mod state;
 
-declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+declare_id!("3PX9z1qPj37eNZqH7e5fyaVDyG7ARqkjkYEe1a4xsBkA");
 
 #[program]
 pub mod tip_distribution {
