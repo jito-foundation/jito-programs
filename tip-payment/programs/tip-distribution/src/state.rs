@@ -53,7 +53,7 @@ pub struct TipDistributionAccount {
     pub bump: u8,
 }
 
-#[derive(AnchorSerialize, AnchorDeserialize, Clone)]
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
 pub struct MerkleRoot {
     /// The 256-bit merkle root.
     pub root: [u8; 32],
