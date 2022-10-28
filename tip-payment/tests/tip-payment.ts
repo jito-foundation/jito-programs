@@ -1,6 +1,10 @@
-const anchor = require('@project-serum/anchor')
-const assert = require('assert')
-const {config} = require("chai");
+import * as anchor from "@project-serum/anchor";
+import {Program} from "@project-serum/anchor";
+
+import {TipPayment} from "../target/types/tip_payment";
+import {assert} from "chai";
+import {PublicKey} from "@solana/web3.js";
+
 const {SystemProgram, Transaction} = anchor.web3
 
 const configAccountSeed = 'CONFIG_ACCOUNT'
@@ -18,10 +22,10 @@ let configAccount, configAccountBump, tipPaymentAccount0, tipBump0, tipPaymentAc
 
 const provider = anchor.AnchorProvider.local(null, {commitment: 'confirmed', preflightCommitment: 'confirmed'},)
 anchor.setProvider(provider)
-const tipPaymentProg = anchor.workspace.TipPayment
+const tipPaymentProg = anchor.workspace.TipPayment as Program<TipPayment>
 
 describe('tests tip_payment', () => {
-    const sendTip = async (accountToTip, tipAmount) => {
+    const sendTip = async (accountToTip: PublicKey, tipAmount: number) => {
         const searcherKP = anchor.web3.Keypair.generate()
         const airDrop = tipAmount * 2
         await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(searcherKP.publicKey, airDrop), 'confirmed',)
@@ -78,30 +82,32 @@ describe('tests tip_payment', () => {
     })
 
     // utility function asserting all expected rent exempt accounts are indeed exempt
-    const assertRentExemptAccounts = async (tip_payment_account_pubkey) => {
-        let tip_payment_account = await tipPaymentProg.provider.connection.getAccountInfo(tip_payment_account_pubkey)
-        minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(tip_payment_account.data.length)
+    const assertRentExemptAccounts = async (tip_payment_account_pubkey: PublicKey) => {
+        const tip_payment_account = await tipPaymentProg.provider.connection.getAccountInfo(tip_payment_account_pubkey);
+        const minRentExempt = await tipPaymentProg.provider.connection.getMinimumBalanceForRentExemption(tip_payment_account.data.length)
         assert.equal(tip_payment_account.lamports, minRentExempt)
     }
+
     it('#initialize happy path', async () => {
         try {
-            await tipPaymentProg.rpc.initialize({
-                configAccountBump, // config
-                tipBump0: tipBump0,
-                tipBump1: tipBump1,
-                tipBump2: tipBump2,
-                tipBump3: tipBump3,
-                tipBump4: tipBump4,
-                tipBump5: tipBump5,
-                tipBump6: tipBump6,
-                tipBump7: tipBump7,
-            }, {
-                accounts: {
-                    config: configAccount,
-                    systemProgram: SystemProgram.programId,
-                    payer: initializerKeys.publicKey, ...tipAccounts
-                }, signers: [initializerKeys],
-            },)
+            await tipPaymentProg.rpc.initialize(
+                {
+                    config: configAccountBump,
+                    tipPaymentAccount0: tipBump0,
+                    tipPaymentAccount1: tipBump1,
+                    tipPaymentAccount2: tipBump2,
+                    tipPaymentAccount3: tipBump3,
+                    tipPaymentAccount4: tipBump4,
+                    tipPaymentAccount5: tipBump5,
+                    tipPaymentAccount6: tipBump6,
+                    tipPaymentAccount7: tipBump7,
+                }, {
+                    accounts: {
+                        config: configAccount,
+                        systemProgram: SystemProgram.programId,
+                        payer: initializerKeys.publicKey, ...tipAccounts
+                    }, signers: [initializerKeys],
+                },)
         } catch (e) {
             assert.fail()
         }
@@ -404,7 +410,7 @@ describe('tests tip_payment', () => {
 
 // utils
 
-const getBadTipPaymentAccounts = async (n) => {
+const getBadTipPaymentAccounts = async (n: number) => {
     const badTipPaymentAccount = anchor.web3.Keypair.generate().publicKey
     await provider.connection.confirmTransaction(await provider.connection.requestAirdrop(badTipPaymentAccount, 100000000000), 'confirmed',)
     switch (n) {
