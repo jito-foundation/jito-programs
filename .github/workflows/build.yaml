@@ -17,8 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: ls /
-      - run: solana
       - run: anchor
+      - run: solana
 #      - uses: ./.github/actions/setup/
 #      - uses: ./.github/actions/setup-solana/
       - uses: actions/cache@v2
