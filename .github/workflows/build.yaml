@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - master
-      - gh-actions
   pull_request:
     branches:
       - master
@@ -17,8 +16,10 @@ jobs:
     container: projectserum/build:v0.25.0
     steps:
       - uses: actions/checkout@v2
-      - uses: ./.github/actions/setup/
-      - uses: ./.github/actions/setup-solana/
+      - run: ls /
+      - run: solana
+#      - uses: ./.github/actions/setup/
+#      - uses: ./.github/actions/setup-solana/
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
         id: cache-anchor
