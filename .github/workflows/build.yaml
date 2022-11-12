@@ -14,13 +14,10 @@ jobs:
     name: Build and test programs
     runs-on: ubuntu-20.04
     container: projectserum/build:v0.25.0
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@v2
-      - run: ls /
-      - run: anchor
-      - run: solana
-#      - uses: ./.github/actions/setup/
-#      - uses: ./.github/actions/setup-solana/
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
         id: cache-anchor
@@ -32,15 +29,21 @@ jobs:
             ~/.cargo/git/db/
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-#      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.25.0 anchor-cli --locked --force
-      - run: cd tip-payment && yarn
-      - run: yarn global add mocha@^9.0.3 ts-mocha@^10.0.0
-      - name: Create reproducible build
+      - name: Install yarn dependencies
         working-directory: ./tip-payment
-        run: anchor build --verifiable
-      - name: test
+        run: yarn
+      - name: Run Anchor test
         working-directory: ./tip-payment
         run: anchor test
+      - name: Anchor Login
+        working-directory: ./tip-payment
+        run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
+      - name: Create & Deploy verifiable tip-payment build
+        working-directory: ./tip-payment
+        run: anchor publish tip_payment
+      - name: Create & Deploy verifiable tip-distribution build
+        working-directory: ./tip-payment
+        run: anchor publish tip_distribution
       - uses: reinismu/clippy-check@master
         with:
           working-directory: ./tip-payment/programs
