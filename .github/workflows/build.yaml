@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v2
       - run: ls /
       - run: solana
+      - run: anchor
 #      - uses: ./.github/actions/setup/
 #      - uses: ./.github/actions/setup-solana/
       - uses: actions/cache@v2
@@ -31,7 +32,7 @@ jobs:
             ~/.cargo/git/db/
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.25.0 anchor-cli --locked --force
+#      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.25.0 anchor-cli --locked --force
       - run: cd tip-payment && yarn
       - run: yarn global add mocha@^9.0.3 ts-mocha@^10.0.0
       - name: Create reproducible build
