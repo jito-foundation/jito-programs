@@ -40,10 +40,10 @@ jobs:
         run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
       - name: Create & Deploy verifiable tip-payment build
         working-directory: ./tip-payment
-        run: anchor publish tip_payment
+        run: yes 'yes' | anchor publish tip_payment
       - name: Create & Deploy verifiable tip-distribution build
         working-directory: ./tip-payment
-        run: anchor publish tip_distribution
+        run: yes 'yes' | anchor publish tip_distribution
       - uses: reinismu/clippy-check@master
         with:
           working-directory: ./tip-payment/programs
