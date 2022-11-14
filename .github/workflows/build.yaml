@@ -14,18 +14,14 @@ jobs:
     name: Build and test programs
     runs-on: ubuntu-20.04
     container:
-      image: projectserum/build:v0.25.0
+      image: busybox:latest
       volumes:
         - /home/runner/.config/solana/id.json:/root/.config/solana/id.json
     env:
       HOME: /root
     steps:
       - uses: actions/checkout@v2
-      - name: Setup upterm session
-        uses: lhotari/action-upterm@v1
-#        with:
-#          limit-access-to-actor: true
-#          limit-access-to-users: esemeniuc
+      - run: file /root/.config/solana/id.json
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
         id: cache-anchor
