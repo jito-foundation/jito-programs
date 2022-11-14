@@ -18,11 +18,16 @@ jobs:
 #      volumes:
 #        - /home/runner/.config/solana/id.json:/root/.config/solana/id.json
     env:
-      HOME: /root
+#      HOME: /root
     steps:
+      - uses: actions/checkout@v2
       - name: Setup upterm session
         uses: lhotari/action-upterm@v1
-      - uses: actions/checkout@v2
+        with:
+        ## limits ssh access and adds the ssh public key for the user which triggered the workflow
+        limit-access-to-actor: true
+        ## limits ssh access and adds the ssh public keys of the listed GitHub users
+        limit-access-to-users: esemeniuc
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
         id: cache-anchor
