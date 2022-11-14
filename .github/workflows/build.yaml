@@ -16,7 +16,7 @@ jobs:
     container:
       image: busybox:latest
       volumes:
-        - /home/runner/.config/solana/id.json:/root/.config/solana/id.json
+        - /home/runner/.config/solana:/root/.config/solana
     env:
       HOME: /root
     steps:
