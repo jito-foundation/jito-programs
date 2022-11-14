@@ -17,7 +17,7 @@ jobs:
 #      image: projectserum/build:v0.25.0
 #      volumes:
 #        - /home/runner/.config/solana/id.json:/root/.config/solana/id.json
-    env:
+#    env:
 #      HOME: /root
     steps:
       - uses: actions/checkout@v2
