@@ -1,0 +1,34 @@
+name: Publish
+on:
+  push:
+    branches:
+      - master
+env:
+  SOLANA_CLI_VERSION: 1.10.39
+  NODE_VERSION: 17.0.1
+jobs:
+  publish-to-apr:
+    name: Publish to apr.dev
+    runs-on: ubuntu-20.04
+    container: projectserum/build:v0.25.0
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install yarn dependencies
+        working-directory: ./tip-payment
+        run: yarn
+      - name: Run Anchor test
+        working-directory: ./tip-payment
+        run: anchor test
+      - name: Anchor Login
+        working-directory: ./tip-payment
+        run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
+      - name: Point to Mainnet (required for publishing)
+        run: sed -i 's/^cluster = ".*/cluster = "mainnet"/' Anchor.toml
+      - name: Publish verifiable tip-payment source code
+        working-directory: ./tip-payment
+        run: yes 'yes' | anchor publish tip_payment --skip-build
+      - name: Publish verifiable tip-distribution source code
+        working-directory: ./tip-payment
+        run: yes 'yes' | anchor publish tip_distribution --skip-build
