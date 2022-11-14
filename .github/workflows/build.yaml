@@ -16,7 +16,7 @@ jobs:
     container:
       image: projectserum/build:v0.25.0
       volumes:
-        - ~/.config/solana/id.json:~/.config/solana/id.json
+        - $HOME/.config/solana/id.json:/root/.config/solana/id.json
     env:
       HOME: /root
     steps:
