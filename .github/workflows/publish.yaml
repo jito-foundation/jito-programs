@@ -3,7 +3,9 @@ on:
   push:
     branches:
       - master
-
+  pull_request:
+    branches:
+      - master
 jobs:
   publish-to-apr:
     name: Publish to apr.dev
