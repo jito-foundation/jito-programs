@@ -431,186 +431,6 @@ describe( 'tests tip_distribution', () => {
         assertDistributionAccount(actual, expected)
     })
 
-    it('#claim happy path', async () => {
-        const {
-            validatorVoteAccount,
-            maxValidatorCommissionBps,
-            tipDistributionAccount,
-            bump,
-        } = await setup_initTipDistributionAccount()
-        await call_initTipDistributionAccount({
-            validatorCommissionBps: maxValidatorCommissionBps,
-            config: configAccount,
-            systemProgram: SystemProgram.programId,
-            merkleRootUploadAuthority: validatorVoteAccount.publicKey,
-            validatorVoteAccount,
-            tipDistributionAccount,
-            bump,
-        })
-
-        const amount0 = 1_000_000
-        const amount1 = 2_000_000
-        await provider.connection.confirmTransaction(
-            await provider.connection.requestAirdrop(
-                tipDistributionAccount, amount0 + amount1
-            ),
-            'confirmed',
-        )
-        const preBalance0 = 10000000000
-        const user0 = await generateAccount(preBalance0)
-        const user1 = await generateAccount(preBalance0)
-        const demoData = [
-            {account: user0.publicKey, amount: new u64(amount0)},
-            {account: user1.publicKey, amount: new u64(amount1)},
-        ].map(({account, amount}) => balanceToBuffer(account, amount));
-
-        const tree = new MerkleTree(demoData)
-        const root = tree.getRoot()
-        const maxTotalClaim = new anchor.BN(amount0 + amount1)
-        const maxNumNodes = new anchor.BN(2)
-
-        await sleepForEpochs(1)
-
-        await tipDistribution.methods
-            .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
-            .accounts({
-                tipDistributionAccount,
-                merkleRootUploadAuthority: validatorVoteAccount.publicKey,
-                config: configAccount,
-            }).signers([validatorVoteAccount])
-            .rpc()
-
-        const index = 0
-        const amount = new anchor.BN(amount0)
-        const proof = tree.getProof(index)
-        assert(tree.verifyProof(0, proof, root));
-
-        const claimant = user0;
-        const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from(CLAIM_STATUS_SEED, 'utf8'),
-                claimant.publicKey.toBuffer(),
-                tipDistributionAccount.toBuffer()],
-            tipDistribution.programId,
-        )
-
-        await tipDistribution.methods
-            .claim(_bump, amount, proof)
-            .accounts({
-                config: configAccount,
-                tipDistributionAccount,
-                claimStatus,
-                claimant: claimant.publicKey,
-                payer: user1.publicKey,
-            })
-            .signers([user1])
-            .rpc()
-
-        const user0Info = await tipDistribution.provider.connection.getAccountInfo(user0.publicKey);
-        assert.equal(user0Info.lamports, preBalance0 + amount0)
-    })
-
-    it('#close_claim_status works even if TipDistributionAccount already closed', async () => {
-        const {
-            validatorVoteAccount,
-            maxValidatorCommissionBps,
-            tipDistributionAccount,
-            bump,
-        } = await setup_initTipDistributionAccount()
-        await call_initTipDistributionAccount({
-            validatorCommissionBps: maxValidatorCommissionBps,
-            config: configAccount,
-            systemProgram: SystemProgram.programId,
-            merkleRootUploadAuthority: validatorVoteAccount.publicKey,
-            validatorVoteAccount,
-            tipDistributionAccount,
-            bump,
-        })
-
-        const amount0 = 1_000_000
-        const amount1 = 2_000_000
-        await provider.connection.confirmTransaction(
-            await provider.connection.requestAirdrop(
-                tipDistributionAccount, amount0 + amount1
-            ),
-            'confirmed',
-        )
-        const preBalance0 = 10000000000
-        const user0 = await generateAccount(preBalance0)
-        const user1 = await generateAccount(preBalance0)
-        const demoData = [
-            {account: user0.publicKey, amount: new u64(amount0)},
-            {account: user1.publicKey, amount: new u64(amount1)},
-        ].map(({account, amount}) => balanceToBuffer(account, amount));
-
-        const tree = new MerkleTree(demoData)
-        const root = tree.getRoot()
-        const maxTotalClaim = new anchor.BN(amount0 + amount1)
-        const maxNumNodes = new anchor.BN(2)
-
-        // Sleep to allow the epoch to advance
-        await sleepForEpochs(1)
-        await tipDistribution.methods
-            .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
-            .accounts({
-                tipDistributionAccount,
-                merkleRootUploadAuthority: validatorVoteAccount.publicKey,
-                config: configAccount,
-            }).signers([validatorVoteAccount])
-            .rpc()
-
-        const index = 0
-        const amount = new anchor.BN(amount0)
-        const proof = tree.getProof(index)
-        const claimant = user0;
-        const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
-            [Buffer.from(CLAIM_STATUS_SEED, 'utf8'),
-                claimant.publicKey.toBuffer(),
-                tipDistributionAccount.toBuffer()],
-            tipDistribution.programId,
-        )
-
-        await tipDistribution.methods
-            .claim(_bump, amount, proof)
-            .accounts({
-                config: configAccount,
-                tipDistributionAccount,
-                claimStatus,
-                claimant: claimant.publicKey,
-                payer: user1.publicKey,
-            })
-            .signers([user1])
-            .rpc()
-
-        await sleepForEpochs(3)
-
-        const actualConfig = await tipDistribution.account.config.fetch(configAccount)
-        const tda = await tipDistribution.account.tipDistributionAccount.fetch(tipDistributionAccount);
-
-        //close the account
-        await tipDistribution.methods
-            .closeTipDistributionAccount(tda.epochCreatedAt)
-            .accounts({
-                config: configAccount,
-                tipDistributionAccount,
-                expiredFundsAccount: actualConfig.expiredFundsAccount,
-                validatorVoteAccount: validatorVoteAccount.publicKey, //funds transferred to this account
-            })
-            .rpc()
-
-        const balStart = await provider.connection.getBalance(user1.publicKey);
-        await tipDistribution.methods
-            .closeClaimStatus()
-            .accounts({
-                config: configAccount,
-                claimStatus,
-                claimStatusPayer: user1.publicKey,
-            })
-            .rpc()
-        const balEnd = await provider.connection.getBalance(user1.publicKey);
-        const minRentExempt = await provider.connection.getMinimumBalanceForRentExemption(CLAIM_STATUS_LEN);
-        assert(balEnd - balStart === minRentExempt)
-    })
-
     it('#close_claim_status fails incorrect claimant', async () => {
         const {
             validatorVoteAccount,
@@ -985,6 +805,187 @@ describe( 'tests tip_distribution', () => {
         const balEnd = await provider.connection.getBalance(user1.publicKey);
         const minRentExempt = await provider.connection.getMinimumBalanceForRentExemption(CLAIM_STATUS_LEN);
         assert(balEnd - balStart === minRentExempt)
+    })
+
+    it('#close_claim_status works even if TipDistributionAccount already closed', async () => {
+        const {
+            validatorVoteAccount,
+            maxValidatorCommissionBps,
+            tipDistributionAccount,
+            bump,
+        } = await setup_initTipDistributionAccount()
+        await call_initTipDistributionAccount({
+            validatorCommissionBps: maxValidatorCommissionBps,
+            config: configAccount,
+            systemProgram: SystemProgram.programId,
+            merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+            validatorVoteAccount,
+            tipDistributionAccount,
+            bump,
+        })
+
+        const amount0 = 1_000_000
+        const amount1 = 2_000_000
+        await provider.connection.confirmTransaction(
+            await provider.connection.requestAirdrop(
+                tipDistributionAccount, amount0 + amount1
+            ),
+            'confirmed',
+        )
+        const preBalance0 = 10000000000
+        const user0 = await generateAccount(preBalance0)
+        const user1 = await generateAccount(preBalance0)
+        const demoData = [
+            {account: user0.publicKey, amount: new u64(amount0)},
+            {account: user1.publicKey, amount: new u64(amount1)},
+        ].map(({account, amount}) => balanceToBuffer(account, amount));
+
+        const tree = new MerkleTree(demoData)
+        const root = tree.getRoot()
+        const maxTotalClaim = new anchor.BN(amount0 + amount1)
+        const maxNumNodes = new anchor.BN(2)
+
+        // Sleep to allow the epoch to advance
+        await sleepForEpochs(1)
+        await tipDistribution.methods
+            .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
+            .accounts({
+                tipDistributionAccount,
+                merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+                config: configAccount,
+            }).signers([validatorVoteAccount])
+            .rpc()
+
+        const index = 0
+        const amount = new anchor.BN(amount0)
+        const proof = tree.getProof(index)
+        const claimant = user0;
+        const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+            [Buffer.from(CLAIM_STATUS_SEED, 'utf8'),
+                claimant.publicKey.toBuffer(),
+                tipDistributionAccount.toBuffer()],
+            tipDistribution.programId,
+        )
+
+        await tipDistribution.methods
+            .claim(_bump, amount, proof)
+            .accounts({
+                config: configAccount,
+                tipDistributionAccount,
+                claimStatus,
+                claimant: claimant.publicKey,
+                payer: user1.publicKey,
+            })
+            .signers([user1])
+            .rpc()
+
+        await sleepForEpochs(3)
+
+        const actualConfig = await tipDistribution.account.config.fetch(configAccount)
+        const tda = await tipDistribution.account.tipDistributionAccount.fetch(tipDistributionAccount);
+
+        //close the account
+        await tipDistribution.methods
+            .closeTipDistributionAccount(tda.epochCreatedAt)
+            .accounts({
+                config: configAccount,
+                tipDistributionAccount,
+                expiredFundsAccount: actualConfig.expiredFundsAccount,
+                validatorVoteAccount: validatorVoteAccount.publicKey, //funds transferred to this account
+            })
+            .rpc()
+
+        const balStart = await provider.connection.getBalance(user1.publicKey);
+        await tipDistribution.methods
+            .closeClaimStatus()
+            .accounts({
+                config: configAccount,
+                claimStatus,
+                claimStatusPayer: user1.publicKey,
+            })
+            .rpc()
+        const balEnd = await provider.connection.getBalance(user1.publicKey);
+        const minRentExempt = await provider.connection.getMinimumBalanceForRentExemption(CLAIM_STATUS_LEN);
+        assert(balEnd - balStart === minRentExempt)
+    })
+
+    // move to end due to PrivilegeEscalation warning
+    it('#claim happy path', async () => {
+        const {
+            validatorVoteAccount,
+            maxValidatorCommissionBps,
+            tipDistributionAccount,
+            bump,
+        } = await setup_initTipDistributionAccount()
+        await call_initTipDistributionAccount({
+            validatorCommissionBps: maxValidatorCommissionBps,
+            config: configAccount,
+            systemProgram: SystemProgram.programId,
+            merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+            validatorVoteAccount,
+            tipDistributionAccount,
+            bump,
+        })
+
+        const amount0 = 1_000_000
+        const amount1 = 2_000_000
+        await provider.connection.confirmTransaction(
+            await provider.connection.requestAirdrop(
+                tipDistributionAccount, amount0 + amount1
+            ),
+            'confirmed',
+        )
+        const preBalance0 = 10000000000
+        const user0 = await generateAccount(preBalance0)
+        const user1 = await generateAccount(preBalance0)
+        const demoData = [
+            {account: user0.publicKey, amount: new u64(amount0)},
+            {account: user1.publicKey, amount: new u64(amount1)},
+        ].map(({account, amount}) => balanceToBuffer(account, amount));
+
+        const tree = new MerkleTree(demoData)
+        const root = tree.getRoot()
+        const maxTotalClaim = new anchor.BN(amount0 + amount1)
+        const maxNumNodes = new anchor.BN(2)
+
+        await sleepForEpochs(1)
+
+        await tipDistribution.methods
+            .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
+            .accounts({
+                tipDistributionAccount,
+                merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+                config: configAccount,
+            }).signers([validatorVoteAccount])
+            .rpc()
+
+        const index = 0
+        const amount = new anchor.BN(amount0)
+        const proof = tree.getProof(index)
+        assert(tree.verifyProof(0, proof, root));
+
+        const claimant = user0;
+        const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+            [Buffer.from(CLAIM_STATUS_SEED, 'utf8'),
+                claimant.publicKey.toBuffer(),
+                tipDistributionAccount.toBuffer()],
+            tipDistribution.programId,
+        )
+
+        await tipDistribution.methods
+            .claim(_bump, amount, proof)
+            .accounts({
+                config: configAccount,
+                tipDistributionAccount,
+                claimStatus,
+                claimant: claimant.publicKey,
+                payer: user1.publicKey,
+            })
+            .signers([user1])
+            .rpc()
+
+        const user0Info = await tipDistribution.provider.connection.getAccountInfo(user0.publicKey);
+        assert.equal(user0Info.lamports, preBalance0 + amount0)
     })
 
 })
