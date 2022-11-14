@@ -1,0 +1,44 @@
+name: Publish
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  publish-to-apr:
+    name: Publish to apr.dev
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/setup/
+      - uses: ./.github/actions/setup-solana/
+      - uses: actions/cache@v2
+        name: Cache Cargo registry + index
+        id: cache-anchor
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ./target/
+          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.25.0 anchor-cli --locked --force
+      - name: Install yarn dependencies
+        working-directory: ./tip-payment
+        run: yarn
+      - name: Run Anchor test
+        working-directory: ./tip-payment
+        run: anchor test
+      - name: Anchor Login
+        working-directory: ./tip-payment
+        run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
+      - name: Point to Mainnet (required for publishing)
+        run: sed -i 's/^cluster = ".*/cluster = "mainnet"/' Anchor.toml
+      - name: Publish tip-payment source code
+        working-directory: ./tip-payment
+        run: yes 'yes' | anchor publish tip_payment --skip-build
+      - name: Publish tip-distribution source code
+        working-directory: ./tip-payment
+        run: yes 'yes' | anchor publish tip_distribution --skip-build
