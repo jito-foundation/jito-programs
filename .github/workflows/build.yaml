@@ -13,7 +13,10 @@ jobs:
   build-and-test:
     name: Build and test programs
     runs-on: ubuntu-20.04
-    container: projectserum/build:v0.25.0
+    container:
+      image: projectserum/build:v0.25.0
+      volumes:
+        - ~/.config/solana/id.json:~/.config/solana/id.json
     env:
       HOME: /root
     steps:
