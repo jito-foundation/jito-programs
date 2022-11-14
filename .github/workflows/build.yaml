@@ -13,16 +13,11 @@ jobs:
   build-and-test:
     name: Build and test programs
     runs-on: ubuntu-20.04
-    container:
-      image: busybox:latest
-      volumes:
-        - /home/runner/.config/solana:/root/.config/solana
-    env:
-      HOME: /root
+
     steps:
-#      - uses: actions/checkout@v2
-      - run: ls -lR /root/.config/solana/
-      - run: cat /root/.config/solana/id.json | cut -c -3
+      - uses: actions/checkout@v2
+      - uses: ./.github/actions/setup/
+      - uses: ./.github/actions/setup-solana/
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
         id: cache-anchor
@@ -34,6 +29,7 @@ jobs:
             ~/.cargo/git/db/
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
+      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.25.0 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./tip-payment
         run: yarn
