@@ -21,7 +21,7 @@ jobs:
       HOME: /root
     steps:
 #      - uses: actions/checkout@v2
-      - run: stat /root/.config/solana/id.json
+      - run: ls -lR /root/.config/solana/
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
         id: cache-anchor
