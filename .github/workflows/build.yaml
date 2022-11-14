@@ -20,7 +20,7 @@ jobs:
     env:
       HOME: /root
     steps:
-      - uses: actions/checkout@v2
+#      - uses: actions/checkout@v2
       - run: file /root/.config/solana/id.json
       - uses: actions/cache@v2
         name: Cache Cargo registry + index
