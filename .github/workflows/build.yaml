@@ -13,12 +13,12 @@ jobs:
   build-and-test:
     name: Build and test programs
     runs-on: ubuntu-20.04
-#    container:
-#      image: projectserum/build:v0.25.0
-#      volumes:
-#        - /home/runner/.config/solana/id.json:/root/.config/solana/id.json
-#    env:
-#      HOME: /root
+    container:
+      image: projectserum/build:v0.25.0
+      volumes:
+        - /home/runner/.config/solana/id.json:/root/.config/solana/id.json
+    env:
+      HOME: /root
     steps:
       - uses: actions/checkout@v2
       - name: Setup upterm session
