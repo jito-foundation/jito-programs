@@ -34,12 +34,9 @@ jobs:
       - name: Anchor Login
         working-directory: ./tip-payment
         run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
-      - name: Point to Mainnet (required for publishing)
-        working-directory: ./tip-payment
-        run: sed -i 's/^cluster = ".*/cluster = "mainnet"/' Anchor.toml
       - name: Publish tip-payment source code
         working-directory: ./tip-payment
-        run: yes 'yes' | anchor publish tip_payment --skip-build
+        run: yes 'yes' | anchor publish tip_payment --skip-build --provider.cluster mainnet
       - name: Publish tip-distribution source code
         working-directory: ./tip-payment
-        run: yes 'yes' | anchor publish tip_distribution --skip-build
+        run: yes 'yes' | anchor publish tip_distribution --skip-build --provider.cluster mainnet
