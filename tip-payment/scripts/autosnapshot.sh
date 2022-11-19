@@ -122,8 +122,8 @@ create_snapshot_for_slot() {
   # for some reason solana-ledger-tool error doesn't cause this script to exit out, so check status here
   exit_status=$?
   if [ $exit_status -ne 0 ]; then
-      echo "solana-ledger-tool returned $exit_status"
-      exit $exit_status
+    echo "solana-ledger-tool returned $exit_status"
+    exit $exit_status
   fi
 
   # snapshot file should exist now, grab the filename here (snapshot-$slot-$hash.tar.zst)
@@ -219,6 +219,23 @@ upload_merkle_roots() {
     --tip-distribution-program-id "$tip_distribution_program_id"
 }
 
+find_previous_epoch_last_slot() {
+  local slot_with_block=$1
+  local rpc_url=$2
+
+  block_result=$(curl -s "$rpc_url" -X POST -H "Content-Type: application/json" -d "
+                           {\"jsonrpc\":\"2.0\",\"id\":1, \"method\":\"getBlock\", \"params\": [$slot_with_block, {\"transactionDetails\": \"none\"}]}
+                         " | jq .result)
+
+  while [[ $block_result = null ]]; do
+    slot_with_block="$((slot_with_block - 1))"
+    block_result=$(curl -s "$rpc_url" -X POST -H "Content-Type: application/json" -d "
+                               {\"jsonrpc\":\"2.0\",\"id\":1, \"method\":\"getBlock\", \"params\": [$slot_with_block, {\"transactionDetails\": \"none\"}]}
+                             " | jq .result)
+  done
+  echo "$slot_with_block"
+}
+
 main() {
   local epoch_info
   local previous_epoch_final_slot
@@ -249,13 +266,16 @@ main() {
   epoch_start_slot=$((current_absolute_slot - current_slot_index))
   previous_epoch_final_slot="$((epoch_start_slot - 1))"
 
+  # The last slot in the epoch might not have a block, so search backwards until the last block is found.
+  previous_epoch_final_slot=$(find_previous_epoch_last_slot "$previous_epoch_final_slot" "$RPC_URL")
+
   echo "epoch_info: $epoch_info"
   echo "previous_epoch_final_slot: $previous_epoch_final_slot"
 
   FILE="$SNAPSHOT_DIR/$last_epoch.done"
   if [ -f "$FILE" ]; then
-      echo "epoch $last_epoch finished uploading, exiting"
-      exit 0
+    echo "epoch $last_epoch finished uploading, exiting"
+    exit 0
   fi
 
   # ---------------------------------------------------------------------------
