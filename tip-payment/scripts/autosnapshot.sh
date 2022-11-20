@@ -362,6 +362,7 @@ main() {
 
   post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
 
   touch "$SNAPSHOT_DIR/$last_epoch.done"
 }
