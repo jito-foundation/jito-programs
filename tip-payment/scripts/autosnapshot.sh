@@ -204,11 +204,12 @@ prune_old_snapshots() {
   local to_delete_merkle
   local to_delete_snapshot
 
-  # sort by timestamp in filename
+  # sorts by timestamp in filename
   to_delete_stake=$(find "$SNAPSHOT_DIR" -type f -name 'stake-meta-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
   to_delete_merkle=$(find "$SNAPSHOT_DIR" -type f -name 'merkle-tree-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
   to_delete_snapshot=$(find "$SNAPSHOT_DIR" -type f -name 'snapshot-[0-9]*-[[:alnum:]]*.tar.zst' | sort | head -n "-$NUM_SNAPSHOTS_TO_KEEP")
 
+  echo "pruning snapshots in $SNAPSHOT_DIR"
   [[ -n $to_delete_stake ]] && rm -v $to_delete_stake
   [[ -n $to_delete_merkle ]] && rm -v $to_delete_merkle
   [[ -n $to_delete_snapshot ]] && rm -v $to_delete_snapshot
@@ -301,11 +302,7 @@ main() {
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot epoch: $last_epoch slot: $previous_epoch_final_slot"
-
-    # note: make sure these filenames match everywhere else in the file
-    rm "$SNAPSHOT_DIR/snapshot-*.tar.zst" || true
-    rm "$SNAPSHOT_DIR/stake-meta-*.json" || true
-    rm "$SNAPSHOT_DIR/merkle-tree-*.json" || true
+    prune_old_snapshots
 
     snapshot_file=$(create_snapshot_for_slot "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$LEDGER_DIR")
   else
@@ -379,11 +376,6 @@ main() {
   post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
   post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
-
-  # ---------------------------------------------------------------------------
-  # Prune old snapshots
-  # ---------------------------------------------------------------------------
-  prune_old_snapshots
 
   touch "$SNAPSHOT_DIR/$last_epoch.done"
 }
