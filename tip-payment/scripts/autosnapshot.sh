@@ -198,6 +198,22 @@ get_filepath_in_gcloud() {
   echo "$file_uploaded"
 }
 
+prune_old_snapshots() {
+  NUM_SNAPSHOTS_TO_KEEP=3
+  local to_delete_stake
+  local to_delete_merkle
+  local to_delete_snapshot
+
+  # sort by timestamp in filename
+  to_delete_stake=$(find "$SNAPSHOT_DIR" -type f -name 'stake-meta-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
+  to_delete_merkle=$(find "$SNAPSHOT_DIR" -type f -name 'merkle-tree-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
+  to_delete_snapshot=$(find "$SNAPSHOT_DIR" -type f -name 'snapshot-[0-9]*-[[:alnum:]]*.tar.zst' | sort | head -n "-$NUM_SNAPSHOTS_TO_KEEP")
+
+  [[ -n $to_delete_stake ]] && rm -v $to_delete_stake
+  [[ -n $to_delete_merkle ]] && rm -v $to_delete_merkle
+  [[ -n $to_delete_snapshot ]] && rm -v $to_delete_snapshot
+}
+
 upload_file_to_gcloud() {
   local filepath=$1
   local gcloud_path=$2
@@ -363,6 +379,11 @@ main() {
   post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
   post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
+
+  # ---------------------------------------------------------------------------
+  # Prune old snapshots
+  # ---------------------------------------------------------------------------
+  prune_old_snapshots
 
   touch "$SNAPSHOT_DIR/$last_epoch.done"
 }
