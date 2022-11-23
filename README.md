@@ -9,6 +9,5 @@ version issues. With that said, `jito-solana` declares a dependency on the `subm
 This gitflow for this repo is as follows:
 - Create a PR against `master`
 - Merge PR
-- Rebase `submodule` on top of master
-- Force push `submodule`
-- Update the submodule sha in `jito-solana`
+- `git cherry-pick` your new commits into `submodule`
+- push `submodule`
