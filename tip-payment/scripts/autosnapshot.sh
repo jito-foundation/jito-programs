@@ -197,7 +197,7 @@ get_filepath_in_gcloud() {
 
   echo "$file_uploaded"
 }
-
+SNAPSHOT_DIR=.
 prune_old_snapshots() {
   NUM_SNAPSHOTS_TO_KEEP=3
   local to_delete_stake
@@ -210,9 +210,9 @@ prune_old_snapshots() {
   to_delete_snapshot=$(find "$SNAPSHOT_DIR" -type f -name 'snapshot-[0-9]*-[[:alnum:]]*.tar.zst' | sort | head -n "-$NUM_SNAPSHOTS_TO_KEEP")
 
   echo "pruning $(echo "$to_delete_snapshot" | wc -l) snapshots in $SNAPSHOT_DIR"
-  [[ -n $to_delete_stake ]] && rm -v $to_delete_stake
-  [[ -n $to_delete_merkle ]] && rm -v $to_delete_merkle
-  [[ -n $to_delete_snapshot ]] && rm -v $to_delete_snapshot
+  rm -f $to_delete_stake
+  rm -f $to_delete_merkle
+  rm -f $to_delete_snapshot
 }
 
 upload_file_to_gcloud() {
