@@ -197,7 +197,7 @@ get_filepath_in_gcloud() {
 
   echo "$file_uploaded"
 }
-SNAPSHOT_DIR=.
+
 prune_old_snapshots() {
   NUM_SNAPSHOTS_TO_KEEP=3
   local to_delete_stake
