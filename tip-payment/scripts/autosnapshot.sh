@@ -209,10 +209,10 @@ prune_old_snapshots() {
   to_delete_merkle=$(find "$SNAPSHOT_DIR" -type f -name 'merkle-tree-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
   to_delete_snapshot=$(find "$SNAPSHOT_DIR" -type f -name 'snapshot-[0-9]*-[[:alnum:]]*.tar.zst' | sort | head -n "-$NUM_SNAPSHOTS_TO_KEEP")
 
-  echo "pruning $(echo "$to_delete_snapshot" | wc -l) snapshots in $SNAPSHOT_DIR"
-  [[ -n $to_delete_stake ]] && rm -v $to_delete_stake
-  [[ -n $to_delete_merkle ]] && rm -v $to_delete_merkle
-  [[ -n $to_delete_snapshot ]] && rm -v $to_delete_snapshot
+  echo "pruning $(echo "$to_delete_snapshot" | wc -w) snapshots in $SNAPSHOT_DIR"
+  rm -f -v $to_delete_stake
+  rm -f -v $to_delete_merkle
+  rm -f -v $to_delete_snapshot
 }
 
 upload_file_to_gcloud() {
