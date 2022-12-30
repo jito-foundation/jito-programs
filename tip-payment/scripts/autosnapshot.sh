@@ -264,6 +264,8 @@ main() {
   local merkle_tree_filename
   local merkle_tree_filepath
   local maybe_merkle_tree
+  local claimant_amounts
+  local num_non_zero_claimants
 
   check_env_vars_set
 
@@ -301,18 +303,18 @@ main() {
 
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot for epoch: $last_epoch slot: $previous_epoch_final_slot"
     prune_old_snapshots
 
     snapshot_file=$(create_snapshot_for_slot "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$LEDGER_DIR")
   else
-    echo "snapshot file already exists: $SNAPSHOT_DIR/$snapshot_file"
+    echo "snapshot file already exists at: $SNAPSHOT_DIR/$snapshot_file"
   fi
 
   snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
   snapshot_in_gcloud=$(get_filepath_in_gcloud "$snapshot_gcloud_path") || true
   if [ -z "$snapshot_in_gcloud" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading snapshot to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading snapshot to gcloud for epoch: $last_epoch slot: $previous_epoch_final_slot"
 
     upload_file_to_gcloud "$SNAPSHOT_DIR/$snapshot_file" "$snapshot_gcloud_path"
   else
@@ -330,7 +332,7 @@ main() {
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running stake-meta-generator epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$stake_meta_filename" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
   else
-    echo "stake-meta already exists: $stake_meta_filepath"
+    echo "stake-meta already exists at: $stake_meta_filepath"
   fi
 
   stake_meta_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$stake_meta_filename")
@@ -375,7 +377,10 @@ main() {
 
   post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
+
+  claimant_amounts=$(grep -o -E '"amount": [[:digit:]]+' "$merkle_tree_filepath")
+  num_non_zero_claimants=$($claimant_amounts | awk '$2 > 0' | wc -l)
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips for epoch: $last_epoch slot: $previous_epoch_final_slot. had $($claimant_amounts | wc -l) claimants, $num_non_zero_claimants non-zero lamport claimants."
 
   # ---------------------------------------------------------------------------
   # Prune old snapshots
