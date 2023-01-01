@@ -379,8 +379,8 @@ main() {
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
 
   claimant_amounts=$(grep -o -E '"amount": [[:digit:]]+' "$merkle_tree_filepath")
-  num_non_zero_claimants=$($claimant_amounts | awk '$2 > 0' | wc -l)
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips for epoch: $last_epoch slot: $previous_epoch_final_slot. had $($claimant_amounts | wc -l) claimants, $num_non_zero_claimants non-zero lamport claimants."
+  num_non_zero_claimants=$(echo "$claimant_amounts" | awk '$2 > 0' | wc -l)
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips for epoch: $last_epoch slot: $previous_epoch_final_slot. had $(echo "$claimant_amounts" | wc -l) claimants, $num_non_zero_claimants non-zero lamport claimants."
 
   # ---------------------------------------------------------------------------
   # Prune old snapshots
