@@ -122,7 +122,7 @@ create_snapshot_for_slot() {
   # for some reason solana-ledger-tool error doesn't cause this script to exit out, so check status here
   exit_status=$?
   if [ $exit_status -ne 0 ]; then
-    echo "solana-ledger-tool returned $exit_status"
+    echo "solana-ledger-tool returned $exit_status, exiting"
     exit $exit_status
   fi
 
@@ -264,6 +264,8 @@ main() {
   local merkle_tree_filename
   local merkle_tree_filepath
   local maybe_merkle_tree
+  local claimant_amounts
+  local num_non_zero_claimants
 
   check_env_vars_set
 
@@ -301,18 +303,18 @@ main() {
 
   snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
   if [ -z "$snapshot_file" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot for epoch: $last_epoch slot: $previous_epoch_final_slot"
     prune_old_snapshots
 
     snapshot_file=$(create_snapshot_for_slot "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$LEDGER_DIR")
   else
-    echo "snapshot file already exists: $SNAPSHOT_DIR/$snapshot_file"
+    echo "snapshot file already exists at: $SNAPSHOT_DIR/$snapshot_file"
   fi
 
   snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
   snapshot_in_gcloud=$(get_filepath_in_gcloud "$snapshot_gcloud_path") || true
   if [ -z "$snapshot_in_gcloud" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading snapshot to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading snapshot to gcloud for epoch: $last_epoch slot: $previous_epoch_final_slot"
 
     upload_file_to_gcloud "$SNAPSHOT_DIR/$snapshot_file" "$snapshot_gcloud_path"
   else
@@ -327,16 +329,16 @@ main() {
   stake_meta_filepath="$SNAPSHOT_DIR/$stake_meta_filename"
   maybe_stake_meta=$(ls "$stake_meta_filepath" 2>/dev/null || true)
   if [ -z "$maybe_stake_meta" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running stake-meta-generator epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running stake-meta-generator for epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$stake_meta_filename" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
   else
-    echo "stake-meta already exists: $stake_meta_filepath"
+    echo "stake-meta already exists at: $stake_meta_filepath"
   fi
 
   stake_meta_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$stake_meta_filename")
   stake_meta_in_gcloud=$(get_filepath_in_gcloud "$stake_meta_gcloud_path") || true
   if [ -z "$stake_meta_in_gcloud" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading stake-meta to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading stake-meta to gcloud for epoch: $last_epoch slot: $previous_epoch_final_slot"
     upload_file_to_gcloud "$stake_meta_filepath" "$stake_meta_gcloud_path"
   else
     echo "stake meta already uploaded to gcloud at: $stake_meta_in_gcloud"
@@ -351,7 +353,7 @@ main() {
   merkle_tree_filepath="$SNAPSHOT_DIR/$merkle_tree_filename"
   maybe_merkle_tree=$(ls "$merkle_tree_filepath" 2>/dev/null || true)
   if [ -z "$maybe_merkle_tree" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running merkle-root-generator epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running merkle-root-generator for epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_merkle_trees "$stake_meta_filepath" "$merkle_tree_filepath"
   else
     echo "stake-meta already exists at: $merkle_tree_filepath"
@@ -360,22 +362,25 @@ main() {
   merkle_tree_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$merkle_tree_filename")
   merkle_tree_in_gcloud=$(get_filepath_in_gcloud "$merkle_tree_gcloud_path") || true
   if [ -z "$merkle_tree_in_gcloud" ]; then
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root to gcloud epoch: $last_epoch slot: $previous_epoch_final_slot"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root to gcloud ($(ls --size -h $merkle_tree_filepath | awk '{ print $1 }')). epoch: $last_epoch slot: $previous_epoch_final_slot"
     upload_file_to_gcloud "$merkle_tree_filepath" "$merkle_tree_gcloud_path"
   else
     echo "merkle tree already uploaded to gcloud at: $merkle_tree_gcloud_path"
   fi
 
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root on-chain epoch: $last_epoch slot: $previous_epoch_final_slot"
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root on-chain for epoch: $last_epoch slot: $previous_epoch_final_slot"
   upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
 
   # ---------------------------------------------------------------------------
   # Claim MEV tips
   # ---------------------------------------------------------------------------
 
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips for epoch: $last_epoch slot: $previous_epoch_final_slot"
   claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips epoch: $last_epoch slot: $previous_epoch_final_slot"
+
+  claimant_amounts=$(grep -o -E '"amount": [[:digit:]]+' "$merkle_tree_filepath")
+  num_non_zero_claimants=$(echo "$claimant_amounts" | awk '$2 > 0' | wc -l)
+  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "successfully claimed mev tips for epoch: $last_epoch slot: $previous_epoch_final_slot. had $(echo "$claimant_amounts" | wc -l) claimants, $num_non_zero_claimants non-zero lamport claimants."
 
   # ---------------------------------------------------------------------------
   # Prune old snapshots
