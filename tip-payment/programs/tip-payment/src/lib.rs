@@ -414,7 +414,8 @@ pub struct ChangeTipReceiver<'info> {
     #[account(mut, constraint = old_tip_receiver.key() == config.tip_receiver)]
     pub old_tip_receiver: AccountInfo<'info>,
 
-    /// CHECK: any new account is allowed as a tip receiver.
+    /// CHECK: any new, writable account is allowed as a tip receiver.
+    #[account(mut)]
     pub new_tip_receiver: AccountInfo<'info>,
 
     /// CHECK: old_block_builder receives a % of funds in the TipPaymentAccount accounts, so
@@ -429,6 +430,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_0: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_1],
@@ -436,6 +438,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_1: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_2],
@@ -443,6 +446,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_2: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_3],
@@ -450,6 +454,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_3: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_4],
@@ -457,6 +462,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_4: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_5],
@@ -464,6 +470,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_5: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_6],
@@ -471,6 +478,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_6: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_7],
@@ -478,6 +486,7 @@ pub struct ChangeTipReceiver<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
@@ -512,7 +521,8 @@ pub struct ChangeBlockBuilder<'info> {
     #[account(mut, constraint = old_block_builder.key() == config.block_builder)]
     pub old_block_builder: AccountInfo<'info>,
 
-    /// CHECK: any new account is allowed as block builder
+    /// CHECK: any new, writable account is allowed as block builder
+    #[account(mut)]
     pub new_block_builder: AccountInfo<'info>,
 
     #[account(
@@ -522,6 +532,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_0: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_1],
@@ -529,6 +540,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_1: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_2],
@@ -536,6 +548,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_2: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_3],
@@ -543,6 +556,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_3: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_4],
@@ -550,6 +564,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_4: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_5],
@@ -557,6 +572,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_5: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_6],
@@ -564,6 +580,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_6: Account<'info, TipPaymentAccount>,
+
     #[account(
         mut,
         seeds = [TIP_ACCOUNT_SEED_7],
@@ -571,6 +588,7 @@ pub struct ChangeBlockBuilder<'info> {
         rent_exempt = enforce
     )]
     pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
