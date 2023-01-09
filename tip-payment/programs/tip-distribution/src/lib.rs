@@ -61,7 +61,9 @@ pub mod tip_distribution {
         distribution_acc.validator_commission_bps = validator_commission_bps;
         distribution_acc.merkle_root_upload_authority = merkle_root_upload_authority;
         distribution_acc.merkle_root = None;
-        distribution_acc.expires_at = current_epoch + ctx.accounts.config.num_epochs_valid;
+        distribution_acc.expires_at = current_epoch
+            .checked_add(ctx.accounts.config.num_epochs_valid)
+            .ok_or(ErrorCode::ArithmeticOverFlow)?;
         distribution_acc.bump = bump;
         distribution_acc.validate()?;
 
@@ -342,6 +344,9 @@ pub enum ErrorCode {
     #[msg("Account failed validation.")]
     AccountValidationFailure,
 
+    #[msg("Encountered arithmetic overflow.")]
+    ArithmeticOverFlow,
+
     #[msg("The maximum number of funds to be claimed has been exceeded.")]
     ExceedsMaxClaim,
 
@@ -356,6 +361,9 @@ pub enum ErrorCode {
 
     #[msg("The current epoch is past the acceptable epoch for the given TipDistributionAccount.")]
     InvalidEpochForTipDistributionAccount,
+
+    #[msg("Supplied invalid parameters.")]
+    InvalidParameters,
 
     #[msg("The given proof is invalid.")]
     InvalidProof,

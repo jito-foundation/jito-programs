@@ -22,7 +22,6 @@ members = [
     "programs/tip-distribution",
     "programs/tip-payment"
 ]
-exclude = ["programs/merkle-tree"]
 
 [registry]
 url = "https://anchor.projectserum.com"
