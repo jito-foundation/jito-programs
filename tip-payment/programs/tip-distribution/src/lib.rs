@@ -15,10 +15,10 @@ declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 pub mod tip_distribution {
     use super::*;
     use crate::ErrorCode::{
-        ExceedsMaxClaim, ExceedsMaxNumNodes, ExpiredTipDistributionAccount, FundsAlreadyClaimed,
-        InvalidProof, MaxValidatorCommissionFeeBpsExceeded, PrematureCloseClaimStatus,
-        PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload, RootNotUploaded,
-        Unauthorized,
+        ArithmeticError, ExceedsMaxClaim, ExceedsMaxNumNodes, ExpiredTipDistributionAccount,
+        FundsAlreadyClaimed, InvalidProof, MaxValidatorCommissionFeeBpsExceeded,
+        PrematureCloseClaimStatus, PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload,
+        RootNotUploaded, Unauthorized,
     };
 
     /// Initialize a singleton instance of the [Config] account.
@@ -63,7 +63,7 @@ pub mod tip_distribution {
         distribution_acc.merkle_root = None;
         distribution_acc.expires_at = current_epoch
             .checked_add(ctx.accounts.config.num_epochs_valid)
-            .ok_or(ErrorCode::ArithmeticOverFlow)?;
+            .ok_or(ErrorCode::ArithmeticError)?;
         distribution_acc.bump = bump;
         distribution_acc.validate()?;
 
@@ -258,13 +258,18 @@ pub mod tip_distribution {
         claim_status.claim_status_payer = ctx.accounts.payer.key();
         claim_status.expires_at = tip_distribution_epoch_expires_at;
 
-        merkle_root.total_funds_claimed =
-            merkle_root.total_funds_claimed.checked_add(amount).unwrap();
+        merkle_root.total_funds_claimed = merkle_root
+            .total_funds_claimed
+            .checked_add(amount)
+            .ok_or(ArithmeticError)?;
         if merkle_root.total_funds_claimed > merkle_root.max_total_claim {
             return Err(ExceedsMaxClaim.into());
         }
 
-        merkle_root.num_nodes_claimed = merkle_root.num_nodes_claimed.checked_add(1).unwrap();
+        merkle_root.num_nodes_claimed = merkle_root
+            .num_nodes_claimed
+            .checked_add(1)
+            .ok_or(ArithmeticError)?;
         if merkle_root.num_nodes_claimed > merkle_root.max_num_nodes {
             return Err(ExceedsMaxNumNodes.into());
         }
@@ -287,8 +292,8 @@ pub enum ErrorCode {
     #[msg("Account failed validation.")]
     AccountValidationFailure,
 
-    #[msg("Encountered arithmetic overflow.")]
-    ArithmeticOverFlow,
+    #[msg("Encountered an arithmetic under/overflow error.")]
+    ArithmeticError,
 
     #[msg("The maximum number of funds to be claimed has been exceeded.")]
     ExceedsMaxClaim,

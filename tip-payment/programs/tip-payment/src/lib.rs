@@ -1,5 +1,7 @@
 use anchor_lang::prelude::*;
 
+use crate::TipPaymentError::ArithmeticError;
+
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
 
 /// We've decided to hardcode the seeds, effectively meaning
@@ -50,13 +52,13 @@ pub mod tip_payment {
 
         let block_builder_fee = total_tips
             .checked_mul(ctx.accounts.config.block_builder_commission_pct)
-            .expect("block_builder_commission_pct overflow")
+            .ok_or(ArithmeticError)?
             .checked_div(100)
-            .unwrap();
+            .ok_or(ArithmeticError)?;
 
         let tip_receiver_fee = total_tips
             .checked_sub(block_builder_fee)
-            .expect("tip_receiver_fee underflow");
+            .ok_or(ArithmeticError)?;
 
         if tip_receiver_fee > 0 {
             **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? = ctx
@@ -64,7 +66,7 @@ pub mod tip_payment {
                 .tip_receiver
                 .lamports()
                 .checked_add(tip_receiver_fee)
-                .expect("overflow adding tips to tip_receiver");
+                .ok_or(ArithmeticError)?;
         }
 
         if block_builder_fee > 0 {
@@ -73,7 +75,7 @@ pub mod tip_payment {
                 .block_builder
                 .lamports()
                 .checked_add(block_builder_fee)
-                .expect("overflow adding tips to block_builder");
+                .ok_or(ArithmeticError)?;
         }
 
         if block_builder_fee > 0 || tip_receiver_fee > 0 {
@@ -95,13 +97,13 @@ pub mod tip_payment {
 
         let block_builder_fee = total_tips
             .checked_mul(ctx.accounts.config.block_builder_commission_pct)
-            .expect("block_builder_commission_pct overflow")
+            .ok_or(ArithmeticError)?
             .checked_div(100)
-            .unwrap();
+            .ok_or(ArithmeticError)?;
 
         let tip_receiver_fee = total_tips
             .checked_sub(block_builder_fee)
-            .expect("tip_receiver_fee underflow");
+            .ok_or(ArithmeticError)?;
 
         if tip_receiver_fee > 0 {
             **ctx.accounts.old_tip_receiver.try_borrow_mut_lamports()? = ctx
@@ -109,7 +111,7 @@ pub mod tip_payment {
                 .old_tip_receiver
                 .lamports()
                 .checked_add(tip_receiver_fee)
-                .expect("overflow adding tips to tip_receiver");
+                .ok_or(ArithmeticError)?;
         }
 
         if block_builder_fee > 0 {
@@ -118,7 +120,7 @@ pub mod tip_payment {
                 .block_builder
                 .lamports()
                 .checked_add(block_builder_fee)
-                .expect("overflow adding tips to block_builder");
+                .ok_or(ArithmeticError)?;
         }
 
         if block_builder_fee > 0 || tip_receiver_fee > 0 {
@@ -142,19 +144,28 @@ pub mod tip_payment {
         ctx: Context<ChangeBlockBuilder>,
         block_builder_commission: u64,
     ) -> Result<()> {
-        require_gte!(100, block_builder_commission, TipPaymentError::InvalidFee);
+        require_gte!(
+            100u64,
+            block_builder_commission,
+            TipPaymentError::InvalidFee
+        );
+        require_gte!(
+            block_builder_commission,
+            10000u64,
+            TipPaymentError::InvalidFee
+        );
 
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
         let block_builder_fee = total_tips
             .checked_mul(ctx.accounts.config.block_builder_commission_pct)
-            .expect("block_builder_commission_pct overflow")
+            .ok_or(ArithmeticError)?
             .checked_div(100)
-            .unwrap();
+            .ok_or(ArithmeticError)?;
 
         let tip_receiver_fee = total_tips
             .checked_sub(block_builder_fee)
-            .expect("tip_receiver_fee underflow");
+            .ok_or(ArithmeticError)?;
 
         if tip_receiver_fee > 0 {
             **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? = ctx
@@ -162,7 +173,7 @@ pub mod tip_payment {
                 .tip_receiver
                 .lamports()
                 .checked_add(tip_receiver_fee)
-                .expect("overflow adding tips to tip_receiver");
+                .ok_or(ArithmeticError)?;
         }
 
         if block_builder_fee > 0 {
@@ -171,7 +182,7 @@ pub mod tip_payment {
                 .old_block_builder
                 .lamports()
                 .checked_add(block_builder_fee)
-                .expect("overflow adding tips to block_builder");
+                .ok_or(ArithmeticError)?;
         }
 
         if block_builder_fee > 0 || tip_receiver_fee > 0 {
@@ -192,6 +203,7 @@ pub mod tip_payment {
 
 #[error_code]
 pub enum TipPaymentError {
+    ArithmeticError,
     InvalidFee,
 }
 
@@ -642,11 +654,7 @@ impl TipPaymentAccount {
         for acc in accs {
             total_tips = total_tips
                 .checked_add(Self::drain_account(&acc)?)
-                .expect(&*format!(
-                    "debit_accounts overflow: [account: {}, amount: {}]",
-                    acc.key(),
-                    acc.lamports(),
-                ));
+                .ok_or(ArithmeticError)?;
         }
 
         Ok(total_tips)
@@ -656,12 +664,8 @@ impl TipPaymentAccount {
         let tips = Self::calc_tips(acc.lamports())?;
         if tips > 0 {
             let pre_lamports = acc.lamports();
-            **acc.try_borrow_mut_lamports()? = pre_lamports.checked_sub(tips).expect(&*format!(
-                "debit account overflow: [account: {}, pre_lamports: {}, tips: {}]",
-                acc.key(),
-                pre_lamports,
-                tips,
-            ));
+            **acc.try_borrow_mut_lamports()? =
+                pre_lamports.checked_sub(tips).ok_or(ArithmeticError)?;
         }
         Ok(tips)
     }
@@ -670,10 +674,7 @@ impl TipPaymentAccount {
         let rent = Rent::get()?;
         let min_rent = rent.minimum_balance(Self::SIZE);
 
-        Ok(total_balance.checked_sub(min_rent).expect(&*format!(
-            "calc_tips overflow: [total_balance: {}, min_rent: {}]",
-            total_balance, min_rent,
-        )))
+        Ok(total_balance.checked_sub(min_rent).ok_or(ArithmeticError)?)
     }
 }
 

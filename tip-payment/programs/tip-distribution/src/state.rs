@@ -4,7 +4,7 @@ use std::mem::size_of;
 
 use anchor_lang::prelude::*;
 
-use crate::ErrorCode::{AccountValidationFailure, RentExemptViolation};
+use crate::ErrorCode::{AccountValidationFailure, ArithmeticError, RentExemptViolation};
 
 #[account]
 #[derive(Default)]
@@ -122,7 +122,10 @@ impl TipDistributionAccount {
     pub fn claim_expired(from: AccountInfo, to: AccountInfo) -> Result<u64> {
         let rent = Rent::get()?;
         let min_rent_lamports = rent.minimum_balance(TipDistributionAccount::SIZE);
-        let amount = from.lamports().checked_sub(min_rent_lamports).unwrap();
+        let amount = from
+            .lamports()
+            .checked_sub(min_rent_lamports)
+            .ok_or(ArithmeticError)?;
         Self::checked_transfer(from, to, amount, min_rent_lamports)?;
 
         Ok(amount)
@@ -145,24 +148,16 @@ impl TipDistributionAccount {
     ) -> Result<()> {
         // debit lamports
         let pre_lamports = from.lamports();
-        **from.try_borrow_mut_lamports()? = pre_lamports.checked_sub(amount).expect(&*format!(
-            "debit lamports overflow: [from: {}, pre_lamports: {}, amount: {}]",
-            from.key(),
-            pre_lamports,
-            amount,
-        ));
+        **from.try_borrow_mut_lamports()? =
+            pre_lamports.checked_sub(amount).ok_or(ArithmeticError)?;
         if from.lamports() < min_rent_lamports {
             return Err(RentExemptViolation.into());
         }
 
         // credit lamports
         let pre_lamports = to.lamports();
-        **to.try_borrow_mut_lamports()? = pre_lamports.checked_add(amount).expect(&*format!(
-            "credit lamports overflow: [to: {}, pre_lamports: {}, amount: {}]",
-            to.key(),
-            pre_lamports,
-            amount,
-        ));
+        **to.try_borrow_mut_lamports()? =
+            pre_lamports.checked_add(amount).ok_or(ArithmeticError)?;
 
         Ok(())
     }
