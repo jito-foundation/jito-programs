@@ -16,9 +16,9 @@ pub mod tip_distribution {
     use super::*;
     use crate::ErrorCode::{
         ExceedsMaxClaim, ExceedsMaxNumNodes, ExpiredTipDistributionAccount, FundsAlreadyClaimed,
-        InvalidEpochForTipDistributionAccount, InvalidProof, MaxValidatorCommissionFeeBpsExceeded,
-        PrematureCloseClaimStatus, PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload,
-        RootNotUploaded, Unauthorized,
+        InvalidProof, MaxValidatorCommissionFeeBpsExceeded, PrematureCloseClaimStatus,
+        PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload, RootNotUploaded,
+        Unauthorized,
     };
 
     /// Initialize a singleton instance of the [Config] account.
@@ -69,63 +69,6 @@ pub mod tip_distribution {
 
         emit!(TipDistributionAccountInitializedEvent {
             tip_distribution_account: distribution_acc.key(),
-        });
-
-        Ok(())
-    }
-
-    /// Sets a new `validator_commission_bps` rate for the given [TipDistributionAccount]. Only the
-    /// associated validator can invoke this instruction.
-    pub fn set_validator_commission_bps(
-        ctx: Context<SetValidatorCommissionBps>,
-        new_validator_commission_bps: u16,
-    ) -> Result<()> {
-        SetValidatorCommissionBps::auth(&ctx)?;
-
-        let distribution_acc = &mut ctx.accounts.tip_distribution_account;
-        if Clock::get()?.epoch != distribution_acc.epoch_created_at {
-            return Err(InvalidEpochForTipDistributionAccount.into());
-        }
-
-        if new_validator_commission_bps > ctx.accounts.config.max_validator_commission_bps {
-            return Err(MaxValidatorCommissionFeeBpsExceeded.into());
-        }
-
-        let old_commission_bps = distribution_acc.validator_commission_bps;
-        distribution_acc.validator_commission_bps = new_validator_commission_bps;
-        distribution_acc.validate()?;
-
-        emit!(ValidatorCommissionBpsUpdatedEvent {
-            tip_distribution_account: distribution_acc.key(),
-            old_commission_bps,
-            new_commission_bps: new_validator_commission_bps,
-        });
-
-        Ok(())
-    }
-
-    /// Sets a new `merkle_root_upload_authority` for the given [TipDistributionAccount]. Only the
-    /// associated validator can invoke this instruction.
-    pub fn set_merkle_root_upload_authority(
-        ctx: Context<SetMerkleRootUploadAuthority>,
-        new_merkle_root_upload_authority: Pubkey,
-    ) -> Result<()> {
-        SetMerkleRootUploadAuthority::auth(&ctx)?;
-
-        let distribution_acc = &mut ctx.accounts.tip_distribution_account;
-        if let Some(merkle_root) = &distribution_acc.merkle_root {
-            if merkle_root.num_nodes_claimed > 0 {
-                return Err(Unauthorized.into());
-            }
-        }
-
-        let old_authority = distribution_acc.merkle_root_upload_authority;
-        distribution_acc.merkle_root_upload_authority = new_merkle_root_upload_authority;
-        distribution_acc.validate()?;
-
-        emit!(MerkleRootUploadAuthorityUpdatedEvent {
-            old_authority,
-            new_authority: new_merkle_root_upload_authority
         });
 
         Ok(())
@@ -359,9 +302,6 @@ pub enum ErrorCode {
     #[msg("The funds for the given index and TipDistributionAccount have already been claimed.")]
     FundsAlreadyClaimed,
 
-    #[msg("The current epoch is past the acceptable epoch for the given TipDistributionAccount.")]
-    InvalidEpochForTipDistributionAccount,
-
     #[msg("Supplied invalid parameters.")]
     InvalidParameters,
 
@@ -436,54 +376,6 @@ pub struct InitTipDistributionAccount<'info> {
     pub payer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
-}
-
-#[derive(Accounts)]
-pub struct SetMerkleRootUploadAuthority<'info> {
-    #[account(
-        mut,
-        rent_exempt = enforce
-    )]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
-
-    #[account(mut)]
-    pub signer: Signer<'info>,
-}
-
-impl SetMerkleRootUploadAuthority<'_> {
-    fn auth(ctx: &Context<SetMerkleRootUploadAuthority>) -> Result<()> {
-        if ctx.accounts.tip_distribution_account.validator_vote_account != ctx.accounts.signer.key()
-        {
-            Err(Unauthorized.into())
-        } else {
-            Ok(())
-        }
-    }
-}
-
-#[derive(Accounts)]
-pub struct SetValidatorCommissionBps<'info> {
-    pub config: Account<'info, Config>,
-
-    #[account(
-        mut,
-        rent_exempt = enforce
-    )]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
-
-    #[account(mut)]
-    pub signer: Signer<'info>,
-}
-
-impl SetValidatorCommissionBps<'_> {
-    fn auth(ctx: &Context<SetValidatorCommissionBps>) -> Result<()> {
-        if ctx.accounts.tip_distribution_account.validator_vote_account != ctx.accounts.signer.key()
-        {
-            Err(Unauthorized.into())
-        } else {
-            Ok(())
-        }
-    }
 }
 
 #[derive(Accounts)]
