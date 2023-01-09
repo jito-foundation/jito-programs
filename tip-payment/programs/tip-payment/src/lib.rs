@@ -144,16 +144,7 @@ pub mod tip_payment {
         ctx: Context<ChangeBlockBuilder>,
         block_builder_commission: u64,
     ) -> Result<()> {
-        require_gte!(
-            100u64,
-            block_builder_commission,
-            TipPaymentError::InvalidFee
-        );
-        require_gte!(
-            block_builder_commission,
-            10000u64,
-            TipPaymentError::InvalidFee
-        );
+        require_gte!(100, block_builder_commission, TipPaymentError::InvalidFee);
 
         let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
 
