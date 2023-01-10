@@ -4,7 +4,7 @@ use std::mem::size_of;
 
 use anchor_lang::prelude::*;
 
-use crate::ErrorCode::{AccountValidationFailure, RentExemptViolation};
+use crate::ErrorCode::{AccountValidationFailure, ArithmeticError, RentExemptViolation};
 
 #[account]
 #[derive(Default)]
@@ -78,13 +78,26 @@ impl Config {
     pub const SIZE: usize = HEADER_SIZE + size_of::<Self>();
 
     pub fn validate(&self) -> Result<()> {
+        const MIN_NUM_EPOCHS_VALID: u64 = 0;
+        const MAX_NUM_EPOCHS_VALID: u64 = 10;
+        const MAX_VALIDATOR_COMMISSION_BPS: u16 = 10000;
+
+        require!(
+            self.num_epochs_valid > MIN_NUM_EPOCHS_VALID
+                && self.num_epochs_valid < MAX_NUM_EPOCHS_VALID,
+            AccountValidationFailure
+        );
+        require!(
+            self.max_validator_commission_bps <= MAX_VALIDATOR_COMMISSION_BPS,
+            AccountValidationFailure
+        );
+
         let default_pubkey = Pubkey::default();
-        if self.max_validator_commission_bps > 10000
-            || self.expired_funds_account == default_pubkey
-            || self.authority == default_pubkey
-        {
-            return Err(AccountValidationFailure.into());
-        }
+        require!(
+            self.expired_funds_account != default_pubkey,
+            AccountValidationFailure
+        );
+        require!(self.authority != default_pubkey, AccountValidationFailure);
 
         Ok(())
     }
@@ -109,7 +122,10 @@ impl TipDistributionAccount {
     pub fn claim_expired(from: AccountInfo, to: AccountInfo) -> Result<u64> {
         let rent = Rent::get()?;
         let min_rent_lamports = rent.minimum_balance(TipDistributionAccount::SIZE);
-        let amount = from.lamports().checked_sub(min_rent_lamports).unwrap();
+        let amount = from
+            .lamports()
+            .checked_sub(min_rent_lamports)
+            .ok_or(ArithmeticError)?;
         Self::checked_transfer(from, to, amount, min_rent_lamports)?;
 
         Ok(amount)
@@ -132,24 +148,16 @@ impl TipDistributionAccount {
     ) -> Result<()> {
         // debit lamports
         let pre_lamports = from.lamports();
-        **from.try_borrow_mut_lamports()? = pre_lamports.checked_sub(amount).expect(&*format!(
-            "debit lamports overflow: [from: {}, pre_lamports: {}, amount: {}]",
-            from.key(),
-            pre_lamports,
-            amount,
-        ));
+        **from.try_borrow_mut_lamports()? =
+            pre_lamports.checked_sub(amount).ok_or(ArithmeticError)?;
         if from.lamports() < min_rent_lamports {
             return Err(RentExemptViolation.into());
         }
 
         // credit lamports
         let pre_lamports = to.lamports();
-        **to.try_borrow_mut_lamports()? = pre_lamports.checked_add(amount).expect(&*format!(
-            "credit lamports overflow: [to: {}, pre_lamports: {}, amount: {}]",
-            to.key(),
-            pre_lamports,
-            amount,
-        ));
+        **to.try_borrow_mut_lamports()? =
+            pre_lamports.checked_add(amount).ok_or(ArithmeticError)?;
 
         Ok(())
     }
