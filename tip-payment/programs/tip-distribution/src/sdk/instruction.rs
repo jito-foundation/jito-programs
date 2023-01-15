@@ -105,6 +105,56 @@ pub fn init_tip_distribution_account_ix(
     }
 }
 
+pub struct InitializeTipDistributionAccountArgs {
+    pub merkle_root_upload_authority: Pubkey,
+    pub validator_commission_bps: u16,
+    pub bump: u8,
+}
+pub struct InitializeTipDistributionAccountAccounts {
+    pub config: Pubkey,
+    pub signer: Pubkey,
+    pub system_program: Pubkey,
+    pub tip_distribution_account: Pubkey,
+    pub validator_vote_account: Pubkey,
+}
+pub fn initialize_tip_distribution_account_ix(
+    program_id: Pubkey,
+    args: InitializeTipDistributionAccountArgs,
+    accounts: InitializeTipDistributionAccountAccounts,
+) -> Instruction {
+    let InitializeTipDistributionAccountArgs {
+        merkle_root_upload_authority,
+        validator_commission_bps,
+        bump,
+    } = args;
+
+    let InitializeTipDistributionAccountAccounts {
+        config,
+        tip_distribution_account,
+        system_program,
+        validator_vote_account,
+        signer,
+    } = accounts;
+
+    Instruction {
+        program_id,
+        data: crate::instruction::InitializeTipDistributionAccount {
+            merkle_root_upload_authority,
+            validator_commission_bps,
+            bump,
+        }
+        .data(),
+        accounts: crate::accounts::InitializeTipDistributionAccount {
+            config,
+            signer,
+            system_program,
+            tip_distribution_account,
+            validator_vote_account,
+        }
+        .to_account_metas(None),
+    }
+}
+
 pub struct UpdateConfigArgs {
     new_config: Config,
 }
