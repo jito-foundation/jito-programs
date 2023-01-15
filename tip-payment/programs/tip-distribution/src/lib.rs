@@ -13,13 +13,10 @@ declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
 #[program]
 pub mod tip_distribution {
+    use vote_state::VoteState;
+
     use super::*;
-    use crate::ErrorCode::{
-        ArithmeticError, ExceedsMaxClaim, ExceedsMaxNumNodes, ExpiredTipDistributionAccount,
-        FundsAlreadyClaimed, InvalidProof, MaxValidatorCommissionFeeBpsExceeded,
-        PrematureCloseClaimStatus, PrematureCloseTipDistributionAccount, PrematureMerkleRootUpload,
-        RootNotUploaded, Unauthorized,
-    };
+    use crate::ErrorCode::*;
 
     /// Initialize a singleton instance of the [Config] account.
     pub fn initialize(
@@ -64,6 +61,42 @@ pub mod tip_distribution {
         distribution_acc.expires_at = current_epoch
             .checked_add(ctx.accounts.config.num_epochs_valid)
             .ok_or(ErrorCode::ArithmeticError)?;
+        distribution_acc.bump = bump;
+        distribution_acc.validate()?;
+
+        emit!(TipDistributionAccountInitializedEvent {
+            tip_distribution_account: distribution_acc.key(),
+        });
+
+        Ok(())
+    }
+
+    /// Initialize a new [TipDistributionAccount] associated with the given validator vote key
+    /// and current epoch.
+    pub fn initialize_tip_distribution_account(
+        ctx: Context<InitializeTipDistributionAccount>,
+        merkle_root_upload_authority: Pubkey,
+        validator_commission_bps: u16,
+        bump: u8,
+    ) -> Result<()> {
+        if validator_commission_bps > ctx.accounts.config.max_validator_commission_bps {
+            return Err(MaxValidatorCommissionFeeBpsExceeded.into());
+        }
+
+        let validator_vote_state = VoteState::deserialize(&ctx.accounts.validator_vote_account)?;
+        if &validator_vote_state.node_pubkey != ctx.accounts.signer.key {
+            return Err(Unauthorized.into());
+        }
+
+        let current_epoch = Clock::get()?.epoch;
+
+        let distribution_acc = &mut ctx.accounts.tip_distribution_account;
+        distribution_acc.validator_vote_account = ctx.accounts.validator_vote_account.key();
+        distribution_acc.epoch_created_at = current_epoch;
+        distribution_acc.validator_commission_bps = validator_commission_bps;
+        distribution_acc.merkle_root_upload_authority = merkle_root_upload_authority;
+        distribution_acc.merkle_root = None;
+        distribution_acc.expires_at = current_epoch + ctx.accounts.config.num_epochs_valid;
         distribution_acc.bump = bump;
         distribution_acc.validate()?;
 
@@ -135,26 +168,6 @@ pub mod tip_distribution {
         });
 
         Ok(())
-    }
-
-    #[derive(Accounts)]
-    pub struct CloseClaimStatus<'info> {
-        #[account(seeds = [Config::SEED], bump)]
-        pub config: Account<'info, Config>,
-
-        // bypass seed check since owner check prevents attacker from passing in invalid data
-        // account can only be transferred to us if it is zeroed, failing the deserialization check
-        #[account(
-            mut,
-            close = claim_status_payer,
-            constraint = claim_status_payer.key() == claim_status.claim_status_payer
-        )]
-        pub claim_status: Account<'info, ClaimStatus>,
-
-        /// CHECK: This is checked against claim_status in the constraint
-        /// Receiver of the funds.
-        #[account(mut)]
-        pub claim_status_payer: UncheckedAccount<'info>,
     }
 
     /// Anyone can invoke this only after the [TipDistributionAccount] has expired.
@@ -313,6 +326,9 @@ pub enum ErrorCode {
     #[msg("The given proof is invalid.")]
     InvalidProof,
 
+    #[msg("Failed to deserialize the supplied vote account data.")]
+    InvalidVoteAccountData,
+
     #[msg("Validator's commission basis points must be less than or equal to the Config account's max_validator_commission_bps.")]
     MaxValidatorCommissionFeeBpsExceeded,
 
@@ -333,6 +349,26 @@ pub enum ErrorCode {
 
     #[msg("Unauthorized signer.")]
     Unauthorized,
+}
+
+#[derive(Accounts)]
+pub struct CloseClaimStatus<'info> {
+    #[account(seeds = [Config::SEED], bump)]
+    pub config: Account<'info, Config>,
+
+    // bypass seed check since owner check prevents attacker from passing in invalid data
+    // account can only be transferred to us if it is zeroed, failing the deserialization check
+    #[account(
+        mut,
+        close = claim_status_payer,
+        constraint = claim_status_payer.key() == claim_status.claim_status_payer
+    )]
+    pub claim_status: Account<'info, ClaimStatus>,
+
+    /// CHECK: This is checked against claim_status in the constraint
+    /// Receiver of the funds.
+    #[account(mut)]
+    pub claim_status_payer: UncheckedAccount<'info>,
 }
 
 #[derive(Accounts)]
@@ -379,6 +415,40 @@ pub struct InitTipDistributionAccount<'info> {
 
     #[account(mut)]
     pub payer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+#[instruction(
+    _merkle_root_upload_authority: Pubkey,
+    _validator_commission_bps: u16,
+    _bump: u8
+)]
+pub struct InitializeTipDistributionAccount<'info> {
+    pub config: Account<'info, Config>,
+
+    #[account(
+        init,
+        seeds = [
+            TipDistributionAccount::SEED,
+            validator_vote_account.key().as_ref(),
+            Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
+        ],
+        bump,
+        payer = signer,
+        space = TipDistributionAccount::SIZE,
+        rent_exempt = enforce
+    )]
+    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+
+    /// CHECK: Safe because we check the vote program is the owner before deserialization.
+    /// The validator's vote account is used to check this transaction's signer is also the authorized withdrawer.
+    pub validator_vote_account: AccountInfo<'info>,
+
+    /// Must be equal to the supplied validator vote account's authorized withdrawer.
+    #[account(mut)]
+    pub signer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }

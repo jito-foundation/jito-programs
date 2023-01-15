@@ -22,6 +22,7 @@ members = [
     "programs/tip-distribution",
     "programs/tip-payment"
 ]
+exclude = ["programs/vote-state"]
 
 [registry]
 url = "https://anchor.projectserum.com"

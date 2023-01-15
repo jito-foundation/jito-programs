@@ -1239,6 +1239,7 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "solana-program",
+ "vote-state",
 ]
 
 [[package]]
@@ -1280,6 +1281,17 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
+
+[[package]]
+name = "vote-state"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program",
+]
 
 [[package]]
 name = "wasi"
