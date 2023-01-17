@@ -8,7 +8,7 @@ tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
 
 [programs.testnet]
 tip_distribution = "F2Zu7QZiTYUhPd7u9ukRVwxh7B71oA3NMJcHuCHc29P2"
-tip_payment = "3jarB2NVZc9KouEppPHoAf3v9y77H5R88nyfMLDUzuwm"
+tip_payment = "DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC"
 
 # Note: these are the keys in dev/ folder
 # do not use these keys in production or you'll get wrecked
