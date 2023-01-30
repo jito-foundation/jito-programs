@@ -3589,7 +3589,7 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tip-distribution"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 dependencies = [
  "anchor-lang",
  "solana-program",
@@ -3886,7 +3886,7 @@ checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
 
 [[package]]
 name = "vote-state"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 dependencies = [
  "anchor-lang",
  "bincode",
