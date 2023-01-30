@@ -1,8 +1,10 @@
 [package]
-name = "tip-distribution"
-version = "0.1.0"
+name = "jito-tip-distribution"
+version = "0.1.1"
 description = "Tip distribution program, responsible for distributing funds to entitled parties."
 edition = "2021"
+license = "Apache-2.0"
+authors = ["Jito Foundation <team@jito.network>"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
