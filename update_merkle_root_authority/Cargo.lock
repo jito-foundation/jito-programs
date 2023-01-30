@@ -1565,6 +1565,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6c8af84674fe1f223a982c933a0ee1086ac4d4052aa0fb8060c12c6ad838e754"
 
 [[package]]
+name = "jito-programs-vote-state"
+version = "0.1.1-alpha.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ac2ebb21b74cd40b3ac55653768dc47ef460d8023deecce1254b73fd26a8726"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program",
+]
+
+[[package]]
 name = "jobserver"
 version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3589,11 +3602,11 @@ checksum = "cda74da7e1a664f795bb1f8a87ec406fb89a02522cf6e50620d016add6dbbf5c"
 
 [[package]]
 name = "tip-distribution"
-version = "0.1.0"
+version = "0.1.1-alpha.4"
 dependencies = [
  "anchor-lang",
+ "jito-programs-vote-state",
  "solana-program",
- "vote-state",
 ]
 
 [[package]]
@@ -3883,17 +3896,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "vote-state"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "bincode",
- "serde",
- "serde_derive",
- "solana-program",
-]
 
 [[package]]
 name = "want"

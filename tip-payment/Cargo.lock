@@ -650,6 +650,46 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4217ad341ebadf8d8e724e264f13e593e0648f5b3e94b3896a5df283be015ecc"
 
 [[package]]
+name = "jito-programs-vote-state"
+version = "0.1.1-alpha.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1ac2ebb21b74cd40b3ac55653768dc47ef460d8023deecce1254b73fd26a8726"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program",
+]
+
+[[package]]
+name = "jito-programs-vote-state"
+version = "0.1.1"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program",
+]
+
+[[package]]
+name = "jito-tip-distribution"
+version = "0.1.1"
+dependencies = [
+ "anchor-lang",
+ "jito-programs-vote-state 0.1.1-alpha.4",
+ "solana-program",
+]
+
+[[package]]
+name = "jito-tip-payment"
+version = "0.1.1"
+dependencies = [
+ "anchor-lang",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1234,22 +1274,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tip-distribution"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "solana-program",
- "vote-state",
-]
-
-[[package]]
-name = "tip-payment"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
-]
-
-[[package]]
 name = "toml"
 version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1281,17 +1305,6 @@ name = "version_check"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49874b5167b65d7193b8aba1567f5c7d93d001cafc34600cee003eda787e483f"
-
-[[package]]
-name = "vote-state"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "bincode",
- "serde",
- "serde_derive",
- "solana-program",
-]
 
 [[package]]
 name = "wasi"
