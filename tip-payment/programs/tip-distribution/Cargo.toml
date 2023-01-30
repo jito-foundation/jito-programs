@@ -1,6 +1,6 @@
 [package]
 name = "tip-distribution"
-version = "0.1.0"
+version = "0.1.1-alpha.0"
 description = "Tip distribution program, responsible for distributing funds to entitled parties."
 edition = "2021"
 
