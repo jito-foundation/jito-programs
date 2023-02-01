@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anchor-lang = "0.25.0"
+anchor-lang = "0.26.0"
 clap = { version = "3.2.5", features = ["derive", "env"] }
 env_logger = "0.9.0"
 futures = "0.3.21"
@@ -14,9 +14,9 @@ log = "0.4.17"
 num-traits = "0.2.15"
 serde = "1.0.137"
 serde_json = "1.0.81"
-solana-client = "~1.10.29"
-solana-program = "~1.10.29"
-solana-sdk = "~1.10.29"
+solana-client = "1.14.13"
+solana-program = "1.14.13"
+solana-sdk = "1.14.13"
 thiserror = "1.0.31"
 tip-distribution = { path = "../tip-payment/programs/tip-distribution", features = ["no-entrypoint"] }
 tokio = { version = "1.12.0", features = ["rt-multi-thread", "macros", "sync", "time", "full"] }

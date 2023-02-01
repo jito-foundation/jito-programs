@@ -82,22 +82,20 @@ impl Config {
         const MAX_NUM_EPOCHS_VALID: u64 = 10;
         const MAX_VALIDATOR_COMMISSION_BPS: u16 = 10000;
 
-        require!(
-            self.num_epochs_valid > MIN_NUM_EPOCHS_VALID
-                && self.num_epochs_valid < MAX_NUM_EPOCHS_VALID,
-            AccountValidationFailure
-        );
-        require!(
-            self.max_validator_commission_bps <= MAX_VALIDATOR_COMMISSION_BPS,
-            AccountValidationFailure
-        );
+        if self.num_epochs_valid < MIN_NUM_EPOCHS_VALID
+            || self.num_epochs_valid > MAX_NUM_EPOCHS_VALID
+        {
+            return Err(AccountValidationFailure.into());
+        }
+
+        if self.max_validator_commission_bps > MAX_VALIDATOR_COMMISSION_BPS {
+            return Err(AccountValidationFailure.into());
+        }
 
         let default_pubkey = Pubkey::default();
-        require!(
-            self.expired_funds_account != default_pubkey,
-            AccountValidationFailure
-        );
-        require!(self.authority != default_pubkey, AccountValidationFailure);
+        if self.expired_funds_account == default_pubkey || self.authority == default_pubkey {
+            return Err(AccountValidationFailure.into());
+        }
 
         Ok(())
     }

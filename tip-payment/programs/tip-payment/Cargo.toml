@@ -1,6 +1,6 @@
 [package]
-name = "jito-tip-payment"
-version = "0.1.1"
+name = "tip-payment"
+version = "0.1.0"
 description = "Tip Payment Program"
 edition = "2021"
 license = "Apache-2.0"
@@ -19,4 +19,4 @@ default = []
 
 
 [dependencies]
-anchor-lang = "0.25.0"
+anchor-lang = "0.26.0"
