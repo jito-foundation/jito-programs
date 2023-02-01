@@ -640,32 +640,36 @@ pub struct TipPaymentAccount {}
 impl TipPaymentAccount {
     pub const SIZE: usize = 8;
 
-    fn drain_accounts(accs: Vec<AccountInfo>) -> Result<u64> {
+    /// Drains the tip accounts, leaves enough lamports for rent exemption.
+    fn drain_accounts(accounts: Vec<AccountInfo>) -> Result<u64> {
         let mut total_tips: u64 = 0;
-        for acc in accs {
+        for a in accounts {
             total_tips = total_tips
-                .checked_add(Self::drain_account(&acc)?)
+                .checked_add(Self::drain_account(&a)?)
                 .ok_or(ArithmeticError)?;
         }
 
         Ok(total_tips)
     }
 
-    fn drain_account(acc: &AccountInfo) -> Result<u64> {
-        let tips = Self::calc_tips(acc.lamports())?;
-        if tips > 0 {
-            let pre_lamports = acc.lamports();
-            **acc.try_borrow_mut_lamports()? =
-                pre_lamports.checked_sub(tips).ok_or(ArithmeticError)?;
-        }
+    fn drain_account(account: &AccountInfo) -> Result<u64> {
+        // Tips after rent exemption.
+        let tips = {
+            let rent = Rent::get()?;
+            let min_rent = rent.minimum_balance(account.data_len());
+
+            account
+                .lamports()
+                .checked_sub(min_rent)
+                .ok_or(ArithmeticError)
+        }?;
+
+        **account.try_borrow_mut_lamports()? = account
+            .lamports()
+            .checked_sub(tips)
+            .ok_or(ArithmeticError)?;
+
         Ok(tips)
-    }
-
-    fn calc_tips(total_balance: u64) -> Result<u64> {
-        let rent = Rent::get()?;
-        let min_rent = rent.minimum_balance(Self::SIZE);
-
-        Ok(total_balance.checked_sub(min_rent).ok_or(ArithmeticError)?)
     }
 }
 

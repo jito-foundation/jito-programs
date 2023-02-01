@@ -4,7 +4,7 @@ use std::mem::size_of;
 
 use anchor_lang::prelude::*;
 
-use crate::ErrorCode::{AccountValidationFailure, ArithmeticError, RentExemptViolation};
+use crate::ErrorCode::{AccountValidationFailure, ArithmeticError};
 
 #[account]
 #[derive(Default)]
@@ -78,26 +78,21 @@ impl Config {
     pub const SIZE: usize = HEADER_SIZE + size_of::<Self>();
 
     pub fn validate(&self) -> Result<()> {
-        const MIN_NUM_EPOCHS_VALID: u64 = 0;
         const MAX_NUM_EPOCHS_VALID: u64 = 10;
         const MAX_VALIDATOR_COMMISSION_BPS: u16 = 10000;
 
-        require!(
-            self.num_epochs_valid > MIN_NUM_EPOCHS_VALID
-                && self.num_epochs_valid < MAX_NUM_EPOCHS_VALID,
-            AccountValidationFailure
-        );
-        require!(
-            self.max_validator_commission_bps <= MAX_VALIDATOR_COMMISSION_BPS,
-            AccountValidationFailure
-        );
+        if self.num_epochs_valid == 0 || self.num_epochs_valid > MAX_NUM_EPOCHS_VALID {
+            return Err(AccountValidationFailure.into());
+        }
+
+        if self.max_validator_commission_bps > MAX_VALIDATOR_COMMISSION_BPS {
+            return Err(AccountValidationFailure.into());
+        }
 
         let default_pubkey = Pubkey::default();
-        require!(
-            self.expired_funds_account != default_pubkey,
-            AccountValidationFailure
-        );
-        require!(self.authority != default_pubkey, AccountValidationFailure);
+        if self.expired_funds_account == default_pubkey || self.authority == default_pubkey {
+            return Err(AccountValidationFailure.into());
+        }
 
         Ok(())
     }
@@ -121,43 +116,28 @@ impl TipDistributionAccount {
 
     pub fn claim_expired(from: AccountInfo, to: AccountInfo) -> Result<u64> {
         let rent = Rent::get()?;
-        let min_rent_lamports = rent.minimum_balance(TipDistributionAccount::SIZE);
+        let min_rent_lamports = rent.minimum_balance(from.data_len());
+
         let amount = from
             .lamports()
             .checked_sub(min_rent_lamports)
             .ok_or(ArithmeticError)?;
-        Self::checked_transfer(from, to, amount, min_rent_lamports)?;
+        Self::transfer_lamports(from, to, amount)?;
 
         Ok(amount)
     }
 
     pub fn claim(from: AccountInfo, to: AccountInfo, amount: u64) -> Result<()> {
-        let rent = Rent::get()?;
-        let min_rent_lamports = rent.minimum_balance(TipDistributionAccount::SIZE);
-
-        Self::checked_transfer(from, to, amount, min_rent_lamports)
+        Self::transfer_lamports(from, to, amount)
     }
 
-    /// Transfers funds from-from and to-to. Returns an error if from ends up with less than what's
-    /// required for rent exemption.
-    fn checked_transfer(
-        from: AccountInfo,
-        to: AccountInfo,
-        amount: u64,
-        min_rent_lamports: u64,
-    ) -> Result<()> {
+    fn transfer_lamports(from: AccountInfo, to: AccountInfo, amount: u64) -> Result<()> {
         // debit lamports
-        let pre_lamports = from.lamports();
         **from.try_borrow_mut_lamports()? =
-            pre_lamports.checked_sub(amount).ok_or(ArithmeticError)?;
-        if from.lamports() < min_rent_lamports {
-            return Err(RentExemptViolation.into());
-        }
-
+            from.lamports().checked_sub(amount).ok_or(ArithmeticError)?;
         // credit lamports
-        let pre_lamports = to.lamports();
         **to.try_borrow_mut_lamports()? =
-            pre_lamports.checked_add(amount).ok_or(ArithmeticError)?;
+            to.lamports().checked_add(amount).ok_or(ArithmeticError)?;
 
         Ok(())
     }

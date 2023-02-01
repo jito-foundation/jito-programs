@@ -1,6 +1,6 @@
 [package]
-name = "jito-tip-distribution"
-version = "0.1.1"
+name = "tip-distribution"
+version = "0.1.0"
 description = "Tip distribution program, responsible for distributing funds to entitled parties."
 edition = "2021"
 license = "Apache-2.0"
@@ -19,4 +19,4 @@ default = []
 [dependencies]
 anchor-lang = { path = "../../../../anchor/lang" }
 solana-program = { path = "../../../../sdk/program" }
-vote-state = { path = "../vote-state" }
+jito-programs-vote-state = { path = "../vote-state" }
