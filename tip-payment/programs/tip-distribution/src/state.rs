@@ -78,13 +78,10 @@ impl Config {
     pub const SIZE: usize = HEADER_SIZE + size_of::<Self>();
 
     pub fn validate(&self) -> Result<()> {
-        const MIN_NUM_EPOCHS_VALID: u64 = 0;
         const MAX_NUM_EPOCHS_VALID: u64 = 10;
         const MAX_VALIDATOR_COMMISSION_BPS: u16 = 10000;
 
-        if self.num_epochs_valid < MIN_NUM_EPOCHS_VALID
-            || self.num_epochs_valid > MAX_NUM_EPOCHS_VALID
-        {
+        if self.num_epochs_valid == 0 || self.num_epochs_valid > MAX_NUM_EPOCHS_VALID {
             return Err(AccountValidationFailure.into());
         }
 
