@@ -1575,8 +1575,6 @@ checksum = "6c8af84674fe1f223a982c933a0ee1086ac4d4052aa0fb8060c12c6ad838e754"
 [[package]]
 name = "jito-programs-vote-state"
 version = "0.1.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "85184141b0a44cf9e9e4c006a4764992bfad2548b9331ea621158ca1910f1707"
 dependencies = [
  "anchor-lang",
  "bincode",

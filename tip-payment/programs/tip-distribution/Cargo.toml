@@ -19,4 +19,4 @@ default = []
 [dependencies]
 anchor-lang = "0.26.0"
 solana-program = "1.14.13"
-jito-programs-vote-state = "0.1.2"
+jito-programs-vote-state = { path = "../vote-state" }
