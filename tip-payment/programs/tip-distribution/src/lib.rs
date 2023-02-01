@@ -341,9 +341,6 @@ pub enum ErrorCode {
     #[msg("Must wait till at least one epoch after the tip distribution account was created to upload the merkle root.")]
     PrematureMerkleRootUpload,
 
-    #[msg("Account would violate rent exemption.")]
-    RentExemptViolation,
-
     #[msg("No merkle root has been uploaded to the given TipDistributionAccount.")]
     RootNotUploaded,
 
