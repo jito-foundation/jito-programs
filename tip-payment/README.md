@@ -1,32 +1,35 @@
-# Mev Programs
-This repository holds a set of programs necessary for the functioning of the Mev Distribution DAO.
+# jito-programs
+This repository holds a set of programs necessary for MEV revenue sharing.
 
-## mev-payment
-This program owns 8 tip accounts that act as ephemeral storage of tips. The reason for eight separate accounts is so
-that Solana's Sealevel Runtime's parallelism can be taken advantage of. In theory, this means 8 bundles can be executed
-in parallel by the Validator's Bank. However, this is not the case right now and is out of the scope of this README's.
+## tip-payment
+This program owns the PDAs and contains the instructions necessary to enable validator tips. 
+There are multiple PDAs that searchers may tip, this is to enable a greater degree of concurrency.
+The validator workflow is as follows for every slot:
+- Searchers submit bundles and include an instruction or transaction that funds one of the many tip payment PDAs
+(note that these PDAs should not be mixed up with the tip distribution account PDA).
+- Upon receiving the first bundle for the slot, the validator fetches the current configured tip receiver set on this program.
+- If the tip receiver is not equal to the validator's tip distribution account PDA (owned by the tip-distribution program),
+then invoke the `change_tip_receiver` instruction, supplying the validator's tip distribution account PDA.
+- The `change_tip_receiver` instruction transfers the tips out of all the tip payment PDAs to the previously configured receiver
+before setting the new validator as the receiver.
 
-### Instructions
-* initialize
-  * inits the `mev_payment` PDAs along with the `Config` PDA
-* claim_tips
-  * transfer funds from all 8 `mev_payment` accounts to the `tip_claimer` account
-* set_tip_claimer
-  * checks to see if there are any funds left in the `mev_payment` accounts; and if so transfers to previous `tip_claimer`
-    before setting the new `tip_claimer`
+## tip-distribution
+This program is responsible for distributing MEV to the rest of the network and functions similarly airdrops, leveraging
+the use of merkle trees. Workflow:
+- Every epoch validators initialize a tip distribution account. These PDAs are derived from the validator's vote account and given epoch.
+Another way to think about these accounts is in terms of MEV buckets scoped per validator per epoch. All lamports in these accounts
+are considered MEV earned by the PDAs corresponding validator for the epoch.
+- Upon initialization of their respective accounts, validators specify an authority that has the power to generate a merkle root and upload it.
+The merkle roots are what is used to determine what portion of the MEV in the bucket stakers are entitled to.
+- Once the epoch comes to a close the merkle root authority is able to generate a merkle root and upload it.
+[Here](https://github.com/jito-foundation/jito-solana/tree/master/tip-distributor) is an example of what that workflow could look like.
+- Claimants/Stakers then have up to some configured number of epochs to claim their share of the MEV across all buckets.
 
-## Tests
-Tests are located at the `./tests` folder. Simply run `anchor test` to execute.
+## Deployments
+The `master` branch may not always be what's deployed on-chain, instead the `deployed/tip-payment` and `deployed/tip-distribution`
+branches designate what's actually deployed on-chain for the individual programs.
 
-## Example Workflow
-1. Slot begins
-2. Leader invokes `set_tip_claimer` and includes it as the first tx in the block
-3. Searchers send bundles (includes tips to one or all of the `mev_payment` accounts)
-4. Leader invokes `claim_tips` and includes it as the last tx in the block
-5. Slot ends
-6. Repeat steps 1-5 until next Leader is rotated, rinse and repeat
-
-## Architecture
-![Bundle Submission Flow](../assets/bundle_submission_flow.png)
-![Data Model](../assets/data_model.png)
-![Flow of Funds](../assets/flow_of_funds.png)
+## Gitflow
+All PRs shall be made against master. Upon merge make sure to cherry-pick the new commits to the `submodule` branch.
+The `jito-solana` client declares this branch as a submodule dependency in order to interact with the two programs.
+Once code is deployed make sure to cherry-pick the appropriate commits to the programs' repsective `deployed/*` branches.
