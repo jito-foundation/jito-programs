@@ -3,6 +3,8 @@ name = "tip-payment"
 version = "0.1.0"
 description = "Tip Payment Program"
 edition = "2021"
+license = "Apache-2.0"
+authors = ["Jito Foundation <team@jito.network>"]
 
 [lib]
 crate-type = ["cdylib", "lib"]

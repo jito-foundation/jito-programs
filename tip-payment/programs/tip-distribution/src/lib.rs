@@ -13,7 +13,7 @@ declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
 #[program]
 pub mod tip_distribution {
-    use vote_state::VoteState;
+    use jito_programs_vote_state::VoteState;
 
     use super::*;
     use crate::ErrorCode::*;
@@ -340,9 +340,6 @@ pub enum ErrorCode {
 
     #[msg("Must wait till at least one epoch after the tip distribution account was created to upload the merkle root.")]
     PrematureMerkleRootUpload,
-
-    #[msg("Account would violate rent exemption.")]
-    RentExemptViolation,
 
     #[msg("No merkle root has been uploaded to the given TipDistributionAccount.")]
     RootNotUploaded,

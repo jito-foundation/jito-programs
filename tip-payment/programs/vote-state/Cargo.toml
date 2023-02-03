@@ -1,7 +1,10 @@
 [package]
-name = "vote-state"
-version = "0.1.0"
+name = "jito-programs-vote-state"
+version = "0.1.2"
 edition = "2021"
+description = "VoteState code copied from Solana."
+license = "Apache-2.0"
+authors = ["Jito Foundation <team@jito.network>"]
 
 [dependencies]
 anchor-lang = { path = "../../../../anchor/lang" }

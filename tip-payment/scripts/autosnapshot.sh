@@ -158,7 +158,10 @@ generate_stake_meta() {
 generate_merkle_trees() {
   local stake_meta_filepath=$1
   local merkle_tree_filepath=$2
+  local rpc_url=$3
+
   RUST_LOG=info solana-merkle-root-generator \
+    --rpc-url "$rpc_url" \
     --stake-meta-coll-path "$stake_meta_filepath" \
     --out-path "$merkle_tree_filepath"
 }
@@ -354,7 +357,7 @@ main() {
   maybe_merkle_tree=$(ls "$merkle_tree_filepath" 2>/dev/null || true)
   if [ -z "$maybe_merkle_tree" ]; then
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running merkle-root-generator for epoch: $last_epoch slot: $previous_epoch_final_slot"
-    generate_merkle_trees "$stake_meta_filepath" "$merkle_tree_filepath"
+    generate_merkle_trees "$stake_meta_filepath" "$merkle_tree_filepath" "$RPC_URL"
   else
     echo "stake-meta already exists at: $merkle_tree_filepath"
   fi
