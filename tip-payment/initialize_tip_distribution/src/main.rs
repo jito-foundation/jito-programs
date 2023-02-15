@@ -22,12 +22,6 @@ struct Args {
 
     #[clap(long, env)]
     keypair_path: PathBuf,
-
-    #[clap(long, env)]
-    expired_funds_account: String,
-
-    #[clap(long, env)]
-    num_epochs_valid: u64,
 }
 
 fn main() {
@@ -38,33 +32,40 @@ fn main() {
     let rpc_client = RpcClient::new(args.rpc_url);
     let tip_distribution_program_id =
         Pubkey::from_str(&args.tip_distribution_program_id).expect("valid program id");
-    let expired_funds_account =
-        Pubkey::from_str(&args.expired_funds_account).expect("valid program id");
-
     let (config_account_pubkey, config_account_bump) =
         Pubkey::find_program_address(&[b"CONFIG_ACCOUNT"], &tip_distribution_program_id);
 
-    let initialize_instruction = Instruction {
+    let config = Config::try_deserialize(
+        &mut rpc_client
+            .get_account(&config_account_pubkey)
+            .expect("get account")
+            .data
+            .as_slice(),
+    )
+    .unwrap();
+
+    let change_config_ix = Instruction {
         program_id: tip_distribution_program_id,
-        data: instruction::Initialize {
-            authority: expired_funds_account,
-            expired_funds_account,
-            num_epochs_valid: args.num_epochs_valid,
-            max_validator_commission_bps: 10_000,
-            bump: config_account_bump,
+        data: instruction::UpdateConfig {
+            new_config: Config {
+                authority: config.authority,
+                bump: config.bump,
+                expired_funds_account: config.expired_funds_account,
+                max_validator_commission_bps: 10_000,
+                num_epochs_valid: config.num_epochs_valid,
+            },
         }
         .data(),
-        accounts: accounts::Initialize {
+        accounts: accounts::UpdateConfig {
             config: config_account_pubkey,
-            system_program: system_program::id(),
-            initializer: payer.pubkey(),
+            authority: payer.pubkey(),
         }
         .to_account_metas(None),
     };
 
     let recent_blockhash = rpc_client.get_latest_blockhash().expect("latest blockhash");
     let transaction = Transaction::new_signed_with_payer(
-        &[initialize_instruction],
+        &[change_config_ix],
         Some(&payer.pubkey()),
         &[&payer],
         recent_blockhash,
