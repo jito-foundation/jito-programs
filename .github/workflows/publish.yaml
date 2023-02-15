@@ -24,19 +24,22 @@ jobs:
             ~/.cargo/git/db/
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.26.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.27.0 anchor-cli --locked --force
       - name: Install yarn dependencies
-        working-directory: ./tip-payment
+        working-directory: ./src
         run: yarn
       - name: Run Anchor test
-        working-directory: ./tip-payment
+        working-directory: ./src
         run: anchor test
       - name: Anchor Login
-        working-directory: ./tip-payment
+        working-directory: ./src
         run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
       - name: Publish tip-payment source code
-        working-directory: ./tip-payment
+        working-directory: ./src
         run: yes 'yes' | anchor publish tip_payment --skip-build --provider.cluster mainnet
       - name: Publish tip-distribution source code
-        working-directory: ./tip-payment
+        working-directory: ./src
         run: yes 'yes' | anchor publish tip_distribution --skip-build --provider.cluster mainnet
+      - name: Publish jito-protecc source code
+        working-directory: ./src
+        run: yes 'yes' | anchor publish jito_protecc --skip-build --provider.cluster mainnet

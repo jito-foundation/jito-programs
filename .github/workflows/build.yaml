@@ -7,7 +7,7 @@ on:
     branches:
       - master
 env:
-  SOLANA_CLI_VERSION: 1.13.5
+  SOLANA_CLI_VERSION: 1.14.15
   NODE_VERSION: 17.0.1
 jobs:
   build-and-test:
@@ -29,16 +29,16 @@ jobs:
             ~/.cargo/git/db/
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.26.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.27.0 anchor-cli --locked --force
       - name: Install yarn dependencies
-        working-directory: ./tip-payment
+        working-directory: ./src
         run: yarn
       - name: Run Anchor test
-        working-directory: ./tip-payment
+        working-directory: ./src
         run: anchor test
       - uses: reinismu/clippy-check@master
         with:
-          working-directory: ./tip-payment/programs
+          working-directory: ./src/programs
           token: ${{ secrets.GITHUB_TOKEN }}
   soteria:
     needs: build-and-test
@@ -53,5 +53,5 @@ jobs:
         with:
           toolchain: nightly
           override: true
-      - run: cd ./tip-payment && sh -c "$(curl -k https://supercompiler.xyz/install)" && cargo build-bpf
-      - run: cd ./tip-payment && ./soteria-linux-develop/bin/soteria -analyzeAll .
+      - run: cd ./src && sh -c "$(curl -k https://supercompiler.xyz/install)" && cargo build-bpf
+      - run: cd ./src && ./soteria-linux-develop/bin/soteria -analyzeAll .
