@@ -93,7 +93,8 @@ get_epoch_info() {
   echo "$epoch_info"
 }
 
-# gets the snapshot filename, assuming it's present
+# returns the snapshot filename, assuming it's present
+# return value is just the filename
 # cant be known ahead of time because the snapshot filename includes a hash
 get_snapshot_filename() {
   local snapshot_dir=$1
