@@ -101,7 +101,7 @@ get_snapshot_filename() {
 
   local snapshot_file
 
-  snapshot_file=$(find "$snapshot_dir" -name "snapshot-${snapshot_slot}-*.tar.zst")
+  snapshot_file=$(find "$snapshot_dir" -name "snapshot-${snapshot_slot}-[[:alnum:]]*.tar.zst")
   echo "$snapshot_file"
 }
 
