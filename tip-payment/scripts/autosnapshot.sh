@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # This script is an error handling wrapper for autosnapshot_inner.sh
 
-set -euxo pipefail
+set -euo pipefail
 DIR=$(realpath "$(dirname "${BASH_SOURCE[0]}")")
 
 # copy pasted from autosnapshot_inner.sh
