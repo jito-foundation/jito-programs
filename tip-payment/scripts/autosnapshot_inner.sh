@@ -21,7 +21,7 @@ post_slack_message() {
 
   echo "Posting slack message: $msg"
 
-  curl -d "text=$hostname: $msg" -d "channel=$channel" -H "Authorization: Bearer $bearer" -X POST https://slack.com/api/chat.postMessage
+  curl -X POST --silent --show-error -d "text=$hostname: $msg" -d "channel=$channel" -H "Authorization: Bearer $bearer" https://slack.com/api/chat.postMessage
 }
 
 # make sure all env vars are set for this script
@@ -83,9 +83,7 @@ get_epoch_info() {
 
   local epoch_info
 
-  epoch_info=$(curl "$rpc_url" -X POST -H "Content-Type: application/json" -d '
-      {"jsonrpc":"2.0","id":1, "method":"getEpochInfo"}
-    ')
+  epoch_info=$(curl -X POST --silent --show-error "$rpc_url" -H "Content-Type: application/json" -d '{"jsonrpc":"2.0","id":1, "method":"getEpochInfo"}')
   if [ -z "$epoch_info" ]; then
     echo "ERROR Unable to fetch epoch info."
     exit 1
@@ -242,15 +240,11 @@ find_previous_epoch_last_slot() {
   local slot_with_block=$1
   local rpc_url=$2
 
-  block_result=$(curl -s "$rpc_url" -X POST -H "Content-Type: application/json" -d "
-                           {\"jsonrpc\":\"2.0\",\"id\":1, \"method\":\"getBlock\", \"params\": [$slot_with_block, {\"transactionDetails\": \"none\"}]}
-                         " | jq .result)
+  block_result=$(curl --silent --show-error "$rpc_url" -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1, \"method\":\"getBlock\", \"params\": [$slot_with_block, {\"transactionDetails\": \"none\"}]}" | jq .result)
 
   while [[ $block_result = null ]]; do
     slot_with_block="$((slot_with_block - 1))"
-    block_result=$(curl -s "$rpc_url" -X POST -H "Content-Type: application/json" -d "
-                               {\"jsonrpc\":\"2.0\",\"id\":1, \"method\":\"getBlock\", \"params\": [$slot_with_block, {\"transactionDetails\": \"none\"}]}
-                             " | jq .result)
+    block_result=$(curl --silent --show-error "$rpc_url" -X POST -H "Content-Type: application/json" -d "{\"jsonrpc\":\"2.0\",\"id\":1, \"method\":\"getBlock\", \"params\": [$slot_with_block, {\"transactionDetails\": \"none\"}]}" | jq .result)
   done
   echo "$slot_with_block"
 }

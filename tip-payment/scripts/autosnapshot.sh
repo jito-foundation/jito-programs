@@ -15,12 +15,12 @@ post_slack_message() {
 
   echo "Posting slack message: $msg"
 
-  curl -d "text=$hostname: $msg" -d "channel=$channel" -H "Authorization: Bearer $bearer" -X POST https://slack.com/api/chat.postMessage
+  curl -X POST --silent --show-error -d "text=$hostname: $msg" -d "channel=$channel" -H "Authorization: Bearer $bearer" https://slack.com/api/chat.postMessage
 }
 
 main() {
   if ! "$DIR"/autosnapshot_inner.sh "$@"; then
-    NUM_LOG_LINES=5 # shows n-2 lines
+    NUM_LOG_LINES=8 # shows n-2 lines
     LOG_SNIPPET=$(journalctl -u autosnapshot --pager-end --lines $NUM_LOG_LINES | head -n -2)
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "autosnapshot failed. journalctl log snippet:
   \`\`\`$LOG_SNIPPET}\`\`\`"
