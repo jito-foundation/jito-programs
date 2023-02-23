@@ -20,7 +20,7 @@ post_slack_message() {
 
 main() {
   if ! "$DIR"/autosnapshot_inner.sh "$@"; then
-    sleep 10 # journalctl lags
+    sleep 8 # journalctl lags
     NUM_LOG_LINES=10
     LOG_SNIPPET=$(journalctl -u autosnapshot --pager-end --lines $NUM_LOG_LINES)
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "autosnapshot failed. journalctl log snippet:
