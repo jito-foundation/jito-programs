@@ -23,8 +23,7 @@ main() {
     sleep 8 # journalctl lags
     NUM_LOG_LINES=10
     LOG_SNIPPET=$(journalctl -u autosnapshot --pager-end --lines $NUM_LOG_LINES)
-    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "autosnapshot failed. journalctl log snippet:
-  \`\`\`$LOG_SNIPPET}\`\`\`"
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "autosnapshot failed. journalctl log snippet: \`\`\`$LOG_SNIPPET\`\`\`"
     exit 0
   fi
 }
