@@ -314,7 +314,7 @@ main() {
   snapshot_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$snapshot_file")
   snapshot_in_gcloud=$(get_filepath_in_gcloud "$snapshot_gcloud_path")
   if [ -z "$snapshot_in_gcloud" ]; then
-    snapshot_file_size=$(ls --size -h "$snapshot_path" | awk '{ print $1 }')
+    snapshot_file_size=$(du -h "$snapshot_path" | awk '{ print $1 }')
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading snapshot ($snapshot_file_size) to gcloud for epoch: $last_epoch slot: $previous_epoch_final_slot. url: https://console.cloud.google.com/storage/browser/jito-mainnet/$last_epoch/$(hostname)"
 
     upload_file_to_gcloud "$snapshot_path" "$snapshot_gcloud_path"
@@ -361,7 +361,7 @@ main() {
   merkle_tree_gcloud_path=$(get_gcloud_path "$SOLANA_CLUSTER" "$last_epoch" "$merkle_tree_filename")
   merkle_tree_in_gcloud=$(get_filepath_in_gcloud "$merkle_tree_gcloud_path") || true
   if [ -z "$merkle_tree_in_gcloud" ]; then
-    merkle_tree_file_size=$(ls --size -h $merkle_tree_filepath | awk '{ print $1 }')
+    merkle_tree_file_size=$(du -h "$merkle_tree_filepath" | awk '{ print $1 }')
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root to gcloud ($merkle_tree_file_size). epoch: $last_epoch slot: $previous_epoch_final_slot"
     upload_file_to_gcloud "$merkle_tree_filepath" "$merkle_tree_gcloud_path"
   else
