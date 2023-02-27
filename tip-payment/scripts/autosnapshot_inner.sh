@@ -307,6 +307,7 @@ main() {
 
     # snapshot file should exist now, grab the filename here (snapshot-$slot-$hash.tar.zst)
     snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
+    snapshot_path="$SNAPSHOT_DIR/$snapshot_file"
   else
     echo "snapshot file already exists at: $snapshot_path"
   fi
