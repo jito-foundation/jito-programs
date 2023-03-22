@@ -1,5 +1,6 @@
 # Jito Programs
-This repository is home to our on-chain programs that enable MEV collection and MEV sharing with SOL stakers.
+This repository is home to Jito's on-chain programs that enable MEV collection and MEV sharing with SOL stakers; additionally
+we may host useful on-chain program reference implementations here.
 
 ## Gitflow
 This repository is declared as a submodule in the `jito-solana` client. In order for that to work the `Solana`
@@ -11,3 +12,4 @@ This gitflow for this repo is as follows:
 - Merge PR
 - `git cherry-pick` your new commits into `submodule`
 - push `submodule`
+- 

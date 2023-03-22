@@ -25,6 +25,9 @@ The merkle roots are what is used to determine what portion of the MEV in the bu
 [Here](https://github.com/jito-foundation/jito-solana/tree/master/tip-distributor) is an example of what that workflow could look like.
 - Claimants/Stakers then have up to some configured number of epochs to claim their share of the MEV across all buckets.
 
+## jito-protecc
+Simple on-chain program that's meant to wrap the inner transactions of a bundle (inner instructions of a transaction), aborting should the signer's lamports change negatively.
+
 ## Deployments
 The `master` branch may not always be what's deployed on-chain, instead the `deployed/tip-payment` and `deployed/tip-distribution`
 branches designate what's actually deployed on-chain for the individual programs.
