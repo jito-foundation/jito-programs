@@ -174,7 +174,7 @@ pub fn close_claim_status_ix(
 
     Instruction {
         program_id,
-        data: vec![],
+        data: crate::instruction::CloseClaimStatus {}.data(),
         accounts: crate::accounts::CloseClaimStatus {
             config,
             claim_status,
