@@ -155,6 +155,35 @@ pub fn initialize_tip_distribution_account_ix(
     }
 }
 
+pub struct CloseClaimStatusArgs;
+pub struct CloseClaimStatusAccounts {
+    pub config: Pubkey,
+    pub claim_status: Pubkey,
+    pub claim_status_payer: Pubkey,
+}
+pub fn close_claim_status_ix(
+    program_id: Pubkey,
+    _args: CloseClaimStatusArgs,
+    accounts: CloseClaimStatusAccounts,
+) -> Instruction {
+    let CloseClaimStatusAccounts {
+        config,
+        claim_status,
+        claim_status_payer,
+    } = accounts;
+
+    Instruction {
+        program_id,
+        data: vec![],
+        accounts: crate::accounts::CloseClaimStatus {
+            config,
+            claim_status,
+            claim_status_payer,
+        }
+        .to_account_metas(None),
+    }
+}
+
 pub struct UpdateConfigArgs {
     new_config: Config,
 }
@@ -225,7 +254,7 @@ pub fn upload_merkle_root_ix(
 pub struct CloseTipDistributionAccountArgs {
     pub _epoch: u64,
 }
-pub struct CloseTipDistributionAccount {
+pub struct CloseTipDistributionAccounts {
     pub config: Pubkey,
     pub tip_distribution_account: Pubkey,
     pub validator_vote_account: Pubkey,
@@ -235,11 +264,11 @@ pub struct CloseTipDistributionAccount {
 pub fn close_tip_distribution_account_ix(
     program_id: Pubkey,
     args: CloseTipDistributionAccountArgs,
-    accounts: CloseTipDistributionAccount,
+    accounts: CloseTipDistributionAccounts,
 ) -> Instruction {
     let CloseTipDistributionAccountArgs { _epoch } = args;
 
-    let CloseTipDistributionAccount {
+    let CloseTipDistributionAccounts {
         config,
         tip_distribution_account,
         validator_vote_account,
