@@ -65,3 +65,5 @@ main() {
       --should-reclaim-tdas
   post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "done reclaiming rent"
 }
+
+main "$@"
