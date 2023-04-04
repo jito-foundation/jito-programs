@@ -1,0 +1,451 @@
+{
+  "version": "0.1.0",
+  "name": "tip_payment",
+  "instructions": [
+    {
+      "name": "initialize",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "singleton account"
+          ]
+        },
+        {
+          "name": "tipPaymentAccount0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount3",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount4",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount5",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount6",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount7",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "bumps",
+          "type": {
+            "defined": "InitBumps"
+          }
+        }
+      ]
+    },
+    {
+      "name": "claimTips",
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount3",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount4",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount5",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount6",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount7",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipReceiver",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "can be an account with a private key to a PDA owned by some other program."
+          ]
+        },
+        {
+          "name": "blockBuilder",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "changeTipReceiver",
+      "docs": [
+        "Validator should invoke this instruction before executing any transactions that contain tips.",
+        "Validator should also ensure it calls it if there's a fork detected."
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "oldTipReceiver",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "ensure its the one that's expected"
+          ]
+        },
+        {
+          "name": "newTipReceiver",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "blockBuilder",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "ensure it's the account that's expected"
+          ]
+        },
+        {
+          "name": "tipPaymentAccount0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount3",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount4",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount5",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount6",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount7",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "changeBlockBuilder",
+      "docs": [
+        "Changes the block builder. The block builder takes a cut on tips transferred out by",
+        "this program. In order for the block builder to be changed, all previous tips must have been",
+        "drained."
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipReceiver",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "ensure its the one that's expected"
+          ]
+        },
+        {
+          "name": "oldBlockBuilder",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "ensure it's the account that's expected"
+          ]
+        },
+        {
+          "name": "newBlockBuilder",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount0",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount3",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount4",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount5",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount6",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tipPaymentAccount7",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        }
+      ],
+      "args": [
+        {
+          "name": "blockBuilderCommission",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Config",
+      "docs": [
+        "Stores program config metadata."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tipReceiver",
+            "docs": [
+              "The account claiming tips from the mev_payment accounts."
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "blockBuilder",
+            "docs": [
+              "Block builder that receives a % of fees"
+            ],
+            "type": "publicKey"
+          },
+          {
+            "name": "blockBuilderCommissionPct",
+            "type": "u64"
+          },
+          {
+            "name": "bumps",
+            "docs": [
+              "Bumps used to derive PDAs"
+            ],
+            "type": {
+              "defined": "InitBumps"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TipPaymentAccount",
+      "docs": [
+        "Account that searchers will need to tip for their bundles to be accepted.",
+        "There will be 8 accounts of this type initialized in order to parallelize bundles."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "InitBumps",
+      "docs": [
+        "Bumps used during initialization"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount0",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount1",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount2",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount3",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount4",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount5",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount6",
+            "type": "u8"
+          },
+          {
+            "name": "tipPaymentAccount7",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "TipsClaimed",
+      "fields": [
+        {
+          "name": "tipReceiver",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "tipReceiverAmount",
+          "type": "u64",
+          "index": false
+        },
+        {
+          "name": "blockBuilder",
+          "type": "publicKey",
+          "index": false
+        },
+        {
+          "name": "blockBuilderAmount",
+          "type": "u64",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "ArithmeticError"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidFee"
+    }
+  ]
+}
