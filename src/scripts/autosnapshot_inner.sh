@@ -369,15 +369,24 @@ main() {
     echo "merkle tree already uploaded to gcloud at: $merkle_tree_gcloud_path"
   fi
 
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root on-chain for epoch: $last_epoch slot: $previous_epoch_final_slot"
-  upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
+  if [ "${SEND_TRANSACTIONS-false}" = true ]; then
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "uploading merkle-root on-chain for epoch: $last_epoch slot: $previous_epoch_final_slot"
+    upload_merkle_roots "$merkle_tree_filepath" "$KEYPAIR" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID"
+  else
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "SEND_TRANSACTIONS flag not set, skipping merkle root upload: $last_epoch slot: $previous_epoch_final_slot"
+  fi
+
 
   # ---------------------------------------------------------------------------
   # Claim MEV tips
   # ---------------------------------------------------------------------------
 
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips for epoch: $last_epoch slot: $previous_epoch_final_slot"
-  claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
+  if [ "${SEND_TRANSACTIONS-false}" = true ]; then
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "claiming mev tips for epoch: $last_epoch slot: $previous_epoch_final_slot"
+    claim_tips "$merkle_tree_filepath" "$RPC_URL" "$TIP_DISTRIBUTION_PROGRAM_ID" "$KEYPAIR"
+  else
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "SEND_TRANSACTIONS flag not set, skipping claim mev tips: $last_epoch slot: $previous_epoch_final_slot"
+  fi
 
   claimant_amounts=$(grep -o -E '"amount": [[:digit:]]+' "$merkle_tree_filepath")
   num_non_zero_claimants=$(echo "$claimant_amounts" | awk '$2 > 0' | wc -l)
