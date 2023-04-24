@@ -56,14 +56,18 @@ post_slack_message() {
 main() {
   check_env_vars_set
 
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "reclaiming rent"
-  RUST_LOG=info \
-      solana-reclaim-rent \
-      --rpc-url "$RPC_URL" \
-      --keypair-path "$KEYPAIR_PATH" \
-      --tip-distribution-program-id "$TIP_DISTRIBUTION_PROGRAM_ID" \
-      --should-reclaim-tdas
-  post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "done reclaiming rent"
+  if [ "${SEND_TRANSACTIONS-false}" = true ]; then
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "reclaiming rent"
+    RUST_LOG=info \
+        solana-reclaim-rent \
+        --rpc-url "$RPC_URL" \
+        --keypair-path "$KEYPAIR_PATH" \
+        --tip-distribution-program-id "$TIP_DISTRIBUTION_PROGRAM_ID" \
+        --should-reclaim-tdas
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "done reclaiming rent"
+  else
+    post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "SEND_TRANSACTIONS flag not set, skipping reclaim"
+  fi
 }
 
 main "$@"
