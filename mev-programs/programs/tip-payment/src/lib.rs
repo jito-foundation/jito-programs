@@ -2,7 +2,7 @@ use anchor_lang::prelude::*;
 
 use crate::TipPaymentError::ArithmeticError;
 
-declare_id!("FHpmzwT4X55k58t9UZggF93E7umvoAxv3fyect8wkpXk");
+declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
 
 /// We've decided to hardcode the seeds, effectively meaning
 /// the following PDAs owned by this program are singleton.
