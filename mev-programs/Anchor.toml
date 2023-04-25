@@ -10,16 +10,12 @@ tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
 tip_distribution = "F2Zu7QZiTYUhPd7u9ukRVwxh7B71oA3NMJcHuCHc29P2"
 tip_payment = "DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC"
 
-# Note: these are the keys in dev/ folder
-# do not use these keys in production or you'll get wrecked
 [programs.localnet]
-jito_protecc = "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"
 tip_distribution = "4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7"
 tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
 
 [workspace]
 members = [
-    "programs/jito-protecc",
     "programs/tip-distribution",
     "programs/tip-payment"
 ]

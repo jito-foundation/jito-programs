@@ -24,8 +24,7 @@ const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
 });
 anchor.setProvider(provider);
 
-const tipDistribution = anchor.workspace
-  .TipDistribution as Program<TipDistribution>;
+const tipDistribution = anchor.workspace.TipDistribution as Program<TipDistribution>;
 
 // globals
 let configAccount, configBump;

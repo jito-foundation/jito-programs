@@ -5,7 +5,7 @@ use std::mem::size_of;
 use anchor_lang::prelude::*;
 use anchor_spl::token::TokenAccount;
 
-declare_id!("Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS");
+declare_id!("B7XTCnuyLmbhea4KzhzgPN2JidbeTtTogBCk2M3vDSKf");
 
 /// The pre/post guard instructions should be separate transactions or instructions wrapping the inner contents of a bundle or transaction.
 #[program]
