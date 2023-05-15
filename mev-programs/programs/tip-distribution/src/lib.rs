@@ -40,39 +40,6 @@ pub mod tip_distribution {
 
     /// Initialize a new [TipDistributionAccount] associated with the given validator vote key
     /// and current epoch.
-    pub fn init_tip_distribution_account(
-        ctx: Context<InitTipDistributionAccount>,
-        merkle_root_upload_authority: Pubkey,
-        validator_vote_account: Pubkey,
-        validator_commission_bps: u16,
-        bump: u8,
-    ) -> Result<()> {
-        if validator_commission_bps > ctx.accounts.config.max_validator_commission_bps {
-            return Err(MaxValidatorCommissionFeeBpsExceeded.into());
-        }
-
-        let distribution_acc = &mut ctx.accounts.tip_distribution_account;
-        let current_epoch = Clock::get()?.epoch;
-        distribution_acc.validator_vote_account = validator_vote_account;
-        distribution_acc.epoch_created_at = current_epoch;
-        distribution_acc.validator_commission_bps = validator_commission_bps;
-        distribution_acc.merkle_root_upload_authority = merkle_root_upload_authority;
-        distribution_acc.merkle_root = None;
-        distribution_acc.expires_at = current_epoch
-            .checked_add(ctx.accounts.config.num_epochs_valid)
-            .ok_or(ErrorCode::ArithmeticError)?;
-        distribution_acc.bump = bump;
-        distribution_acc.validate()?;
-
-        emit!(TipDistributionAccountInitializedEvent {
-            tip_distribution_account: distribution_acc.key(),
-        });
-
-        Ok(())
-    }
-
-    /// Initialize a new [TipDistributionAccount] associated with the given validator vote key
-    /// and current epoch.
     pub fn initialize_tip_distribution_account(
         ctx: Context<InitializeTipDistributionAccount>,
         merkle_root_upload_authority: Pubkey,
@@ -384,36 +351,6 @@ pub struct Initialize<'info> {
 
     #[account(mut)]
     pub initializer: Signer<'info>,
-}
-
-#[derive(Accounts)]
-#[instruction(
-    _merkle_root_upload_authority: Pubkey,
-    validator_vote_account: Pubkey,
-    _validator_commission_bps: u16,
-    _bump: u8
-)]
-pub struct InitTipDistributionAccount<'info> {
-    pub config: Account<'info, Config>,
-
-    #[account(
-        init,
-        seeds = [
-            TipDistributionAccount::SEED,
-            validator_vote_account.as_ref(),
-            Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
-        ],
-        bump,
-        payer = payer,
-        space = TipDistributionAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
-
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    pub system_program: Program<'info, System>,
 }
 
 #[derive(Accounts)]
