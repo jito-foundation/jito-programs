@@ -1,6 +1,6 @@
 import { u64 } from "@saberhq/token-utils";
-import * as anchor from "@project-serum/anchor";
-import { AnchorError, Program } from "@project-serum/anchor";
+import * as anchor from "@coral-xyz/anchor";
+import { AnchorError, Program } from "@coral-xyz/anchor";
 import { TipDistribution } from "../target/types/tip_distribution";
 import { assert, expect } from "chai";
 import { PublicKey } from "@solana/web3.js";

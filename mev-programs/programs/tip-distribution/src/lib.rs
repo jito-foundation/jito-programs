@@ -63,7 +63,9 @@ pub mod tip_distribution {
         distribution_acc.validator_commission_bps = validator_commission_bps;
         distribution_acc.merkle_root_upload_authority = merkle_root_upload_authority;
         distribution_acc.merkle_root = None;
-        distribution_acc.expires_at = current_epoch + ctx.accounts.config.num_epochs_valid;
+        distribution_acc.expires_at = current_epoch
+            .checked_add(ctx.accounts.config.num_epochs_valid)
+            .ok_or(ArithmeticError)?;
         distribution_acc.bump = bump;
         distribution_acc.validate()?;
 

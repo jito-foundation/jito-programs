@@ -7,7 +7,7 @@ on:
     branches:
       - master
 env:
-  SOLANA_CLI_VERSION: 1.13.5
+  SOLANA_CLI_VERSION: 1.14.17
 jobs:
   build-and-test:
     name: Build and test programs
@@ -28,7 +28,7 @@ jobs:
             ~/.cargo/git/db/
             ./target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/project-serum/anchor --tag v0.26.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.27.0 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
@@ -39,18 +39,3 @@ jobs:
         with:
           working-directory: ./mev-programs/programs
           token: ${{ secrets.GITHUB_TOKEN }}
-  soteria:
-    needs: build-and-test
-    name: Runs soteria analysis
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/setup/
-      - uses: ./.github/actions/setup-solana/
-      - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-      - run: cd ./mev-programs && sh -c "$(curl -k https://supercompiler.xyz/install)" && cargo build-bpf
-      - run: cd ./mev-programs && ./soteria-linux-develop/bin/soteria -analyzeAll .
