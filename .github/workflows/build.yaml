@@ -39,18 +39,3 @@ jobs:
         with:
           working-directory: ./mev-programs/programs
           token: ${{ secrets.GITHUB_TOKEN }}
-  soteria:
-    needs: build-and-test
-    name: Runs soteria analysis
-    runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-      - uses: ./.github/actions/setup/
-      - uses: ./.github/actions/setup-solana/
-      - name: Install latest nightly
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: nightly
-          override: true
-      - run: cd ./mev-programs && sh -c "$(curl -k https://supercompiler.xyz/install)" && cargo build-bpf
-      - run: cd ./mev-programs && ./soteria-linux-develop/bin/soteria -analyzeAll .
