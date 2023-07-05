@@ -1,6 +1,6 @@
 [package]
-name = "tip-payment"
-version = "0.1.0"
+name = "jito-tip-payment"
+version = "0.1.2"
 description = "Tip Payment Program"
 edition = "2021"
 license = "Apache-2.0"
