@@ -662,6 +662,35 @@ dependencies = [
 ]
 
 [[package]]
+name = "jito-programs-vote-state"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4887bc55cadadcbc95efb08d4e4f1292d34281b3ade56429bd7772244a11446d"
+dependencies = [
+ "anchor-lang",
+ "bincode",
+ "serde",
+ "serde_derive",
+ "solana-program",
+]
+
+[[package]]
+name = "jito-tip-distribution"
+version = "0.1.2"
+dependencies = [
+ "anchor-lang",
+ "jito-programs-vote-state 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "solana-program",
+]
+
+[[package]]
+name = "jito-tip-payment"
+version = "0.1.2"
+dependencies = [
+ "anchor-lang",
+]
+
+[[package]]
 name = "jobserver"
 version = "0.1.26"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1329,22 +1358,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "tip-distribution"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
- "jito-programs-vote-state",
- "solana-program",
-]
-
-[[package]]
-name = "tip-payment"
-version = "0.1.0"
-dependencies = [
- "anchor-lang",
-]
 
 [[package]]
 name = "toml"
