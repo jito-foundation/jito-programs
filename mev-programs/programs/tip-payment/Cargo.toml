@@ -8,7 +8,7 @@ authors = ["Jito Foundation <team@jito.network>"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "tip_payment"
+name = "jito_tip_payment"
 
 [features]
 no-entrypoint = []
