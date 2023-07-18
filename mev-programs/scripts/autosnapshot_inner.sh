@@ -115,7 +115,7 @@ create_snapshot_for_slot() {
 
   # produces snapshot in $snapshot_dir
   # shellcheck disable=SC2012
-  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot "$snapshot_slot" "$snapshot_dir"
+  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot --enable-accounts-disk-index "$snapshot_slot" "$snapshot_dir"
 
   # TODO: figure this out
   # for some reason solana-ledger-tool error doesn't cause this script to exit out, so check status here
