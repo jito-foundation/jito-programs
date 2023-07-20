@@ -18,8 +18,8 @@ security_txt! {
     // Optional Fields
     preferred_languages: "en",
     source_code: "https://github.com/jito-foundation/jito-programs",
-    source_revision: default_env!("GITHUB_SHA", ""),
-    source_release: default_env!("GITHUB_REF_NAME", "")
+    source_revision: default_env!("GIT_SHA", "GIT_SHA_MISSING"),
+    source_release: default_env!("GIT_REF_NAME", "GIT_REF_NAME_MISSING")
 }
 
 pub mod merkle_proof;
