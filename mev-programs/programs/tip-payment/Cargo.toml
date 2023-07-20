@@ -1,6 +1,6 @@
 [package]
 name = "jito-tip-payment"
-version = "0.1.2"
+version = "0.1.3"
 description = "Tip Payment Program"
 edition = "2021"
 license = "Apache-2.0"
@@ -17,6 +17,6 @@ no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 
-
 [dependencies]
 anchor-lang = "0.27.0"
+solana-security-txt = "1.1.1"

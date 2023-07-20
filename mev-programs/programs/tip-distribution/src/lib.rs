@@ -5,6 +5,19 @@ use crate::{
     ErrorCode::Unauthorized,
 };
 
+#[cfg(not(feature = "no-entrypoint"))]
+use solana_security_txt::security_txt;
+
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "Jito Tip Distribution Program",
+    project_url: "https://jito.network/",
+    contacts: "email:support@jito.network",
+    policy: "https://github.com/jito-foundation/jito-programs",
+    preferred_languages: "en",
+    source_code: "https://github.com/jito-foundation/jito-programs"
+}
+
 pub mod merkle_proof;
 pub mod sdk;
 pub mod state;

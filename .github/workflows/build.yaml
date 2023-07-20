@@ -61,7 +61,6 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build
-          working-directory: ./mev-programs
           path: |
-            target/deploy/jito_tip_distribution.so
-            target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_tip_distribution.so
+            mev-programs/target/deploy/jito_tip_payment.so

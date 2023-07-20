@@ -55,15 +55,14 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build
-          working-directory: ./mev-programs
           path: |
-            target/deploy/jito_tip_distribution.so
-            target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_tip_distribution.so
+            mev-programs/target/deploy/jito_tip_payment.so
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           working-directory: ./mev-programs
           files: |
-            ./target/deploy/jito_tip_distribution.so
-            ./target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_tip_distribution.so
+            mev-programs/target/deploy/jito_tip_payment.so

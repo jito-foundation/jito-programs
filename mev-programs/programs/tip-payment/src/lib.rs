@@ -2,6 +2,19 @@ use anchor_lang::prelude::*;
 
 use crate::TipPaymentError::ArithmeticError;
 
+#[cfg(not(feature = "no-entrypoint"))]
+use solana_security_txt::security_txt;
+
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    name: "Jito Tip Payment Program",
+    project_url: "https://jito.network/",
+    contacts: "email:support@jito.network",
+    policy: "https://github.com/jito-foundation/jito-programs",
+    preferred_languages: "en",
+    source_code: "https://github.com/jito-foundation/jito-programs"
+}
+
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
 
 /// We've decided to hardcode the seeds, effectively meaning
