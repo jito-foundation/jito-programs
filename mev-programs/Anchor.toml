@@ -28,5 +28,12 @@ url = "https://anchor.projectserum.com"
 test = "yarn ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.{ts,js}"
 
 [test.validator]
-slots_per_epoch = "128"
-ticks_per_slot = 32
+slots_per_epoch = "32"
+
+#[[test.genesis]]
+#address = "4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7"
+#program = "target/deploy/jito_tip_distribution.so"
+#
+#[[test.genesis]]
+#address = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
+#program = "target/deploy/jito_tip_payment.so"
