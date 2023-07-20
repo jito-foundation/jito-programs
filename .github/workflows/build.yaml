@@ -54,13 +54,13 @@ jobs:
       - name: Verifiable Build
         working-directory: ./mev-programs
         run: |
-          solana-verify build --library-name tip_distribution
-          solana-verify build --library-name tip_payment
+          solana-verify build --library-name jito_tip_distribution
+          solana-verify build --library-name jito_tip_payment
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:
           name: build
           path: |
-            target/deploy/tip_distribution.so
-            target/deploy/tip_payment.so
+            target/deploy/jito_tip_distribution.so
+            target/deploy/jito_tip_payment.so
