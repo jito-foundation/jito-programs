@@ -22,7 +22,7 @@ pub const TIP_ACCOUNT_SEED_7: &[u8] = b"TIP_ACCOUNT_7";
 pub const HEADER: usize = 8;
 
 #[program]
-pub mod tip_payment {
+pub mod jito_tip_payment {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumps) -> Result<()> {
