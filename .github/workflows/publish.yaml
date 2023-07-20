@@ -7,7 +7,7 @@ on:
 jobs:
   publish-to-apr:
     name: Publish to apr.dev
-    runs-on: ubuntu-20.04-16c-64g
+    runs-on: big-runner-1
 
     steps:
       - uses: actions/checkout@v2

@@ -11,7 +11,7 @@ env:
 jobs:
   build-and-test:
     name: Build and test programs
-    runs-on: ubuntu-20.04-16c-64g
+    runs-on: big-runner-1
 
     steps:
       - uses: actions/checkout@v2
@@ -41,7 +41,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
   verified-build:
     name: Build Verifiable Artifact
-    runs-on: ubuntu-20.04-16c-64g
+    runs-on: big-runner-1
     steps:
       - name: Checkout
         uses: actions/checkout@v3
