@@ -1,10 +1,12 @@
+cargo-features = ["workspace-inheritance"]
+
 [package]
 name = "tip-distribution"
-version = "0.1.0"
+version = { workspace = true }
 description = "Tip distribution program, responsible for distributing funds to entitled parties."
-edition = "2021"
-license = "Apache-2.0"
-authors = ["Jito Foundation <team@jito.network>"]
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -17,6 +19,6 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = { path = "../../../../anchor/lang" }
-solana-program = { path = "../../../../sdk/program" }
-jito-programs-vote-state = { path = "../vote-state" }
+anchor-lang = { workspace = true }
+solana-program = { workspace = true }
+jito-programs-vote-state = { workspace = true }
