@@ -39,3 +39,28 @@ jobs:
         with:
           working-directory: ./mev-programs/programs
           token: ${{ secrets.GITHUB_TOKEN }}
+  verified-build:
+    name: Build Verifiable Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install Solana Verify
+        run: |
+          cargo install solana-verify
+          solana-verify --version
+
+      - name: Verifiable Build
+        working-directory: ./mev-programs
+        run: |
+          solana-verify build --library-name tip_distribution
+          solana-verify build --library-name tip_payment
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: |
+            target/deploy/tip_distribution.so
+            target/deploy/tip_payment.so
