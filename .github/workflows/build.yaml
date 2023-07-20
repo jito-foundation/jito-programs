@@ -32,13 +32,25 @@ jobs:
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
-      - name: Run Anchor test
-        working-directory: ./mev-programs
-        run: anchor test
       - uses: reinismu/clippy-check@master
         with:
           working-directory: ./mev-programs/programs
           token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Run Anchor test
+        working-directory: ./mev-programs
+        run: anchor test
+      - name: check tip distribution IDL
+        uses: GuillaumeFalourd/diff-action@v1
+        with:
+          first_file_path: mev-programs/idl/jito_tip_distribution.json
+          second_file_path: mev-programs/target/idl/jito_tip_distribution.json
+          expected_result: PASSED
+      - name: check tip payment IDL
+        uses: GuillaumeFalourd/diff-action@v1
+        with:
+          first_file_path: mev-programs/idl/jito_tip_payment.json
+          second_file_path: mev-programs/target/idl/jito_tip_payment.json
+          expected_result: PASSED
   verified-build:
     name: Build Verifiable Artifact
     runs-on: big-runner-1
@@ -64,3 +76,5 @@ jobs:
           path: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/idl/jito_tip_distribution.json
+            mev-programs/target/idl/jito_tip_payment.json

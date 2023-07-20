@@ -30,6 +30,21 @@ jobs:
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
+      - name: Run Anchor test
+        working-directory: ./mev-programs
+        run: anchor test
+      - name: check tip distribution IDL
+        uses: GuillaumeFalourd/diff-action@v1
+        with:
+          first_file_path: mev-programs/idl/jito_tip_distribution.json
+          second_file_path: mev-programs/target/idl/jito_tip_distribution.json
+          expected_result: PASSED
+      - name: check tip payment IDL
+        uses: GuillaumeFalourd/diff-action@v1
+        with:
+          first_file_path: mev-programs/idl/jito_tip_payment.json
+          second_file_path: mev-programs/target/idl/jito_tip_payment.json
+          expected_result: PASSED
       - name: Install Solana Verify
         run: |
           cargo install solana-verify
@@ -39,9 +54,6 @@ jobs:
         run: |
           solana-verify build --library-name jito_tip_distribution
           solana-verify build --library-name jito_tip_payment
-      - name: Run Anchor test
-        working-directory: ./mev-programs
-        run: anchor test
       - name: Anchor Login
         working-directory: ./mev-programs
         run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
@@ -58,6 +70,8 @@ jobs:
           path: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/idl/jito_tip_distribution.json
+            mev-programs/target/idl/jito_tip_payment.json
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -66,3 +80,5 @@ jobs:
           files: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/idl/jito_tip_distribution.json
+            mev-programs/target/idl/jito_tip_payment.json
