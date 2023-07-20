@@ -6,16 +6,20 @@ use crate::{
 };
 
 #[cfg(not(feature = "no-entrypoint"))]
-use solana_security_txt::security_txt;
+use {default_env::default_env, solana_security_txt::security_txt};
 
 #[cfg(not(feature = "no-entrypoint"))]
 security_txt! {
+    // Required fields
     name: "Jito Tip Distribution Program",
     project_url: "https://jito.network/",
     contacts: "email:support@jito.network",
     policy: "https://github.com/jito-foundation/jito-programs",
+    // Optional Fields
     preferred_languages: "en",
-    source_code: "https://github.com/jito-foundation/jito-programs"
+    source_code: "https://github.com/jito-foundation/jito-programs",
+    source_revision: default_env!("GITHUB_SHA", ""),
+    source_release: default_env!("GITHUB_REF_NAME", "")
 }
 
 pub mod merkle_proof;
