@@ -58,6 +58,7 @@ jobs:
           solana-verify build --library-name jito_tip_payment
 
       - name: Upload Artifact
+        working-directory: ./mev-programs
         uses: actions/upload-artifact@v3
         with:
           name: build
