@@ -7,8 +7,8 @@ on:
       - 'v*'
 
 jobs:
-  publish-to-apr:
-    name: Publish to apr.dev
+  release-jito-programs:
+    name: Create the jito programs release
     runs-on: big-runner-1
 
     steps:
