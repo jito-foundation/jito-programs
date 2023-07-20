@@ -1,8 +1,10 @@
-name: Publish
+name: Release
 on:
   push:
-    branches:
-      - master
+    #    branches:
+    #      - master
+    tags:
+      - 'v*'
 
 jobs:
   publish-to-apr:
@@ -28,6 +30,15 @@ jobs:
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
+      - name: Install Solana Verify
+        run: |
+          cargo install solana-verify
+          solana-verify --version
+      - name: Verifiable Build
+        working-directory: ./mev-programs
+        run: |
+          solana-verify build --library-name jito_tip_distribution
+          solana-verify build --library-name jito_tip_payment
       - name: Run Anchor test
         working-directory: ./mev-programs
         run: anchor test
@@ -40,3 +51,19 @@ jobs:
       - name: Publish tip-distribution source code
         working-directory: ./mev-programs
         run: yes 'yes' | anchor publish tip_distribution --skip-build --provider.cluster mainnet
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          working-directory: ./mev-programs
+          path: |
+            target/deploy/jito_tip_distribution.so
+            target/deploy/jito_tip_payment.so
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          working-directory: ./mev-programs
+          files: |
+            ./target/deploy/jito_tip_distribution.so
+            ./target/deploy/jito_tip_payment.so
