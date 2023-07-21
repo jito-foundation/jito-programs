@@ -1,6 +1,6 @@
 [package]
 name = "jito-tip-distribution"
-version = "0.1.2"
+version = "0.1.3"
 description = "Tip distribution program, responsible for distributing funds to entitled parties."
 edition = "2021"
 license = "Apache-2.0"
@@ -8,7 +8,7 @@ authors = ["Jito Foundation <team@jito.network>"]
 
 [lib]
 crate-type = ["cdylib", "lib"]
-name = "tip_distribution"
+name = "jito_tip_distribution"
 
 [features]
 no-entrypoint = []
@@ -18,5 +18,7 @@ default = []
 
 [dependencies]
 anchor-lang = "0.27.0"
-solana-program = "=1.14.17"
+default-env = "0.1.1"
 jito-programs-vote-state = "0.1.3"
+solana-program = "1.14"
+solana-security-txt = "1.1.1"
