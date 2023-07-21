@@ -12,6 +12,7 @@ jobs:
     runs-on: big-runner-1
 
     steps:
+      # Setup
       - uses: actions/checkout@v2
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-solana/
@@ -30,9 +31,21 @@ jobs:
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
+
+      # Build + check IDLs
+      - name: Build jito_tip_distribution
+        working-directory: ./mev-programs
+        run: anchor build --idl idl --program-name jito_tip_distribution
+      - name: Build jito_tip_payment
+        working-directory: ./mev-programs
+        run: anchor build --idl idl --program-name jito_tip_payment
+
+      # Test
       - name: Run Anchor test
         working-directory: ./mev-programs
         run: anchor test
+
+      # Verified Build
       - name: Install Solana Verify
         run: |
           cargo install solana-verify
@@ -44,20 +57,11 @@ jobs:
           solana-verify build --library-name jito_tip_distribution
           solana-verify build --library-name jito_tip_payment
 
-      - name: check tip distribution IDL
-        uses: GuillaumeFalourd/diff-action@v1
-        with:
-          first_file_path: mev-programs/idl/jito_tip_distribution.json
-          second_file_path: mev-programs/target/idl/jito_tip_distribution.json
-          expected_result: PASSED
-      - name: check tip payment IDL
-        uses: GuillaumeFalourd/diff-action@v1
-        with:
-          first_file_path: mev-programs/idl/jito_tip_payment.json
-          second_file_path: mev-programs/target/idl/jito_tip_payment.json
-          expected_result: PASSED
+      # Make sure no uncommitted changes
+      - name: Check for diff
+        run: git diff --exit-code
 
-      # Push to anchor
+      # Push to anchor repository
       - name: Anchor Login
         working-directory: ./mev-programs
         run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
