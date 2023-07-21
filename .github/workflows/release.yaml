@@ -67,10 +67,10 @@ jobs:
         run: anchor login ${{ secrets.ANCHOR_PUBLISH_TOKEN }}
       - name: Publish tip-payment source code
         working-directory: ./mev-programs
-        run: yes 'yes' | anchor publish tip_payment --skip-build --provider.cluster mainnet
+        run: yes 'yes' | anchor publish jito_tip_payment --skip-build --provider.cluster mainnet
       - name: Publish tip-distribution source code
         working-directory: ./mev-programs
-        run: yes 'yes' | anchor publish tip_distribution --skip-build --provider.cluster mainnet
+        run: yes 'yes' | anchor publish jito_tip_distribution --skip-build --provider.cluster mainnet
 
       # Upload artifacts
       - name: Upload Artifact
