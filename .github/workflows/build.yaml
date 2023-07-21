@@ -39,18 +39,6 @@ jobs:
       - name: Run Anchor test
         working-directory: ./mev-programs
         run: anchor test
-      - name: check tip distribution IDL
-        uses: GuillaumeFalourd/diff-action@v1
-        with:
-          first_file_path: mev-programs/idl/jito_tip_distribution.json
-          second_file_path: mev-programs/target/idl/jito_tip_distribution.json
-          expected_result: PASSED
-      - name: check tip payment IDL
-        uses: GuillaumeFalourd/diff-action@v1
-        with:
-          first_file_path: mev-programs/idl/jito_tip_payment.json
-          second_file_path: mev-programs/target/idl/jito_tip_payment.json
-          expected_result: PASSED
   verified-build:
     name: Build Verifiable Artifact
     runs-on: big-runner-1
@@ -68,6 +56,20 @@ jobs:
         run: |
           solana-verify build --library-name jito_tip_distribution
           solana-verify build --library-name jito_tip_payment
+
+      # note: anchor test generates the IDL differently from other build processes
+      - name: check tip distribution IDL
+        uses: GuillaumeFalourd/diff-action@v1
+        with:
+          first_file_path: mev-programs/idl/jito_tip_distribution.json
+          second_file_path: mev-programs/target/idl/jito_tip_distribution.json
+          expected_result: PASSED
+      - name: check tip payment IDL
+        uses: GuillaumeFalourd/diff-action@v1
+        with:
+          first_file_path: mev-programs/idl/jito_tip_payment.json
+          second_file_path: mev-programs/target/idl/jito_tip_payment.json
+          expected_result: PASSED
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v3

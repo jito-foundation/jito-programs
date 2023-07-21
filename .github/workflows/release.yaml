@@ -33,6 +33,17 @@ jobs:
       - name: Run Anchor test
         working-directory: ./mev-programs
         run: anchor test
+      - name: Install Solana Verify
+        run: |
+          cargo install solana-verify
+          solana-verify --version
+
+      - name: Verifiable Build
+        working-directory: ./mev-programs
+        run: |
+          solana-verify build --library-name jito_tip_distribution
+          solana-verify build --library-name jito_tip_payment
+
       - name: check tip distribution IDL
         uses: GuillaumeFalourd/diff-action@v1
         with:
@@ -45,16 +56,6 @@ jobs:
           first_file_path: mev-programs/idl/jito_tip_payment.json
           second_file_path: mev-programs/target/idl/jito_tip_payment.json
           expected_result: PASSED
-      - name: Install Solana Verify
-        run: |
-          cargo install solana-verify
-          solana-verify --version
-
-      - name: Verifiable Build
-        working-directory: ./mev-programs
-        run: |
-          solana-verify build --library-name jito_tip_distribution
-          solana-verify build --library-name jito_tip_payment
 
       # Push to anchor
       - name: Anchor Login
