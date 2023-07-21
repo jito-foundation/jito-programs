@@ -62,9 +62,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
+      # --force because the cargo cache has it saved
       - name: Install Solana Verify
         run: |
-          cargo install solana-verify
+          cargo install solana-verify --force
           solana-verify --version
 
       - name: Verifiable Build
