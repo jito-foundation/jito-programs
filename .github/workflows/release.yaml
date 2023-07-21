@@ -32,7 +32,7 @@ jobs:
         working-directory: ./mev-programs
         run: yarn
 
-      # Build + check IDLs
+      # Build IDLs
       - name: Build jito_tip_distribution
         working-directory: ./mev-programs
         run: anchor build --idl idl --program-name jito_tip_distribution
