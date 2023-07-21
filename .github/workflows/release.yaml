@@ -45,10 +45,11 @@ jobs:
         working-directory: ./mev-programs
         run: anchor test
 
-      # Verified Build
+      # Verified build
+      # --force because the cargo cache has it saved
       - name: Install Solana Verify
         run: |
-          cargo install solana-verify
+          cargo install solana-verify --force
           solana-verify --version
 
       - name: Verifiable Build
@@ -78,6 +79,15 @@ jobs:
         with:
           name: build
           path: |
+            mev-programs/target/deploy/jito_tip_distribution.so
+            mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/idl/jito_tip_distribution.json
+            mev-programs/target/idl/jito_tip_payment.json
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
             mev-programs/target/idl/jito_tip_distribution.json
