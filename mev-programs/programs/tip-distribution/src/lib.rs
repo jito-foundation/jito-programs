@@ -5,23 +5,6 @@ use crate::{
     ErrorCode::Unauthorized,
 };
 
-#[cfg(not(feature = "no-entrypoint"))]
-use {default_env::default_env, solana_security_txt::security_txt};
-
-#[cfg(not(feature = "no-entrypoint"))]
-security_txt! {
-    // Required fields
-    name: "Jito Tip Distribution Program",
-    project_url: "https://jito.network/",
-    contacts: "email:support@jito.network",
-    policy: "https://github.com/jito-foundation/jito-programs",
-    // Optional Fields
-    preferred_languages: "en",
-    source_code: "https://github.com/jito-foundation/jito-programs",
-    source_revision: default_env!("GIT_SHA", "GIT_SHA_MISSING"),
-    source_release: default_env!("GIT_REF_NAME", "GIT_REF_NAME_MISSING")
-}
-
 pub mod merkle_proof;
 pub mod sdk;
 pub mod state;
@@ -29,7 +12,7 @@ pub mod state;
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
 #[program]
-pub mod jito_tip_distribution {
+pub mod tip_distribution {
     use jito_programs_vote_state::VoteState;
 
     use super::*;

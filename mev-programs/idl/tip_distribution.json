@@ -1,6 +1,6 @@
 {
-  "version": "0.1.3",
-  "name": "jito_tip_distribution",
+  "version": "0.1.0",
+  "name": "tip_distribution",
   "instructions": [
     {
       "name": "initialize",
@@ -39,6 +39,53 @@
         },
         {
           "name": "maxValidatorCommissionBps",
+          "type": "u16"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initTipDistributionAccount",
+      "docs": [
+        "Initialize a new [TipDistributionAccount] associated with the given validator vote key",
+        "and current epoch."
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tipDistributionAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "merkleRootUploadAuthority",
+          "type": "publicKey"
+        },
+        {
+          "name": "validatorVoteAccount",
+          "type": "publicKey"
+        },
+        {
+          "name": "validatorCommissionBps",
           "type": "u16"
         },
         {

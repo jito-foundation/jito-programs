@@ -1,6 +1,6 @@
 {
-  "version": "0.1.3",
-  "name": "jito_tip_payment",
+  "version": "0.1.0",
+  "name": "tip_payment",
   "instructions": [
     {
       "name": "initialize",
