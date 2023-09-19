@@ -2,7 +2,17 @@ use anchor_lang::prelude::*;
 
 use crate::TipPaymentError::ArithmeticError;
 
+#[cfg(all(not(mainnet), not(testnet), not(localnet)))]
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
+
+#[cfg(all(mainnet, not(testnet), not(localnet)))]
+declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
+
+#[cfg(all(testnet, not(mainnet), not(localnet)))]
+declare_id!("DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC");
+
+#[cfg(all(localnet, not(mainnet), not(testnet)))]
+declare_id!("6veFRUKJBNGMR58LEcKn5Bc6MR17WZF4rsgD4Lqq7fsU");
 
 /// We've decided to hardcode the seeds, effectively meaning
 /// the following PDAs owned by this program are singleton.

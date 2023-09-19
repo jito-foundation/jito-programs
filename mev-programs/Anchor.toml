@@ -11,8 +11,8 @@ tip_distribution = "F2Zu7QZiTYUhPd7u9ukRVwxh7B71oA3NMJcHuCHc29P2"
 tip_payment = "DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC"
 
 [programs.localnet]
-tip_distribution = "4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7"
-tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
+tip_distribution = "3PX9z1qPj37eNZqH7e5fyaVDyG7ARqkjkYEe1a4xsBkA"
+tip_payment = "6veFRUKJBNGMR58LEcKn5Bc6MR17WZF4rsgD4Lqq7fsU"
 
 [workspace]
 members = [
