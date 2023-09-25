@@ -9,7 +9,17 @@ pub mod merkle_proof;
 pub mod sdk;
 pub mod state;
 
+#[cfg(all(not(mainnet), not(testnet), not(localnet)))]
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+
+#[cfg(all(mainnet, not(testnet), not(localnet)))]
+declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+
+#[cfg(all(testnet, not(mainnet), not(localnet)))]
+declare_id!("F2Zu7QZiTYUhPd7u9ukRVwxh7B71oA3NMJcHuCHc29P2");
+
+#[cfg(all(localnet, not(mainnet), not(testnet)))]
+declare_id!("3PX9z1qPj37eNZqH7e5fyaVDyG7ARqkjkYEe1a4xsBkA");
 
 #[program]
 pub mod tip_distribution {
