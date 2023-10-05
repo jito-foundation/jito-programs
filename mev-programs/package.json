@@ -4,7 +4,7 @@
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
   "dependencies": {
-    "@coral-xyz/anchor": "0.27.0"
+    "@coral-xyz/anchor": "0.28.0"
   },
   "devDependencies": {
     "@saberhq/token-utils": "^1.14.9",
