@@ -1,7 +1,7 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 
-import { TipPayment } from "../target/types/tip_payment";
+import { JitoTipPayment } from "../target/types/jito_tip_payment";
 import { assert } from "chai";
 import { PublicKey } from "@solana/web3.js";
 
@@ -41,7 +41,7 @@ const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
   preflightCommitment: "confirmed",
 });
 anchor.setProvider(provider);
-const tipPaymentProg = anchor.workspace.TipPayment as Program<TipPayment>;
+const tipPaymentProg = anchor.workspace.JitoTipPayment as Program<JitoTipPayment>;
 
 describe("tests tip_payment", () => {
   const sendTip = async (accountToTip: PublicKey, tipAmount: number) => {
