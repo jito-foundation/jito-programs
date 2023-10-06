@@ -17,14 +17,14 @@ type Epoch = u64;
 type Slot = u64;
 type UnixTimestamp = i64;
 
-#[derive(Clone, Deserialize)]
+#[derive(Eq, PartialEq, Clone, Deserialize)]
 pub struct Lockout {
     pub slot: Slot,
     pub confirmation_count: u32,
 }
 
-#[derive(Default, Deserialize)]
-struct AuthorizedVoters {
+#[derive(Clone, Default, Deserialize)]
+pub struct AuthorizedVoters {
     authorized_voters: BTreeMap<Epoch, Pubkey>,
 }
 
@@ -55,6 +55,7 @@ pub struct BlockTimestamp {
 #[derive(Deserialize)]
 pub enum VoteStateVersions {
     V0_23_5(Box<VoteState0_23_5>),
+    V1_14_11(Box<VoteState1_14_11>),
     Current(Box<VoteState>),
 }
 
@@ -68,32 +69,71 @@ impl VoteStateVersions {
                 Box::new(VoteState {
                     node_pubkey: state.node_pubkey,
 
-                    /// the signer for withdrawals
                     authorized_withdrawer: state.authorized_withdrawer,
 
-                    /// percentage (0-100) that represents what part of a rewards
-                    ///  payout should be given to this VoteAccount
                     commission: state.commission,
 
-                    votes: state.votes,
+                    votes: Self::landed_votes_from_lockouts(state.votes),
 
                     root_slot: state.root_slot,
-                    /// the signer for vote transactions
+
                     authorized_voters,
-                    /// history of prior authorized voters and the epochs for which
-                    /// they were set, the bottom end of the range is inclusive,
-                    /// the top of the range is exclusive
+
                     prior_voters: CircBuf::default(),
 
-                    /// history of how many credits earned by the end of each epoch
-                    ///  each tuple is (Epoch, credits, prev_credits)
-                    epoch_credits: state.epoch_credits,
+                    epoch_credits: state.epoch_credits.clone(),
 
-                    /// most recent timestamp submitted with a vote
-                    last_timestamp: state.last_timestamp,
+                    last_timestamp: state.last_timestamp.clone(),
                 })
             }
-            VoteStateVersions::Current(state) => state,
+
+            VoteStateVersions::V1_14_11(state) => Box::new(VoteState {
+                node_pubkey: state.node_pubkey,
+                authorized_withdrawer: state.authorized_withdrawer,
+                commission: state.commission,
+
+                votes: Self::landed_votes_from_lockouts(state.votes),
+
+                root_slot: state.root_slot,
+
+                authorized_voters: state.authorized_voters.clone(),
+
+                prior_voters: state.prior_voters,
+
+                epoch_credits: state.epoch_credits,
+
+                last_timestamp: state.last_timestamp,
+            }),
+
+            VoteStateVersions::Current(state) => Box::new(*state),
+        }
+    }
+
+    fn landed_votes_from_lockouts(lockouts: VecDeque<Lockout>) -> VecDeque<LandedVote> {
+        lockouts.into_iter().map(|lockout| lockout.into()).collect()
+    }
+}
+
+#[derive(Deserialize)]
+pub struct LandedVote {
+    // Latency is the difference in slot number between the slot that was voted on (lockout.slot) and the slot in
+    // which the vote that added this Lockout landed.  For votes which were cast before versions of the validator
+    // software which recorded vote latencies, latency is recorded as 0.
+    pub latency: u8,
+    pub lockout: Lockout,
+}
+
+impl From<LandedVote> for Lockout {
+    fn from(landed_vote: LandedVote) -> Self {
+        landed_vote.lockout
+    }
+}
+
+impl From<Lockout> for LandedVote {
+    fn from(lockout: Lockout) -> Self {
+        Self {
+            latency: 0,
+            lockout,
         }
     }
 }
@@ -104,37 +144,30 @@ pub struct VoteState {
     pub node_pubkey: Pubkey,
 
     /// the signer for withdrawals
-    #[serde(skip_deserializing)]
     pub authorized_withdrawer: Pubkey,
     /// percentage (0-100) that represents what part of a rewards
     ///  payout should be given to this VoteAccount
-    #[serde(skip_deserializing)]
     pub commission: u8,
-    #[serde(skip_deserializing)]
-    pub votes: VecDeque<Lockout>,
 
-    /// This usually the last Lockout which was popped from self.votes.
-    /// However, it can be arbitrary slot, when being used inside Tower
-    #[serde(skip_deserializing)]
+    pub votes: VecDeque<LandedVote>,
+
+    // This usually the last Lockout which was popped from self.votes.
+    // However, it can be arbitrary slot, when being used inside Tower
     pub root_slot: Option<Slot>,
 
     /// the signer for vote transactions
-    #[serde(skip_deserializing)]
     authorized_voters: AuthorizedVoters,
 
     /// history of prior authorized voters and the epochs for which
     /// they were set, the bottom end of the range is inclusive,
     /// the top of the range is exclusive
-    #[serde(skip_deserializing)]
     prior_voters: CircBuf<(Pubkey, Epoch, Epoch)>,
 
     /// history of how many credits earned by the end of each epoch
     ///  each tuple is (Epoch, credits, prev_credits)
-    #[serde(skip_deserializing)]
-    pub(crate) epoch_credits: Vec<(Epoch, u64, u64)>,
+    pub epoch_credits: Vec<(Epoch, u64, u64)>,
 
     /// most recent timestamp submitted with a vote
-    #[serde(skip_deserializing)]
     pub last_timestamp: BlockTimestamp,
 }
 
@@ -176,6 +209,81 @@ pub struct VoteState0_23_5 {
     /// most recent timestamp submitted with a vote
     #[serde(skip_deserializing)]
     pub last_timestamp: BlockTimestamp,
+}
+
+// Offset used for VoteState version 1_14_11
+const DEFAULT_PRIOR_VOTERS_OFFSET: usize = 82;
+
+#[derive(Deserialize)]
+pub struct VoteState1_14_11 {
+    /// the node that votes in this account
+    pub node_pubkey: Pubkey,
+
+    /// the signer for withdrawals
+    pub authorized_withdrawer: Pubkey,
+    /// percentage (0-100) that represents what part of a rewards
+    ///  payout should be given to this VoteAccount
+    pub commission: u8,
+
+    pub votes: VecDeque<Lockout>,
+
+    // This usually the last Lockout which was popped from self.votes.
+    // However, it can be arbitrary slot, when being used inside Tower
+    pub root_slot: Option<Slot>,
+
+    /// the signer for vote transactions
+    pub authorized_voters: AuthorizedVoters,
+
+    /// history of prior authorized voters and the epochs for which
+    /// they were set, the bottom end of the range is inclusive,
+    /// the top of the range is exclusive
+    pub prior_voters: CircBuf<(Pubkey, Epoch, Epoch)>,
+
+    /// history of how many credits earned by the end of each epoch
+    ///  each tuple is (Epoch, credits, prev_credits)
+    pub epoch_credits: Vec<(Epoch, u64, u64)>,
+
+    /// most recent timestamp submitted with a vote
+    pub last_timestamp: BlockTimestamp,
+}
+
+impl VoteState1_14_11 {
+    pub fn get_rent_exempt_reserve(rent: &Rent) -> u64 {
+        rent.minimum_balance(Self::size_of())
+    }
+
+    /// Upper limit on the size of the Vote State
+    /// when votes.len() is MAX_LOCKOUT_HISTORY.
+    pub fn size_of() -> usize {
+        3731 // see test_vote_state_size_of
+    }
+
+    pub fn is_correct_size_and_initialized(data: &[u8]) -> bool {
+        const VERSION_OFFSET: usize = 4;
+        const DEFAULT_PRIOR_VOTERS_END: usize = VERSION_OFFSET + DEFAULT_PRIOR_VOTERS_OFFSET;
+        data.len() == VoteState1_14_11::size_of()
+            && data[VERSION_OFFSET..DEFAULT_PRIOR_VOTERS_END] != [0; DEFAULT_PRIOR_VOTERS_OFFSET]
+    }
+}
+
+impl From<VoteState> for VoteState1_14_11 {
+    fn from(vote_state: VoteState) -> Self {
+        Self {
+            node_pubkey: vote_state.node_pubkey,
+            authorized_withdrawer: vote_state.authorized_withdrawer,
+            commission: vote_state.commission,
+            votes: vote_state
+                .votes
+                .into_iter()
+                .map(|landed_vote| landed_vote.into())
+                .collect(),
+            root_slot: vote_state.root_slot,
+            authorized_voters: vote_state.authorized_voters,
+            prior_voters: vote_state.prior_voters,
+            epoch_credits: vote_state.epoch_credits,
+            last_timestamp: vote_state.last_timestamp,
+        }
+    }
 }
 
 impl VoteState {
