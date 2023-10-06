@@ -39,6 +39,7 @@ jobs:
           toolchain: nightly-2023-04-19-x86_64-unknown-linux-gnu
           components: rustfmt, clippy
       - name: clippy
+        working-directory: ./mev-programs
         run: cargo +nightly-2023-04-19 clippy --all-features --all-targets --tests -- -D warnings
         shell: bash
 
