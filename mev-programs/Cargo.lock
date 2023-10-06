@@ -673,25 +673,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "jito-programs-vote-state"
-version = "0.1.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4887bc55cadadcbc95efb08d4e4f1292d34281b3ade56429bd7772244a11446d"
-dependencies = [
- "anchor-lang",
- "bincode",
- "serde",
- "serde_derive",
- "solana-program",
-]
-
-[[package]]
 name = "jito-tip-distribution"
 version = "0.1.3"
 dependencies = [
  "anchor-lang",
  "default-env",
- "jito-programs-vote-state 0.1.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jito-programs-vote-state",
  "solana-program",
  "solana-security-txt",
 ]
