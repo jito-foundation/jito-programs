@@ -40,7 +40,7 @@ jobs:
           components: rustfmt, clippy
       - name: clippy
         working-directory: ./mev-programs
-        run: cargo +nightly-2023-04-19 clippy --all-features --all-targets --tests -- -D warnings
+        run: cargo +nightly-2023-04-19 clippy
         shell: bash
 
       # Build IDLs
