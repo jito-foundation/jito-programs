@@ -3,7 +3,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorError, Program } from "@coral-xyz/anchor";
 import { JitoTipDistribution } from "../target/types/jito_tip_distribution";
 import { assert, expect } from "chai";
-import {PublicKey, VoteInit, VoteProgram} from "@solana/web3.js";
+import {PublicKey, TransactionInstruction, VoteInit, VoteProgram} from "@solana/web3.js";
 import { MerkleTree } from "./merkle-tree";
 
 const {
@@ -1004,7 +1004,6 @@ const setup_initTipDistributionAccount = async () => {
     validatorIdentityKeypair.publicKey,
     0
   );
-  console.log("VoteProgram.space: ", VoteProgram.space);
   const lamports = await provider.connection.getMinimumBalanceForRentExemption(
     VoteProgram.space
   );
@@ -1014,6 +1013,15 @@ const setup_initTipDistributionAccount = async () => {
     voteInit,
     lamports: lamports + 10 * LAMPORTS_PER_SOL,
   });
+
+  tx.instructions[0] = SystemProgram.createAccount({
+    fromPubkey: validatorIdentityKeypair.publicKey,
+    newAccountPubkey: validatorVoteAccount.publicKey,
+    lamports: lamports + 10 * LAMPORTS_PER_SOL,
+    space: 3762, // timely vote credits has a new vote account layout, which doesn't work correctly with solana web3.js
+    programId: VoteProgram.programId,
+  });
+
   try {
     await sendAndConfirmTransaction(provider.connection, tx, [
       validatorIdentityKeypair,
