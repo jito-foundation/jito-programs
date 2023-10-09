@@ -55,8 +55,8 @@ jobs:
       - name: Verifiable Build
         working-directory: ./mev-programs
         run: |
-          solana-verify build --library-name jito_tip_distribution
-          solana-verify build --library-name jito_tip_payment
+          solana-verify build --library-name jito_tip_distribution --bpf
+          solana-verify build --library-name jito_tip_payment --bpf
 
       # Make sure no uncommitted changes
       - name: Check for diff
