@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 //! This code was mostly copy-pasta'd from [here](https://github.com/solana-labs/solana/blob/df128573127c324cb5b53634a7e2d77427c6f2d8/programs/vote/src/vote_state/mod.rs#L1).
-//! In all current releases [VoteState1_14_11] is defined in the `solana-vote-program` crate which is not compatible
+//! In all current releases [VoteState] is defined in the `solana-vote-program` crate which is not compatible
 //! with programs targeting BPF bytecode due to some BPF-incompatible libraries being pulled in.
 
 use std::collections::{BTreeMap, VecDeque};
