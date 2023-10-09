@@ -5,7 +5,7 @@ on:
       - 'v*'
 
 env:
-  SOLANA_CLI_VERSION: 1.14.17
+  SOLANA_CLI_VERSION: 1.16.14
 jobs:
   release:
     name: Create the jito programs release
