@@ -7,7 +7,7 @@ on:
     branches:
       - master
 env:
-  SOLANA_CLI_VERSION: 1.16.14
+  SOLANA_CLI_VERSION: 1.16.16
 jobs:
   build-and-test:
     name: Build and test programs
@@ -29,7 +29,7 @@ jobs:
             ~/.cargo/git/db/
             ./mev-programs/target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.27.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
