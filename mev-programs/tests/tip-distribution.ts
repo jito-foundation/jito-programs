@@ -3,13 +3,11 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorError, Program } from "@coral-xyz/anchor";
 import { JitoTipDistribution } from "../target/types/jito_tip_distribution";
 import { assert, expect } from "chai";
-import { PublicKey } from "@solana/web3.js";
+import {PublicKey, VoteInit, VoteProgram} from "@solana/web3.js";
 import { MerkleTree } from "./merkle-tree";
 
 const {
   SystemProgram,
-  VoteProgram,
-  VoteInit,
   sendAndConfirmTransaction,
   LAMPORTS_PER_SOL,
 } = anchor.web3;
@@ -1006,6 +1004,7 @@ const setup_initTipDistributionAccount = async () => {
     validatorIdentityKeypair.publicKey,
     0
   );
+  console.log("VoteProgram.space: ", VoteProgram.space);
   const lamports = await provider.connection.getMinimumBalanceForRentExemption(
     VoteProgram.space
   );
