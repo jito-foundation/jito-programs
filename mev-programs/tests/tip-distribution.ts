@@ -1,7 +1,7 @@
 import { u64 } from "@saberhq/token-utils";
-import * as anchor from "@project-serum/anchor";
-import { AnchorError, Program } from "@project-serum/anchor";
-import { TipDistribution } from "../target/types/tip_distribution";
+import * as anchor from "@coral-xyz/anchor";
+import { AnchorError, Program } from "@coral-xyz/anchor";
+import { JitoTipDistribution } from "../target/types/jito_tip_distribution";
 import { assert, expect } from "chai";
 import {PublicKey, TransactionInstruction, VoteInit, VoteProgram} from "@solana/web3.js";
 import { MerkleTree } from "./merkle-tree";
@@ -22,7 +22,7 @@ const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
 });
 anchor.setProvider(provider);
 
-const tipDistribution = anchor.workspace.TipDistribution as Program<TipDistribution>;
+const tipDistribution = anchor.workspace.JitoTipDistribution as Program<JitoTipDistribution>;
 
 // globals
 let configAccount, configBump;
