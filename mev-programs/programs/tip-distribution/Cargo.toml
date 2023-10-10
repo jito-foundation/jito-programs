@@ -1,6 +1,6 @@
 [package]
-name = "tip-distribution"
-version = "0.1.0"
+name = "jito-tip-distribution"
+version = "0.1.4"
 description = "Tip distribution program, responsible for distributing funds to entitled parties."
 edition = "2021"
 license = "Apache-2.0"
