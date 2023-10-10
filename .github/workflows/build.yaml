@@ -7,7 +7,7 @@ on:
     branches:
       - master
 env:
-  SOLANA_CLI_VERSION: 1.14.17
+  SOLANA_CLI_VERSION: 1.16.16
 jobs:
   build-and-test:
     name: Build and test programs
@@ -29,14 +29,19 @@ jobs:
             ~/.cargo/git/db/
             ./mev-programs/target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.27.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
-      - uses: reinismu/clippy-check@master
+      - name: Install latest nightly
+        uses: actions-rs/toolchain@v1
         with:
-          working-directory: ./mev-programs/programs
-          token: ${{ secrets.GITHUB_TOKEN }}
+          toolchain: nightly-2023-04-19-x86_64-unknown-linux-gnu
+          components: rustfmt, clippy
+      - name: clippy
+        working-directory: ./mev-programs
+        run: cargo +nightly-2023-04-19 clippy
+        shell: bash
 
       # Build IDLs
       - name: Build jito_tip_distribution
@@ -55,42 +60,31 @@ jobs:
       - name: Check for diff
         run: git diff --exit-code
 
-  verified-build:
-    name: Build Verifiable Artifact
-    runs-on: big-runner-1
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-
-      # --force because the cargo cache has it saved
-      - name: Install Solana Verify
-        run: |
-          cargo install solana-verify --force
-          solana-verify --version
-
-      - name: Verifiable Build
-        working-directory: ./mev-programs
-        run: |
-          solana-verify build --library-name jito_tip_distribution
-          solana-verify build --library-name jito_tip_payment
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: build
-          path: |
-            mev-programs/target/deploy/jito_tip_distribution.so
-            mev-programs/target/deploy/jito_tip_payment.so
-            mev-programs/target/idl/jito_tip_distribution.json
-            mev-programs/target/idl/jito_tip_payment.json
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          working-directory: ./mev-programs
-          files: |
-            mev-programs/target/deploy/jito_tip_distribution.so
-            mev-programs/target/deploy/jito_tip_payment.so
-            mev-programs/target/idl/jito_tip_distribution.json
-            mev-programs/target/idl/jito_tip_payment.json
+#  verified-build:
+#    name: Build Verifiable Artifact
+#    runs-on: big-runner-1
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#
+#      # --force because the cargo cache has it saved
+#      - name: Install Solana Verify
+#        run: |
+#          cargo install solana-verify --force
+#          solana-verify --version
+#
+#      - name: Verifiable Build
+#        working-directory: ./mev-programs
+#        run: |
+#          solana-verify build --library-name jito_tip_distribution
+#          solana-verify build --library-name jito_tip_payment
+#
+#      - name: Upload Artifact
+#        uses: actions/upload-artifact@v3
+#        with:
+#          name: build
+#          path: |
+#            mev-programs/target/deploy/jito_tip_distribution.so
+#            mev-programs/target/deploy/jito_tip_payment.so
+#            mev-programs/target/idl/jito_tip_distribution.json
+#            mev-programs/target/idl/jito_tip_payment.json
