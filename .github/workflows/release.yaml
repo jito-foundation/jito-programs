@@ -5,7 +5,7 @@ on:
       - 'v*'
 
 env:
-  SOLANA_CLI_VERSION: 1.14.17
+  SOLANA_CLI_VERSION: 1.16.16
 jobs:
   release:
     name: Create the jito programs release
@@ -27,12 +27,12 @@ jobs:
             ~/.cargo/git/db/
             ./mev-programs/target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.27.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
 
-      # Build IDLs
+      # Build IDLs + programs
       - name: Build jito_tip_distribution
         working-directory: ./mev-programs
         run: anchor build --idl idl --program-name jito_tip_distribution
@@ -47,16 +47,16 @@ jobs:
 
       # Verified build
       # --force because the cargo cache has it saved
-      - name: Install Solana Verify
-        run: |
-          cargo install solana-verify --force
-          solana-verify --version
-
-      - name: Verifiable Build
-        working-directory: ./mev-programs
-        run: |
-          solana-verify build --library-name jito_tip_distribution
-          solana-verify build --library-name jito_tip_payment
+      #      - name: Install Solana Verify
+      #        run: |
+      #          cargo install solana-verify --force
+      #          solana-verify --version
+      #
+      #      - name: Verifiable Build
+      #        working-directory: ./mev-programs
+      #        run: |
+      #          solana-verify build --library-name jito_tip_distribution
+      #          solana-verify build --library-name jito_tip_payment
 
       # Make sure no uncommitted changes
       - name: Check for diff
