@@ -1,12 +1,11 @@
 use anchor_lang::prelude::*;
+#[cfg(not(feature = "no-entrypoint"))]
+use {default_env::default_env, solana_security_txt::security_txt};
 
 use crate::{
     state::{ClaimStatus, Config, MerkleRoot, TipDistributionAccount},
     ErrorCode::Unauthorized,
 };
-
-#[cfg(not(feature = "no-entrypoint"))]
-use {default_env::default_env, solana_security_txt::security_txt};
 
 #[cfg(not(feature = "no-entrypoint"))]
 security_txt! {
