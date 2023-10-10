@@ -20,3 +20,5 @@ default = []
 
 [dependencies]
 anchor-lang = { path = "../../../../anchor/lang" }
+default-env = "0.1.1"
+solana-security-txt = "1.1.1"
