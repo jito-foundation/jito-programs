@@ -2,17 +2,24 @@ use anchor_lang::prelude::*;
 
 use crate::TipPaymentError::ArithmeticError;
 
-#[cfg(all(not(mainnet), not(testnet), not(localnet)))]
+#[cfg(not(feature = "no-entrypoint"))]
+use {default_env::default_env, solana_security_txt::security_txt};
+
+#[cfg(not(feature = "no-entrypoint"))]
+security_txt! {
+    // Required fields
+    name: "Jito Tip Payment Program",
+    project_url: "https://jito.network/",
+    contacts: "email:support@jito.network",
+    policy: "https://github.com/jito-foundation/jito-programs",
+    // Optional Fields
+    preferred_languages: "en",
+    source_code: "https://github.com/jito-foundation/jito-programs",
+    source_revision: default_env!("GIT_SHA", "GIT_SHA_MISSING"),
+    source_release: default_env!("GIT_REF_NAME", "GIT_REF_NAME_MISSING")
+}
+
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
-
-#[cfg(all(mainnet, not(testnet), not(localnet)))]
-declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
-
-#[cfg(all(testnet, not(mainnet), not(localnet)))]
-declare_id!("DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC");
-
-#[cfg(all(localnet, not(mainnet), not(testnet)))]
-declare_id!("6veFRUKJBNGMR58LEcKn5Bc6MR17WZF4rsgD4Lqq7fsU");
 
 /// We've decided to hardcode the seeds, effectively meaning
 /// the following PDAs owned by this program are singleton.
@@ -32,7 +39,7 @@ pub const TIP_ACCOUNT_SEED_7: &[u8] = b"TIP_ACCOUNT_7";
 pub const HEADER: usize = 8;
 
 #[program]
-pub mod tip_payment {
+pub mod jito_tip_payment {
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumps) -> Result<()> {
