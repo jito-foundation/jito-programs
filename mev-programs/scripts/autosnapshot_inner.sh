@@ -115,7 +115,7 @@ create_snapshot_for_slot() {
 
   # produces snapshot in $snapshot_dir
   # shellcheck disable=SC2012
-  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot --enable-accounts-disk-index "$snapshot_slot" "$snapshot_dir"
+  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot "$snapshot_slot" "$snapshot_dir"
 
   # TODO: figure this out
   # for some reason solana-ledger-tool error doesn't cause this script to exit out, so check status here
@@ -124,6 +124,35 @@ create_snapshot_for_slot() {
     echo "solana-ledger-tool returned $exit_status, exiting."
     exit $exit_status
   fi
+}
+
+get_gcloud_path() {
+  local solana_cluster=$1
+  local epoch=$2
+  local file_name=$3
+
+  local upload_path
+
+  upload_path="gs://jito-$solana_cluster/$epoch/$(hostname)/$file_name"
+
+  echo "$upload_path"
+}
+
+get_filepath_in_gcloud() {
+  local upload_path=$1
+
+  local file_uploaded
+
+  file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
+
+  echo "$file_uploaded"
+}
+
+upload_file_to_gcloud() {
+  local filepath=$1
+  local gcloud_path=$2
+
+  gcloud storage cp "$filepath" "$gcloud_path"
 }
 
 generate_stake_meta() {
@@ -160,6 +189,20 @@ generate_merkle_trees() {
     --out-path "$merkle_tree_filepath"
 }
 
+upload_merkle_roots() {
+  local merkle_root_path=$1
+  local keypair_path=$2
+  local rpc_url=$3
+  local tip_distribution_program_id=$4
+
+  RUST_LOG=info \
+    solana-merkle-root-uploader \
+    --merkle-root-path "$merkle_root_path" \
+    --keypair-path "$keypair_path" \
+    --rpc-url "$rpc_url" \
+    --tip-distribution-program-id "$tip_distribution_program_id"
+}
+
 claim_tips() {
   local merkle_trees_path=$1
   local rpc_url=$2
@@ -171,28 +214,6 @@ claim_tips() {
     --rpc-url "$rpc_url" \
     --tip-distribution-program-id "$tip_distribution_program_id" \
     --keypair-path "$keypair_path"
-}
-
-get_gcloud_path() {
-  local solana_cluster=$1
-  local epoch=$2
-  local file_name=$3
-
-  local upload_path
-
-  upload_path="gs://jito-$solana_cluster/$epoch/$(hostname)/$file_name"
-
-  echo "$upload_path"
-}
-
-get_filepath_in_gcloud() {
-  local upload_path=$1
-
-  local file_uploaded
-
-  file_uploaded=$(gcloud storage ls "$upload_path" | { grep "$upload_path" || true; })
-
-  echo "$file_uploaded"
 }
 
 prune_old_snapshots() {
@@ -215,26 +236,7 @@ prune_old_snapshots() {
   rm -f -v $to_delete_snapshot
 }
 
-upload_file_to_gcloud() {
-  local filepath=$1
-  local gcloud_path=$2
 
-  gcloud storage cp "$filepath" "$gcloud_path"
-}
-
-upload_merkle_roots() {
-  local merkle_root_path=$1
-  local keypair_path=$2
-  local rpc_url=$3
-  local tip_distribution_program_id=$4
-
-  RUST_LOG=info \
-    solana-merkle-root-uploader \
-    --merkle-root-path "$merkle_root_path" \
-    --keypair-path "$keypair_path" \
-    --rpc-url "$rpc_url" \
-    --tip-distribution-program-id "$tip_distribution_program_id"
-}
 
 find_previous_epoch_last_slot() {
   local slot_with_block=$1
