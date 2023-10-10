@@ -4,11 +4,7 @@
     "lint": "prettier */*.js \"*/**/*{.js,.ts}\" --check"
   },
   "dependencies": {
-<<<<<<< HEAD
-    "@project-serum/anchor": "0.26.0"
-=======
     "@coral-xyz/anchor": "0.28.0"
->>>>>>> b913019 (Add new vote account for timely vote credits (#101))
   },
   "devDependencies": {
     "@saberhq/token-utils": "^1.14.9",
