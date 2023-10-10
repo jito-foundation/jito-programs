@@ -18,5 +18,7 @@ default = []
 
 [dependencies]
 anchor-lang = { path = "../../../../anchor/lang" }
-solana-program = { path = "../../../../sdk/program" }
+default-env = "0.1.1"
 jito-programs-vote-state = { path = "../vote-state" }
+solana-program = { path = "../../../../sdk/program" }
+solana-security-txt = "1.1.1"
