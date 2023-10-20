@@ -60,31 +60,31 @@ jobs:
       - name: Check for diff
         run: git diff --exit-code
 
-#  verified-build:
-#    name: Build Verifiable Artifact
-#    runs-on: big-runner-1
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#
-#      # --force because the cargo cache has it saved
-#      - name: Install Solana Verify
-#        run: |
-#          cargo install solana-verify --force
-#          solana-verify --version
-#
-#      - name: Verifiable Build
-#        working-directory: ./mev-programs
-#        run: |
-#          solana-verify build --library-name jito_tip_distribution
-#          solana-verify build --library-name jito_tip_payment
-#
-#      - name: Upload Artifact
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: build
-#          path: |
-#            mev-programs/target/deploy/jito_tip_distribution.so
-#            mev-programs/target/deploy/jito_tip_payment.so
-#            mev-programs/target/idl/jito_tip_distribution.json
-#            mev-programs/target/idl/jito_tip_payment.json
+  verified-build:
+    name: Build Verifiable Artifact
+    runs-on: big-runner-1
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # --force because the cargo cache has it saved
+      - name: Install Solana Verify
+        run: |
+          cargo install solana-verify --force
+          solana-verify --version
+
+      - name: Verifiable Build
+        working-directory: ./mev-programs
+        run: |
+          solana-verify build --library-name jito_tip_distribution
+          solana-verify build --library-name jito_tip_payment
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: build
+          path: |
+            mev-programs/target/deploy/jito_tip_distribution.so
+            mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/idl/jito_tip_distribution.json
+            mev-programs/target/idl/jito_tip_payment.json
