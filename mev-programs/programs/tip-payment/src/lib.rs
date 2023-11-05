@@ -18,6 +18,16 @@ security_txt! {
     source_release: default_env!("GIT_REF_NAME", "GIT_REF_NAME_MISSING")
 }
 
+#[cfg(mainnet)]
+declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
+
+#[cfg(testnet)]
+declare_id!("DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC");
+
+#[cfg(localnet)]
+declare_id!("6veFRUKJBNGMR58LEcKn5Bc6MR17WZF4rsgD4Lqq7fsU");
+
+#[cfg(not(any(mainnet, testnet, localnet)))]
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
 
 /// We've decided to hardcode the seeds, effectively meaning

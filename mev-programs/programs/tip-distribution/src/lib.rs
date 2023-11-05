@@ -25,6 +25,16 @@ pub mod merkle_proof;
 pub mod sdk;
 pub mod state;
 
+#[cfg(mainnet)]
+declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+
+#[cfg(testnet)]
+declare_id!("F2Zu7QZiTYUhPd7u9ukRVwxh7B71oA3NMJcHuCHc29P2");
+
+#[cfg(localnet)]
+declare_id!("3PX9z1qPj37eNZqH7e5fyaVDyG7ARqkjkYEe1a4xsBkA");
+
+#[cfg(not(any(mainnet, testnet, localnet)))]
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
 #[program]

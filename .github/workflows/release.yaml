@@ -43,6 +43,8 @@ jobs:
       # Test
       - name: Run Anchor test
         working-directory: ./mev-programs
+        env:
+          RUSTFLAGS: '--cfg testnet'
         run: anchor test
 
       # Verified build
