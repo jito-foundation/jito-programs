@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4.0
-FROM rust:1.72.1-slim-bullseye as builder
+FROM rust:1.66.0-slim-bullseye as builder
 
 RUN set -x \
     && apt-get -qq update \
@@ -13,11 +13,11 @@ RUN set -x \
     zlib1g-dev \
     curl
 
-RUN sh -c "$(curl -sSfL https://release.solana.com/v1.16.17/install)"
+RUN sh -c "$(curl -sSfL https://release.solana.com/v1.14.17/install)"
 
 ENV PATH="/root/.local/share/solana/install/active_release/bin:$PATH"
 
-RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked
+RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.27.0 anchor-cli --locked
 
 WORKDIR /jito-programs
 COPY . .
