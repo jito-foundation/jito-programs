@@ -16,4 +16,9 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
+<<<<<<< HEAD
 anchor-lang = "0.26.0"
+=======
+anchor-lang = { version = "0.27.0", features = ["init-if-needed"] }
+anchor-spl = {version = "0.27.0", features = ["token"]}
+>>>>>>> 28520ea (lil cleanup (#111))
