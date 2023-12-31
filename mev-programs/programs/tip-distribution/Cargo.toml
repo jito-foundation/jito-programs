@@ -17,8 +17,8 @@ cpi = ["no-entrypoint"]
 default = []
 
 [dependencies]
-anchor-lang = "0.28.0"
+anchor-lang = "0.29.0"
 default-env = "0.1.1"
 jito-programs-vote-state = { path = "../vote-state" }
-solana-program = "1.16"
+solana-program = "1.17"
 solana-security-txt = "1.1.1"

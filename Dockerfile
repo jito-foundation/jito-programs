@@ -13,11 +13,11 @@ RUN set -x \
     zlib1g-dev \
     curl
 
-RUN sh -c "$(curl -sSfL https://release.solana.com/v1.16.17/install)"
+RUN sh -c "$(curl -sSfL https://release.solana.com/v1.17.6/install)"
 
 ENV PATH="/root/.local/share/solana/install/active_release/bin:$PATH"
 
-RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked
+RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked
 
 WORKDIR /jito-programs
 COPY . .
