@@ -2,10 +2,10 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 env:
-  SOLANA_CLI_VERSION: 1.16.17
+  SOLANA_CLI_VERSION: 1.17.6
 jobs:
   release:
     name: Create the jito programs release
@@ -27,7 +27,7 @@ jobs:
             ~/.cargo/git/db/
             ./mev-programs/target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.29.0 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn

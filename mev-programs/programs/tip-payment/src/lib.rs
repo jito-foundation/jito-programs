@@ -47,15 +47,15 @@ pub mod jito_tip_payment {
         cfg.block_builder = ctx.accounts.payer.key();
 
         let bumps = InitBumps {
-            config: *ctx.bumps.get("config").unwrap(),
-            tip_payment_account_0: *ctx.bumps.get("tip_payment_account_0").unwrap(),
-            tip_payment_account_1: *ctx.bumps.get("tip_payment_account_1").unwrap(),
-            tip_payment_account_2: *ctx.bumps.get("tip_payment_account_2").unwrap(),
-            tip_payment_account_3: *ctx.bumps.get("tip_payment_account_3").unwrap(),
-            tip_payment_account_4: *ctx.bumps.get("tip_payment_account_4").unwrap(),
-            tip_payment_account_5: *ctx.bumps.get("tip_payment_account_5").unwrap(),
-            tip_payment_account_6: *ctx.bumps.get("tip_payment_account_6").unwrap(),
-            tip_payment_account_7: *ctx.bumps.get("tip_payment_account_7").unwrap(),
+            config: ctx.bumps.config,
+            tip_payment_account_0: ctx.bumps.tip_payment_account_0,
+            tip_payment_account_1: ctx.bumps.tip_payment_account_1,
+            tip_payment_account_2: ctx.bumps.tip_payment_account_2,
+            tip_payment_account_3: ctx.bumps.tip_payment_account_3,
+            tip_payment_account_4: ctx.bumps.tip_payment_account_4,
+            tip_payment_account_5: ctx.bumps.tip_payment_account_5,
+            tip_payment_account_6: ctx.bumps.tip_payment_account_6,
+            tip_payment_account_7: ctx.bumps.tip_payment_account_7,
         };
         cfg.bumps = bumps;
         cfg.block_builder_commission_pct = 0;
