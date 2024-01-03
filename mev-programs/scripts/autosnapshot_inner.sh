@@ -36,8 +36,13 @@ check_env_vars_set() {
     exit 1
   fi
 
-  if [ -z "$SNAPSHOT_DIR" ]; then
-    echo "SNAPSHOT_DIR must be set"
+  if [ -z "$SNAPSHOT_OUTPUT_DIR" ]; then
+    echo "SNAPSHOT_OUTPUT_DIR must be set"
+    exit 1
+  fi
+
+  if [ -z "$SNAPSHOT_ARCHIVE_DIR" ]; then
+    echo "SNAPSHOT_ARCHIVE_DIR must be set"
     exit 1
   fi
 
@@ -107,15 +112,16 @@ get_snapshot_filename() {
 # creates a snapshot for the given slot
 create_snapshot_for_slot() {
   local snapshot_slot=$1
-  local snapshot_dir=$2
-  local ledger_location=$3
+  local snapshot_output_dir=$2
+  local snapshot_archive_dir=$3
+  local ledger_location=$4
 
   local snapshot_file
   local exit_status
 
-  # produces snapshot in $snapshot_dir
+  # produces snapshot in $snapshot_output_dir
   # shellcheck disable=SC2012
-  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot --enable-accounts-disk-index "$snapshot_slot" "$snapshot_dir"
+  RUST_LOG=info solana-ledger-tool -l "$ledger_location" create-snapshot --snapshot-archive-path "$snapshot_archive_dir" "$snapshot_slot" "$snapshot_output_dir"
 
   # TODO: figure this out
   # for some reason solana-ledger-tool error doesn't cause this script to exit out, so check status here
@@ -124,53 +130,6 @@ create_snapshot_for_slot() {
     echo "solana-ledger-tool returned $exit_status, exiting."
     exit $exit_status
   fi
-}
-
-generate_stake_meta() {
-  local slot=$1
-  local snapshot_dir=$2
-  local stake_meta_filename=$3
-  local tip_distribution_program_id=$4
-  local tip_payment_program_id=$5
-
-  rm -rf "$snapshot_dir"/stake-meta.accounts
-  rm -rf "$snapshot_dir"/tmp*
-  rm -rf /tmp/.tmp* # calculate hash stuff stored here
-
-  RUST_LOG=info solana-stake-meta-generator \
-    --ledger-path "$snapshot_dir" \
-    --tip-distribution-program-id "$tip_distribution_program_id" \
-    --out-path "$snapshot_dir/$stake_meta_filename" \
-    --snapshot-slot "$slot" \
-    --tip-payment-program-id "$tip_payment_program_id"
-
-  rm -rf "$snapshot_dir"/stake-meta.accounts
-  rm -rf "$snapshot_dir"/tmp*
-  rm -rf /tmp/.tmp* # calculate hash stuff stored here
-}
-
-generate_merkle_trees() {
-  local stake_meta_filepath=$1
-  local merkle_tree_filepath=$2
-  local rpc_url=$3
-
-  RUST_LOG=info solana-merkle-root-generator \
-    --rpc-url "$rpc_url" \
-    --stake-meta-coll-path "$stake_meta_filepath" \
-    --out-path "$merkle_tree_filepath"
-}
-
-claim_tips() {
-  local merkle_trees_path=$1
-  local rpc_url=$2
-  local tip_distribution_program_id=$3
-  local keypair_path=$4
-
-  RUST_LOG=info solana-claim-mev-tips \
-    --merkle-trees-path "$merkle_trees_path" \
-    --rpc-url "$rpc_url" \
-    --tip-distribution-program-id "$tip_distribution_program_id" \
-    --keypair-path "$keypair_path"
 }
 
 get_gcloud_path() {
@@ -195,31 +154,45 @@ get_filepath_in_gcloud() {
   echo "$file_uploaded"
 }
 
-prune_old_snapshots() {
-  NUM_SNAPSHOTS_TO_KEEP=3
-  local to_delete_stake
-  local to_delete_merkle
-  local to_delete_snapshot
-
-  # sorts by timestamp in filename
-  to_delete_stake=$(find "$SNAPSHOT_DIR" -type f -name 'stake-meta-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
-  to_delete_merkle=$(find "$SNAPSHOT_DIR" -type f -name 'merkle-tree-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
-  to_delete_snapshot=$(find "$SNAPSHOT_DIR" -type f -name 'snapshot-[0-9]*-[[:alnum:]]*.tar.zst' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
-
-  echo "pruning $(echo "$to_delete_snapshot" | wc -w) snapshots in $SNAPSHOT_DIR"
-  # shellcheck disable=SC2086
-  rm -f -v $to_delete_stake
-  # shellcheck disable=SC2086
-  rm -f -v $to_delete_merkle
-  # shellcheck disable=SC2086
-  rm -f -v $to_delete_snapshot
-}
-
 upload_file_to_gcloud() {
   local filepath=$1
   local gcloud_path=$2
 
   gcloud storage cp "$filepath" "$gcloud_path"
+}
+
+generate_stake_meta() {
+  local slot=$1
+  local snapshot_output_dir=$2
+  local stake_meta_filename=$3
+  local tip_distribution_program_id=$4
+  local tip_payment_program_id=$5
+
+  rm -rf "$snapshot_output_dir"/stake-meta.accounts
+  rm -rf "$snapshot_output_dir"/tmp*
+  rm -rf /tmp/.tmp* # calculate hash stuff stored here
+
+  RUST_LOG=info solana-stake-meta-generator \
+    --ledger-path "$snapshot_output_dir" \
+    --tip-distribution-program-id "$tip_distribution_program_id" \
+    --out-path "$snapshot_output_dir/$stake_meta_filename" \
+    --snapshot-slot "$slot" \
+    --tip-payment-program-id "$tip_payment_program_id"
+
+  rm -rf "$snapshot_output_dir"/stake-meta.accounts
+  rm -rf "$snapshot_output_dir"/tmp*
+  rm -rf /tmp/.tmp* # calculate hash stuff stored here
+}
+
+generate_merkle_trees() {
+  local stake_meta_filepath=$1
+  local merkle_tree_filepath=$2
+  local rpc_url=$3
+
+  RUST_LOG=info solana-merkle-root-generator \
+    --rpc-url "$rpc_url" \
+    --stake-meta-coll-path "$stake_meta_filepath" \
+    --out-path "$merkle_tree_filepath"
 }
 
 upload_merkle_roots() {
@@ -235,6 +208,41 @@ upload_merkle_roots() {
     --rpc-url "$rpc_url" \
     --tip-distribution-program-id "$tip_distribution_program_id"
 }
+
+claim_tips() {
+  local merkle_trees_path=$1
+  local rpc_url=$2
+  local tip_distribution_program_id=$3
+  local keypair_path=$4
+
+  RUST_LOG=info solana-claim-mev-tips \
+    --merkle-trees-path "$merkle_trees_path" \
+    --rpc-url "$rpc_url" \
+    --tip-distribution-program-id "$tip_distribution_program_id" \
+    --keypair-path "$keypair_path"
+}
+
+prune_old_snapshots() {
+  NUM_SNAPSHOTS_TO_KEEP=3
+  local to_delete_stake
+  local to_delete_merkle
+  local to_delete_snapshot
+
+  # sorts by timestamp in filename
+  to_delete_stake=$(find "$SNAPSHOT_OUTPUT_DIR" -type f -name 'stake-meta-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
+  to_delete_merkle=$(find "$SNAPSHOT_OUTPUT_DIR" -type f -name 'merkle-tree-[0-9]*.json' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
+  to_delete_snapshot=$(find "$SNAPSHOT_OUTPUT_DIR" -type f -name 'snapshot-[0-9]*-[[:alnum:]]*.tar.zst' | sort | head -n -$NUM_SNAPSHOTS_TO_KEEP)
+
+  echo "pruning $(echo "$to_delete_snapshot" | wc -w) snapshots in $SNAPSHOT_OUTPUT_DIR"
+  # shellcheck disable=SC2086
+  rm -f -v $to_delete_stake
+  # shellcheck disable=SC2086
+  rm -f -v $to_delete_merkle
+  # shellcheck disable=SC2086
+  rm -f -v $to_delete_snapshot
+}
+
+
 
 find_previous_epoch_last_slot() {
   local slot_with_block=$1
@@ -267,8 +275,8 @@ main() {
   check_env_vars_set
 
   # make sure snapshot location exists and has a genesis file in it
-  mkdir -p "$SNAPSHOT_DIR"
-  cp "$LEDGER_DIR"/genesis.bin "$SNAPSHOT_DIR"
+  mkdir -p "$SNAPSHOT_OUTPUT_DIR"
+  cp "$LEDGER_DIR"/genesis.bin "$SNAPSHOT_OUTPUT_DIR"
 
   # ---------------------------------------------------------------------------
   # Read epoch info off RPC and calculate previous epoch + previous epoch's last slot
@@ -288,7 +296,7 @@ main() {
   echo "epoch_info: $epoch_info"
   echo "previous_epoch_final_slot: $previous_epoch_final_slot"
 
-  FILE="$SNAPSHOT_DIR/$last_epoch.done"
+  FILE="$SNAPSHOT_OUTPUT_DIR/$last_epoch.done"
   if [ -f "$FILE" ]; then
     echo "epoch $last_epoch finished uploading, exiting"
     exit 0
@@ -298,16 +306,16 @@ main() {
   # Take snapshot and upload to gcloud
   # ---------------------------------------------------------------------------
 
-  snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
-  snapshot_path="$SNAPSHOT_DIR/$snapshot_file"
+  snapshot_file=$(get_snapshot_filename "$SNAPSHOT_OUTPUT_DIR" "$previous_epoch_final_slot")
+  snapshot_path="$SNAPSHOT_OUTPUT_DIR/$snapshot_file"
   if [[ ! -f $snapshot_path ]]; then
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "creating snapshot for epoch: $last_epoch slot: $previous_epoch_final_slot"
     prune_old_snapshots
-    create_snapshot_for_slot "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$LEDGER_DIR"
+    create_snapshot_for_slot "$previous_epoch_final_slot" "$SNAPSHOT_OUTPUT_DIR" "$SNAPSHOT_ARCHIVE_DIR" "$LEDGER_DIR"
 
     # snapshot file should exist now, grab the filename here (snapshot-$slot-$hash.tar.zst)
-    snapshot_file=$(get_snapshot_filename "$SNAPSHOT_DIR" "$previous_epoch_final_slot")
-    snapshot_path="$SNAPSHOT_DIR/$snapshot_file"
+    snapshot_file=$(get_snapshot_filename "$SNAPSHOT_OUTPUT_DIR" "$previous_epoch_final_slot")
+    snapshot_path="$SNAPSHOT_OUTPUT_DIR/$snapshot_file"
   else
     echo "snapshot file already exists at: $snapshot_path"
   fi
@@ -328,10 +336,10 @@ main() {
   # ---------------------------------------------------------------------------
 
   stake_meta_filename=stake-meta-"$previous_epoch_final_slot".json
-  stake_meta_filepath="$SNAPSHOT_DIR/$stake_meta_filename"
+  stake_meta_filepath="$SNAPSHOT_OUTPUT_DIR/$stake_meta_filename"
   if [[ ! -f $stake_meta_filepath ]]; then
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running stake-meta-generator for epoch: $last_epoch slot: $previous_epoch_final_slot"
-    generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_DIR" "$stake_meta_filename" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
+    generate_stake_meta "$previous_epoch_final_slot" "$SNAPSHOT_OUTPUT_DIR" "$stake_meta_filename" "$TIP_DISTRIBUTION_PROGRAM_ID" "$TIP_PAYMENT_PROGRAM_ID"
   else
     echo "stake-meta already exists at: $stake_meta_filepath"
   fi
@@ -351,7 +359,7 @@ main() {
   # ---------------------------------------------------------------------------
 
   merkle_tree_filename=merkle-tree-"$previous_epoch_final_slot".json
-  merkle_tree_filepath="$SNAPSHOT_DIR/$merkle_tree_filename"
+  merkle_tree_filepath="$SNAPSHOT_OUTPUT_DIR/$merkle_tree_filename"
   if [[ ! -f $merkle_tree_filepath ]]; then
     post_slack_message "$SLACK_APP_TOKEN" "$SLACK_CHANNEL" "running merkle-root-generator for epoch: $last_epoch slot: $previous_epoch_final_slot"
     generate_merkle_trees "$stake_meta_filepath" "$merkle_tree_filepath" "$RPC_URL"
@@ -397,7 +405,7 @@ main() {
   # ---------------------------------------------------------------------------
   prune_old_snapshots
 
-  touch "$SNAPSHOT_DIR/$last_epoch.done"
+  touch "$SNAPSHOT_OUTPUT_DIR/$last_epoch.done"
 }
 
 main
