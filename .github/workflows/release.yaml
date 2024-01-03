@@ -5,7 +5,7 @@ on:
       - 'v*'
 
 env:
-  SOLANA_CLI_VERSION: 1.14.17
+  SOLANA_CLI_VERSION: 1.16.17
 jobs:
   release:
     name: Create the jito programs release
@@ -27,12 +27,12 @@ jobs:
             ~/.cargo/git/db/
             ./mev-programs/target/
           key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.27.0 anchor-cli --locked --force
+      - run: cargo install --git https://github.com/coral-xyz/anchor --tag v0.28.0 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
 
-      # Build IDLs
+      # Build IDLs + programs
       - name: Build jito_tip_distribution
         working-directory: ./mev-programs
         run: anchor build --idl idl --program-name jito_tip_distribution
