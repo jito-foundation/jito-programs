@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 #[cfg(not(feature = "no-entrypoint"))]
-use {default_env::default_env, solana_security_txt::security_txt};
+use solana_security_txt::security_txt;
 
 use crate::TipPaymentError::ArithmeticError;
 
@@ -14,8 +14,8 @@ security_txt! {
     // Optional Fields
     preferred_languages: "en",
     source_code: "https://github.com/jito-foundation/jito-programs",
-    source_revision: default_env!("GIT_SHA", "GIT_SHA_MISSING"),
-    source_release: default_env!("GIT_REF_NAME", "GIT_REF_NAME_MISSING")
+    source_revision: std::env!("GIT_SHA"),
+    source_release: std::env!("GIT_REF_NAME")
 }
 
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");

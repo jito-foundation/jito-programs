@@ -29,3 +29,6 @@ test = "yarn ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.{ts,js}"
 
 [test.validator]
 slots_per_epoch = "32"
+
+[features]
+resolution = false
