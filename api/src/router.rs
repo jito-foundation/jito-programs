@@ -123,6 +123,7 @@ struct Params {
     epoch: u64,
 }
 
+#[instrument(ret)]
 async fn get_tip_distribution(
     Path(params): Path<Params>,
     State(state): State<Arc<RouterState>>,

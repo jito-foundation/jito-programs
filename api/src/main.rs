@@ -8,7 +8,7 @@ use error::ApiError;
 use router::RouterState;
 use solana_program::pubkey::Pubkey;
 use solana_rpc_client::nonblocking::rpc_client::RpcClient;
-use tracing::info;
+use tracing::{info, instrument};
 
 pub type Result<T> = std::result::Result<T, ApiError>;
 
@@ -29,8 +29,11 @@ pub struct Args {
 }
 
 #[tokio::main]
+#[instrument]
 async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
+
+    tracing_subscriber::fmt().init();
 
     info!("args: {:?}", args);
 
