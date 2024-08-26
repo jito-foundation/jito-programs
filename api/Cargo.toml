@@ -1,0 +1,26 @@
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anchor-lang = "0.28.0"
+axum = "0.7.5"
+clap = { version = "4.5.16", features = ["derive", "env"] }
+derive = "1.0.0"
+features = "0.10.0"
+http = "1.1.0"
+jito-tip-distribution = { path = "../mev-programs/programs/tip-distribution" }
+serde = "1.0.209"
+serde_json = "1.0.127"
+solana-program = "1.16"
+solana-rpc-client = "1.16"
+solana-rpc-client-api = "1.16"
+thiserror = "1.0.63"
+tokio = { version = "1.39.3", features = ["full"] }
+tower = { version = "0.5.0", features = ["limit", "buffer", "timeout", "load-shed"] }
+tower-http = { version = "0.5.2", features = ["trace"] }
+tracing = "0.1.40"
+tracing-core = "0.1.32"

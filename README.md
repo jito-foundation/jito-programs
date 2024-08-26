@@ -13,3 +13,19 @@ This gitflow for this repo is as follows:
 - `git cherry-pick` your new commits into `submodule`
 - push `submodule`
 - 
+
+## API
+
+### Run
+
+```bash
+cd api
+
+cargo r -- --bind-addr <BIND_ADDR>  --rpc-url <RPC_URL> --jito-tip-distribution-program-id <JITO_TIP_DISTRIBUTION_PROGRAM_ID>
+```
+
+### Send a request
+
+```bash
+curl http://localhost:7001/get_tip_distribution/{vote_account}/{epoch} 
+```
