@@ -15,13 +15,13 @@ use tracing::log::error;
 #[derive(Error, Debug)]
 pub enum ApiError {
     #[error("Rpc Error")]
-    RpcError(#[from] RpcError),
+    Rpc(#[from] RpcError),
 
     #[error("Parse Pubkey Error")]
-    ParsePubkeyError(#[from] ParsePubkeyError),
+    ParsePubkey(#[from] ParsePubkeyError),
 
     #[error("Internal Error")]
-    InternalError,
+    Internal,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -31,15 +31,15 @@ pub struct Error {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error_message) = match self {
-            ApiError::ParsePubkeyError(e) => {
+            ApiError::ParsePubkey(e) => {
                 error!("Parse pubkey error: {e}");
                 (StatusCode::INTERNAL_SERVER_ERROR, "Pubkey parse error")
             }
-            ApiError::RpcError(e) => {
+            ApiError::Rpc(e) => {
                 error!("Rpc error: {e}");
                 (StatusCode::INTERNAL_SERVER_ERROR, "Rpc error")
             }
-            ApiError::InternalError => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
+            ApiError::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "Internal Server Error"),
         };
         (
             status,

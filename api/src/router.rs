@@ -145,16 +145,13 @@ async fn get_tip_distribution(
     )
     .unwrap();
 
-    let merkle_root = match tip_distribution.merkle_root {
-        Some(inner) => Some(MerkleRoot {
-            root: inner.root,
-            max_total_claim: inner.max_total_claim,
-            max_num_nodes: inner.max_num_nodes,
-            total_funds_claimed: inner.total_funds_claimed,
-            num_nodes_claimed: inner.num_nodes_claimed,
-        }),
-        None => None,
-    };
+    let merkle_root = tip_distribution.merkle_root.map(|inner| MerkleRoot {
+        root: inner.root,
+        max_total_claim: inner.max_total_claim,
+        max_num_nodes: inner.max_num_nodes,
+        total_funds_claimed: inner.total_funds_claimed,
+        num_nodes_claimed: inner.num_nodes_claimed,
+    });
 
     Ok(Json(TipDistribution {
         validator_vote_account: tip_distribution.validator_vote_account,
