@@ -1,7 +1,8 @@
 [workspace]
 members = [
     "programs/*",
-    "initialize_tip_distribution"
+    "initialize_tip_distribution",
+    "initialize_tip_payment"
 ]
 
 [profile.release]
