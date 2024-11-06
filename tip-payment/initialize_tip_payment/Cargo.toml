@@ -1,0 +1,13 @@
+[package]
+name = "initialize-tip-payment"
+version = "0.1.0"
+description = "Initialize tip payment"
+edition = "2021"
+
+[dependencies]
+anchor-client = "0.25.0"
+anchor-lang = "0.25.0"
+clap = { version = "3.2.23", features = ["derive", "env"] }
+tip-payment = { path = "../programs/tip-payment", features = ["no-entrypoint"] }
+solana-client = "=1.10.33"
+solana-sdk = "=1.10.33"
