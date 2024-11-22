@@ -1,0 +1,8 @@
+[package]
+name = "jito-tip-distribution-sdk"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anchor-lang = "0.30.0" 
+jito-tip-distribution = { path = "../tip-distribution" }

@@ -928,6 +928,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "jito-tip-distribution-sdk"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "jito-tip-distribution",
+]
+
+[[package]]
 name = "jito-tip-payment"
 version = "0.1.5"
 dependencies = [
