@@ -1,0 +1,14 @@
+[package]
+name = "tip-payment-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anchor-lang = "0.28.0"
+clap = { version = "=4.0", features = ["derive"] }
+solana-sdk = "1.16"
+solana-client = "1.16"
+solana-program = "1.16"
+anyhow = "1.0"
+jito-tip-payment = { path = "../programs/tip-payment", features = ["no-entrypoint"] }
+ 
