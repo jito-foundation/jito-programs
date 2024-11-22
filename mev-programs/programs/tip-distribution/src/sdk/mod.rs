@@ -1,4 +1,4 @@
-pub mod instruction;
+pub mod instructions;
 
 use anchor_lang::{prelude::Pubkey, solana_program::clock::Epoch};
 
