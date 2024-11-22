@@ -1,4 +1,4 @@
-pub mod instructions;
+pub mod instruction;
 
 use anchor_lang::{prelude::Pubkey, solana_program::clock::Epoch};
 use jito_tip_distribution::state::{Config, TipDistributionAccount};

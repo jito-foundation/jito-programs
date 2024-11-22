@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 anchor-lang = "0.30.0" 
-jito-tip-distribution = { path = "../tip-distribution" }
+jito-tip-distribution = { features = ["no-entrypoint", "no-idl"], path = "../tip-distribution" }
