@@ -4,7 +4,7 @@ import { AnchorError, Program } from "@coral-xyz/anchor";
 import { JitoTipDistribution } from "../target/types/jito_tip_distribution";
 import { assert, expect } from "chai";
 import {PublicKey, TransactionInstruction, VoteInit, VoteProgram} from "@solana/web3.js";
-import { MerkleTree } from "./merkle-tree";
+import { convertBufProofToNumber, MerkleTree } from "./merkle-tree";
 
 const {
   SystemProgram,
@@ -358,13 +358,14 @@ describe("tests tip_distribution", () => {
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user1])
       .rpc();
@@ -455,13 +456,14 @@ describe("tests tip_distribution", () => {
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user1])
       .rpc();
@@ -554,13 +556,14 @@ describe("tests tip_distribution", () => {
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user1])
       .rpc();
@@ -579,13 +582,14 @@ describe("tests tip_distribution", () => {
     try {
       // claim second time, this should fail since the TDA has expired
       await tipDistribution.methods
-        .claim(_bump, amount, proof)
+        .claim(_bump, amount, convertBufProofToNumber(proof))
         .accounts({
           config: configAccount,
           tipDistributionAccount,
           claimStatus,
           claimant: claimant.publicKey,
           payer: user1.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
         })
         .signers([user1])
         .rpc();
@@ -664,13 +668,14 @@ describe("tests tip_distribution", () => {
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey, //payer receives rent from closing ClaimAccount
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user1])
       .rpc();
@@ -762,13 +767,14 @@ describe("tests tip_distribution", () => {
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user1])
       .rpc();
@@ -880,13 +886,14 @@ describe("tests tip_distribution", () => {
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([user1])
       .rpc();
