@@ -17,7 +17,7 @@ RUN sh -c "$(curl -sSfL https://release.solana.com/v1.18.9/install)"
 
 ENV PATH="/root/.local/share/solana/install/active_release/bin:$PATH"
 
-RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.0 anchor-cli --locked
+RUN cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.1 anchor-cli --locked
 
 WORKDIR /jito-programs
 COPY . .
