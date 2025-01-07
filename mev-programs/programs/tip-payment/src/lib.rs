@@ -697,6 +697,10 @@ impl TipPaymentAccount {
         Ok(tips)
     }
 
+    #[deprecated(
+        since = "0.1.5",
+        note = "please change back to Anchor's `#[account(init)]` method"
+    )]
     fn initialize<'info>(
         seeds: &[u8],
         program_id: &Pubkey,
