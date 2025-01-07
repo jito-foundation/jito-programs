@@ -3,14 +3,16 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorError, Program } from "@coral-xyz/anchor";
 import { JitoTipDistribution } from "../target/types/jito_tip_distribution";
 import { assert, expect } from "chai";
-import {PublicKey, TransactionInstruction, VoteInit, VoteProgram} from "@solana/web3.js";
+import {
+  PublicKey,
+  TransactionInstruction,
+  VoteInit,
+  VoteProgram,
+} from "@solana/web3.js";
 import { convertBufProofToNumber, MerkleTree } from "./merkle-tree";
 
-const {
-  SystemProgram,
-  sendAndConfirmTransaction,
-  LAMPORTS_PER_SOL,
-} = anchor.web3;
+const { SystemProgram, sendAndConfirmTransaction, LAMPORTS_PER_SOL } =
+  anchor.web3;
 const CONFIG_ACCOUNT_SEED = "CONFIG_ACCOUNT";
 const TIP_DISTRIBUTION_ACCOUNT_LEN = 168;
 const CLAIM_STATUS_SEED = "CLAIM_STATUS";
@@ -22,16 +24,17 @@ const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
 });
 anchor.setProvider(provider);
 
-const tipDistribution = anchor.workspace.JitoTipDistribution as Program<JitoTipDistribution>;
+const tipDistribution = anchor.workspace
+  .JitoTipDistribution as Program<JitoTipDistribution>;
 
 // globals
 let configAccount, configBump;
 
 describe("tests tip_distribution", () => {
   before(async () => {
-    const [acc, bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [acc, bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from(CONFIG_ACCOUNT_SEED, "utf8")],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
     configAccount = acc;
     configBump = bump;
@@ -60,7 +63,7 @@ describe("tests tip_distribution", () => {
             initializer: initializer.publicKey,
           },
           signers: [initializer],
-        }
+        },
       );
     } catch (e) {
       assert.fail("unexpected error: " + e);
@@ -68,7 +71,7 @@ describe("tests tip_distribution", () => {
 
     // expect
     const actualConfig = await tipDistribution.account.config.fetch(
-      configAccount
+      configAccount,
     );
     const expected = {
       authority: authority.publicKey,
@@ -108,7 +111,7 @@ describe("tests tip_distribution", () => {
 
     // expect
     const actual = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
     const expected = {
       validatorVoteAccount: validatorVoteAccount.publicKey,
@@ -147,8 +150,8 @@ describe("tests tip_distribution", () => {
       // expect
       assert(
         e.errorLogs[0].includes(
-          "Validator's commission basis points must be less than or equal to the Config account's max_validator_commission_bps."
-        )
+          "Validator's commission basis points must be less than or equal to the Config account's max_validator_commission_bps.",
+        ),
       );
     }
   });
@@ -175,14 +178,14 @@ describe("tests tip_distribution", () => {
     });
 
     const actualConfig = await tipDistribution.account.config.fetch(
-      configAccount
+      configAccount,
     );
     const tda = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
 
     const balStart = await provider.connection.getBalance(
-      validatorVoteAccount.publicKey
+      validatorVoteAccount.publicKey,
     );
     await sleepForEpochs(4);
 
@@ -198,19 +201,19 @@ describe("tests tip_distribution", () => {
       .rpc();
 
     const balEnd = await provider.connection.getBalance(
-      validatorVoteAccount.publicKey
+      validatorVoteAccount.publicKey,
     );
 
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
-        TIP_DISTRIBUTION_ACCOUNT_LEN
+        TIP_DISTRIBUTION_ACCOUNT_LEN,
       );
     assert(balEnd - balStart === minRentExempt);
 
     try {
       // cannot fetch a closed account
       await tipDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+        tipDistributionAccount,
       );
       assert.fail("fetch should fail");
     } catch (_err) {
@@ -267,14 +270,14 @@ describe("tests tip_distribution", () => {
             config: configAccount,
           },
           signers: [validatorVoteAccount],
-        }
+        },
       );
     } catch (e) {
       assert.fail("Unexpected error: " + e);
     }
 
     const actual = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
     const expected = {
       validatorVoteAccount: validatorVoteAccount.publicKey,
@@ -316,9 +319,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -348,13 +351,13 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
@@ -413,9 +416,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -446,13 +449,13 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
@@ -513,9 +516,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -546,13 +549,13 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
@@ -625,9 +628,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -658,13 +661,13 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
@@ -695,7 +698,7 @@ describe("tests tip_distribution", () => {
     const balEnd = await provider.connection.getBalance(user1.publicKey);
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
-        CLAIM_STATUS_LEN
+        CLAIM_STATUS_LEN,
       );
     assert(balEnd - balStart === minRentExempt);
   });
@@ -724,9 +727,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -757,14 +760,15 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        Buffer.from(CLAIM_STATUS_SEED, "utf8"),
-        claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
-      ],
-      tipDistribution.programId
-    );
+    const [claimStatus, _bump] =
+      await anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from(CLAIM_STATUS_SEED, "utf8"),
+          claimant.publicKey.toBuffer(),
+          tipDistributionAccount.toBuffer(),
+        ],
+        tipDistribution.programId,
+      );
 
     await tipDistribution.methods
       .claim(_bump, amount, convertBufProofToNumber(proof))
@@ -782,10 +786,10 @@ describe("tests tip_distribution", () => {
     await sleepForEpochs(3);
 
     const actualConfig = await tipDistribution.account.config.fetch(
-      configAccount
+      configAccount,
     );
     const tda = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
 
     //close the account
@@ -811,7 +815,7 @@ describe("tests tip_distribution", () => {
     const balEnd = await provider.connection.getBalance(user1.publicKey);
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
-        CLAIM_STATUS_LEN
+        CLAIM_STATUS_LEN,
       );
     assert(balEnd - balStart === minRentExempt);
   });
@@ -841,9 +845,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -876,13 +880,13 @@ describe("tests tip_distribution", () => {
     assert(tree.verifyProof(0, proof, root));
 
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
@@ -899,9 +903,24 @@ describe("tests tip_distribution", () => {
       .rpc();
 
     const user0Info = await tipDistribution.provider.connection.getAccountInfo(
-      user0.publicKey
+      user0.publicKey,
     );
     assert.equal(user0Info.lamports, preBalance0 + amount0);
+  });
+
+  it("#iniialize_merkle_root_upload_conifg happy path", async () => {
+    const {
+      validatorVoteAccount,
+      maxValidatorCommissionBps,
+      tipDistributionAccount,
+      validatorIdentityKeypair,
+      bump,
+    } = await setup_initTipDistributionAccount();
+
+    // TODO: call the init instruction
+    // TODO: Valdiate that the MerkleRootUploadConfig account was created
+    // TODO: Validate the MerkleRootUploadConfig authority is the Config authority
+    
   });
 });
 
@@ -931,26 +950,26 @@ const assertConfigState = (actual, expected) => {
   assert.equal(actual.authority.toString(), expected.authority.toString());
   assert.equal(
     actual.expiredFundsAccount.toString(),
-    expected.expiredFundsAccount.toString()
+    expected.expiredFundsAccount.toString(),
   );
   assert.equal(
     actual.maxValidatorCommissionBps,
-    expected.maxValidatorCommissionBps
+    expected.maxValidatorCommissionBps,
   );
   assert.equal(
     actual.numEpochsValid.toString(),
-    expected.numEpochsValid.toString()
+    expected.numEpochsValid.toString(),
   );
 };
 
 const assertDistributionAccount = (actual, expected) => {
   assert.equal(
     actual.validatorVoteAccount.toString(),
-    expected.validatorVoteAccount.toString()
+    expected.validatorVoteAccount.toString(),
   );
   assert.equal(
     actual.merkleRootUploadAuthority.toString(),
-    expected.merkleRootUploadAuthority.toString()
+    expected.merkleRootUploadAuthority.toString(),
   );
   assert.equal(actual.epochCreatedAt, expected.epochCreatedAt);
   assert.equal(actual.validatorCommissionBps, expected.validatorCommissionBps);
@@ -958,23 +977,23 @@ const assertDistributionAccount = (actual, expected) => {
   if (actual.merkleRoot && expected.merkleRoot) {
     assert.equal(
       actual.merkleRoot.root.toString(),
-      expected.merkleRoot.root.toString()
+      expected.merkleRoot.root.toString(),
     );
     assert.equal(
       actual.merkleRoot.maxTotalClaim.toString(),
-      expected.merkleRoot.maxTotalClaim.toString()
+      expected.merkleRoot.maxTotalClaim.toString(),
     );
     assert.equal(
       actual.merkleRoot.maxNumNodes.toString(),
-      expected.merkleRoot.maxNumNodes.toString()
+      expected.merkleRoot.maxNumNodes.toString(),
     );
     assert.equal(
       actual.merkleRoot.totalFundsClaimed.toString(),
-      expected.merkleRoot.totalFundsClaimed.toString()
+      expected.merkleRoot.totalFundsClaimed.toString(),
     );
     assert.equal(
       actual.merkleRoot.numNodesClaimed.toString(),
-      expected.merkleRoot.numNodesClaimed.toString()
+      expected.merkleRoot.numNodesClaimed.toString(),
     );
   } else if (actual.merkleRoot || expected.merkleRoot) {
     assert.fail();
@@ -987,9 +1006,9 @@ const generateAccount = async (airdropAmount: number) => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         account.publicKey,
-        airdropAmount
+        airdropAmount,
       ),
-      "confirmed"
+      "confirmed",
     );
   }
 
@@ -1009,10 +1028,10 @@ const setup_initTipDistributionAccount = async () => {
     validatorIdentityKeypair.publicKey,
     validatorIdentityKeypair.publicKey,
     validatorIdentityKeypair.publicKey,
-    0
+    0,
   );
   const lamports = await provider.connection.getMinimumBalanceForRentExemption(
-    VoteProgram.space
+    VoteProgram.space,
   );
   const tx = VoteProgram.createAccount({
     fromPubkey: validatorIdentityKeypair.publicKey,
@@ -1044,13 +1063,13 @@ const setup_initTipDistributionAccount = async () => {
   const epochInfo = await provider.connection.getEpochInfo("confirmed");
   const epoch = new anchor.BN(epochInfo.epoch).toArrayLike(Buffer, "le", 8);
   const [tipDistributionAccount, bump] =
-    await anchor.web3.PublicKey.findProgramAddress(
+    anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("TIP_DISTRIBUTION_ACCOUNT", "utf8"),
         validatorVoteAccount.publicKey.toBuffer(),
         epoch,
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
   return {
@@ -1088,7 +1107,7 @@ const call_initTipDistributionAccount = async ({
         tipDistributionAccount,
       },
       signers: [validatorIdentityKeypair],
-    }
+    },
   );
 };
 

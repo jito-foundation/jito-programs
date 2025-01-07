@@ -3,7 +3,7 @@ use anchor_lang::{prelude::*, solana_program::clock::Clock};
 use solana_security_txt::security_txt;
 
 use crate::{
-    state::{ClaimStatus, Config, MerkleRoot, TipDistributionAccount},
+    state::{ClaimStatus, Config, MerkleRoot, MerkleRootUploadConfig, TipDistributionAccount},
     ErrorCode::Unauthorized,
 };
 
@@ -282,6 +282,16 @@ pub mod jito_tip_distribution {
 
         Ok(())
     }
+
+    pub fn initialize_merkle_root_upload_config(
+        ctx: Context<InitializeMerkleRootUploadConfig>,
+        authority: Pubkey,
+    ) -> Result<()> {
+        // TODO: Call the authorize function
+
+        // TODO: Set the bump and override authority
+        todo!()
+    }
 }
 
 #[error_code]
@@ -517,6 +527,42 @@ impl UploadMerkleRoot<'_> {
                 .tip_distribution_account
                 .merkle_root_upload_authority
         {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Accounts)]
+pub struct InitializeMerkleRootUploadConfig<'info> {
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    #[account(mut, rent_exempt = enforce)]
+    pub config: Account<'info, Config>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        init,
+        rent_exempt = enforce,
+        seeds = [
+            MerkleRootUploadConfig::SEED,
+        ],
+        bump,
+        space = MerkleRootUploadConfig::SIZE,
+        payer = payer
+    )]
+    pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl InitializeMerkleRootUploadConfig<'_> {
+    fn auth(ctx: &Context<InitializeMerkleRootUploadConfig>) -> Result<()> {
+        if ctx.accounts.config.authority != ctx.accounts.authority.key() {
             Err(Unauthorized.into())
         } else {
             Ok(())
