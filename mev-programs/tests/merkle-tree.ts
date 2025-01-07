@@ -1,5 +1,14 @@
 import { createHash } from "crypto";
 
+export const convertBufProofToNumber = (buffers: Buffer[]): number[][] => {
+  return buffers.reduce((prev, cur) => {
+    const numArray = new Array(cur.length);
+    for (let i = 0; i < cur.length; i = i + 1) numArray[i] = cur[i];
+    prev.push(numArray);
+    return prev;
+  }, [] as number[][]);
+};
+
 export class MerkleTree {
   leafs: Array<Buffer>;
   layers: Array<Array<Buffer>>;

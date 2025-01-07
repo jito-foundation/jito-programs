@@ -1,6 +1,6 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, Discriminator};
 #[cfg(not(feature = "no-entrypoint"))]
-use {default_env::default_env, solana_security_txt::security_txt};
+use solana_security_txt::security_txt;
 
 use crate::TipPaymentError::ArithmeticError;
 
@@ -14,8 +14,8 @@ security_txt! {
     // Optional Fields
     preferred_languages: "en",
     source_code: "https://github.com/jito-foundation/jito-programs",
-    source_revision: default_env!("GIT_SHA", "GIT_SHA_MISSING"),
-    source_release: default_env!("GIT_REF_NAME", "GIT_REF_NAME_MISSING")
+    source_revision: std::env!("GIT_SHA"),
+    source_release: std::env!("GIT_REF_NAME")
 }
 
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
@@ -45,18 +45,75 @@ pub mod jito_tip_payment {
         let cfg = &mut ctx.accounts.config;
         cfg.tip_receiver = ctx.accounts.payer.key();
         cfg.block_builder = ctx.accounts.payer.key();
+        let mut bumps = InitBumps::default();
+        bumps.config = ctx.bumps.config;
 
-        let bumps = InitBumps {
-            config: *ctx.bumps.get("config").unwrap(),
-            tip_payment_account_0: *ctx.bumps.get("tip_payment_account_0").unwrap(),
-            tip_payment_account_1: *ctx.bumps.get("tip_payment_account_1").unwrap(),
-            tip_payment_account_2: *ctx.bumps.get("tip_payment_account_2").unwrap(),
-            tip_payment_account_3: *ctx.bumps.get("tip_payment_account_3").unwrap(),
-            tip_payment_account_4: *ctx.bumps.get("tip_payment_account_4").unwrap(),
-            tip_payment_account_5: *ctx.bumps.get("tip_payment_account_5").unwrap(),
-            tip_payment_account_6: *ctx.bumps.get("tip_payment_account_6").unwrap(),
-            tip_payment_account_7: *ctx.bumps.get("tip_payment_account_7").unwrap(),
-        };
+        let rent = Rent::get()?;
+        bumps.tip_payment_account_0 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_0,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_0,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+        bumps.tip_payment_account_1 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_1,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_1,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+        bumps.tip_payment_account_2 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_2,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_2,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+        bumps.tip_payment_account_3 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_3,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_3,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+        bumps.tip_payment_account_4 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_4,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_4,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+        bumps.tip_payment_account_5 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_5,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_5,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+        bumps.tip_payment_account_6 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_6,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_6,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+        bumps.tip_payment_account_7 = TipPaymentAccount::initialize(
+            &TIP_ACCOUNT_SEED_7,
+            ctx.program_id,
+            &ctx.accounts.tip_payment_account_7,
+            &ctx.accounts.payer,
+            &ctx.accounts.system_program,
+            &rent,
+        )?;
+
         cfg.bumps = bumps;
         cfg.block_builder_commission_pct = 0;
 
@@ -245,78 +302,30 @@ pub struct Initialize<'info> {
         rent_exempt = enforce
     )]
     pub config: Account<'info, Config>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_0],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_0: Account<'info, TipPaymentAccount>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_1],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_1: Account<'info, TipPaymentAccount>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_2],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_2: Account<'info, TipPaymentAccount>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_3],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_3: Account<'info, TipPaymentAccount>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_4],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_4: Account<'info, TipPaymentAccount>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_5],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_5: Account<'info, TipPaymentAccount>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_6],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_6: Account<'info, TipPaymentAccount>,
-    #[account(
-        init,
-        seeds = [TIP_ACCOUNT_SEED_7],
-        bump,
-        payer = payer,
-        space = TipPaymentAccount::SIZE,
-        rent_exempt = enforce
-    )]
-    pub tip_payment_account_7: Account<'info, TipPaymentAccount>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_0: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_1: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_2: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_3: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_4: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_5: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_6: UncheckedAccount<'info>,
+    #[account(mut)]
+    /// CHECK: Handled in TipPaymentAccount::initialize
+    pub tip_payment_account_7: UncheckedAccount<'info>,
 
     pub system_program: Program<'info, System>,
     #[account(mut)]
@@ -686,6 +695,57 @@ impl TipPaymentAccount {
             .ok_or(ArithmeticError)?;
 
         Ok(tips)
+    }
+
+    #[deprecated(
+        since = "0.1.5",
+        note = "please change back to Anchor's `#[account(init)]` method"
+    )]
+    fn initialize<'info>(
+        seeds: &[u8],
+        program_id: &Pubkey,
+        account_info: &AccountInfo<'info>,
+        payer: &AccountInfo<'info>,
+        system_program: &AccountInfo<'info>,
+        rent: &Rent,
+    ) -> Result<u8> {
+        let space = TipPaymentAccount::SIZE;
+
+        // Validate PDA
+        let (pubkey, bump) = Pubkey::find_program_address(&[seeds], program_id);
+        require!(
+            &pubkey == account_info.key,
+            anchor_lang::error::ErrorCode::ConstraintSeeds
+        );
+
+        // CPI to system program to create account
+        let current_lamports = account_info.lamports();
+        // TODO: Make this error accurate
+        // This requirement simplifies the CPIs and checks required
+        require!(
+            current_lamports == 0,
+            anchor_lang::error::ErrorCode::ConstraintSeeds
+        );
+        let required_lamports = rent.minimum_balance(space);
+        let cpi_accounts = anchor_lang::system_program::CreateAccount {
+            from: payer.to_account_info(),
+            to: account_info.to_account_info(),
+        };
+        let cpi_context = CpiContext::new(system_program.to_account_info(), cpi_accounts);
+        anchor_lang::system_program::create_account(
+            cpi_context.with_signer(&[&[seeds, &[bump]]]),
+            required_lamports,
+            space as u64,
+            program_id,
+        )?;
+
+        // set the discriminator
+        let mut account_data: std::cell::RefMut<'_, &mut [u8]> =
+            account_info.try_borrow_mut_data()?;
+        account_data[..TipPaymentAccount::DISCRIMINATOR.len()]
+            .copy_from_slice(&TipPaymentAccount::DISCRIMINATOR);
+
+        Ok(bump)
     }
 }
 
