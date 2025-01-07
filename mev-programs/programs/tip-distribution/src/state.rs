@@ -175,3 +175,20 @@ impl ClaimStatus {
 
     pub const SIZE: usize = HEADER_SIZE + size_of::<Self>();
 }
+
+/// Singleton account that allows overriding TDA's merkle upload authority
+#[account]
+#[derive(Default)]
+pub struct MerkleRootUploadConfig {
+    /// The authority that overrides the TipDistributionAccount merkle_root_upload_authority
+    pub overide_authority: Pubkey,
+
+    /// The bump used to genearte this account
+    pub bump: u8,
+}
+
+impl MerkleRootUploadConfig {
+    pub const SEED: &'static [u8] = b"ROOT_UPLOAD_CONFIG";
+
+    pub const SIZE: usize = HEADER_SIZE + size_of::<Self>();
+}
