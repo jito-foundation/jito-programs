@@ -17,6 +17,7 @@ const CONFIG_ACCOUNT_SEED = "CONFIG_ACCOUNT";
 const TIP_DISTRIBUTION_ACCOUNT_LEN = 168;
 const CLAIM_STATUS_SEED = "CLAIM_STATUS";
 const CLAIM_STATUS_LEN = 104;
+const ROOT_UPLOAD_CONFIG_SEED = "ROOT_UPLOAD_CONFIG";
 
 const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
   commitment: "confirmed",
@@ -29,6 +30,7 @@ const tipDistribution = anchor.workspace
 
 // globals
 let configAccount, configBump;
+let authority: anchor.web3.Keypair;
 
 describe("tests tip_distribution", () => {
   before(async () => {
@@ -38,12 +40,12 @@ describe("tests tip_distribution", () => {
     );
     configAccount = acc;
     configBump = bump;
+    authority = await generateAccount(100000000000000);
   });
 
   it("#initialize happy path", async () => {
     // given
     const initializer = await generateAccount(100000000000000);
-    const authority = await generateAccount(100000000000000);
     const expiredFundsAccount = await generateAccount(100000000000000);
     const numEpochsValid = new anchor.BN(3);
     const maxValidatorCommissionBps = 1000;
@@ -909,18 +911,39 @@ describe("tests tip_distribution", () => {
   });
 
   it("#iniialize_merkle_root_upload_conifg happy path", async () => {
-    const {
-      validatorVoteAccount,
-      maxValidatorCommissionBps,
-      tipDistributionAccount,
-      validatorIdentityKeypair,
-      bump,
-    } = await setup_initTipDistributionAccount();
+    await setup_initTipDistributionAccount();
 
-    // TODO: call the init instruction
-    // TODO: Valdiate that the MerkleRootUploadConfig account was created
-    // TODO: Validate the MerkleRootUploadConfig authority is the Config authority
-    
+    const [merkleRootUploadConfigKey, merkleRootUploadConfigBump] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(ROOT_UPLOAD_CONFIG_SEED, "utf8")],
+        tipDistribution.programId,
+      );
+    const overrideAuthority = anchor.web3.Keypair.generate();
+
+    // call the init instruction
+    await tipDistribution.methods
+      .initializeMerkleRootUploadConfig(overrideAuthority.publicKey)
+      .accounts({
+        payer: tipDistribution.provider.publicKey,
+        config: configAccount,
+        authority: authority.publicKey,
+        merkleRootUploadConfig: merkleRootUploadConfigKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([authority])
+      .rpc({ skipPreflight: true });
+
+    // Valdiate that the MerkleRootUploadConfig account was created
+    const merkleRootUploadConfig =
+      await tipDistribution.account.merkleRootUploadConfig.fetch(
+        merkleRootUploadConfigKey,
+      );
+    // Validate the MerkleRootUploadConfig authority is the Config authority
+    assert.equal(merkleRootUploadConfig.bump, merkleRootUploadConfigBump);
+    assert.equal(
+      merkleRootUploadConfig.overideAuthority.toString(),
+      overrideAuthority.publicKey.toString(),
+    );
   });
 });
 

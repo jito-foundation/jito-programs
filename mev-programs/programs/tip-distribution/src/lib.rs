@@ -287,10 +287,14 @@ pub mod jito_tip_distribution {
         ctx: Context<InitializeMerkleRootUploadConfig>,
         authority: Pubkey,
     ) -> Result<()> {
-        // TODO: Call the authorize function
+        // Call the authorize function
+        InitializeMerkleRootUploadConfig::auth(&ctx)?;
 
-        // TODO: Set the bump and override authority
-        todo!()
+        // Set the bump and override authority
+        let merkle_root_upload_config = &mut ctx.accounts.merkle_root_upload_config;
+        merkle_root_upload_config.bump = ctx.bumps.merkle_root_upload_config;
+        merkle_root_upload_config.overide_authority = authority;
+        Ok(())
     }
 }
 
