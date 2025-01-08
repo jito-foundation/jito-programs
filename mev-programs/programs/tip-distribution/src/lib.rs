@@ -26,6 +26,10 @@ pub mod state;
 
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
+static JITO_UPLOAD_AUTHORITY: Pubkey = pubkey!("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib");
+
+
+
 #[program]
 pub mod jito_tip_distribution {
     use jito_programs_vote_state::VoteState;
@@ -310,6 +314,25 @@ pub mod jito_tip_distribution {
 
         Ok(())
     }
+
+    pub fn migrate_tda_merkle_root_upload_authority(
+        ctx: Context<MigrateTdaMerkleRootUploadAuthority>
+    ) -> Result<()> {
+        let distribution_account = &mut ctx.accounts.tip_distribution_account;
+        // Validate TDA has no MerkleRoot uploaded to it
+        if distribution_account.merkle_root.is_some() {
+            return Err(InvalidTdaForMigration.into());
+        }
+        // Validate the TDA key is Jito's key
+        if distribution_account.merkle_root_upload_authority != JITO_UPLOAD_AUTHORITY {
+            return Err(InvalidTdaForMigration.into());
+        }
+
+        // Change the TDA's root upload authority
+        distribution_account.merkle_root_upload_authority = ctx.accounts.merkle_root_upload_config.overide_authority;
+
+        Ok(())
+    }
 }
 
 #[error_code]
@@ -358,6 +381,9 @@ pub enum ErrorCode {
 
     #[msg("Unauthorized signer.")]
     Unauthorized,
+
+    #[msg("TDA not valid for migration.")]
+    InvalidTdaForMigration,
 }
 
 #[derive(Accounts)]
@@ -614,6 +640,18 @@ impl UpdateMerkleRootUploadConfig<'_> {
             Ok(())
         }
     }
+}
+
+#[derive(Accounts)]
+pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
+    #[account(mut, rent_exempt = enforce)]
+    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+
+    #[account(
+        seeds = [MerkleRootUploadConfig::SEED],
+        bump,
+    )]
+    pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
 }
 
 // Events
