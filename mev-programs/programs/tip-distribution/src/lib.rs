@@ -28,8 +28,6 @@ declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
 static JITO_UPLOAD_AUTHORITY: Pubkey = pubkey!("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib");
 
-
-
 #[program]
 pub mod jito_tip_distribution {
     use jito_programs_vote_state::VoteState;
@@ -316,7 +314,7 @@ pub mod jito_tip_distribution {
     }
 
     pub fn migrate_tda_merkle_root_upload_authority(
-        ctx: Context<MigrateTdaMerkleRootUploadAuthority>
+        ctx: Context<MigrateTdaMerkleRootUploadAuthority>,
     ) -> Result<()> {
         let distribution_account = &mut ctx.accounts.tip_distribution_account;
         // Validate TDA has no MerkleRoot uploaded to it
@@ -329,7 +327,8 @@ pub mod jito_tip_distribution {
         }
 
         // Change the TDA's root upload authority
-        distribution_account.merkle_root_upload_authority = ctx.accounts.merkle_root_upload_config.overide_authority;
+        distribution_account.merkle_root_upload_authority =
+            ctx.accounts.merkle_root_upload_config.overide_authority;
 
         Ok(())
     }
