@@ -296,6 +296,20 @@ pub mod jito_tip_distribution {
         merkle_root_upload_config.overide_authority = authority;
         Ok(())
     }
+
+    pub fn update_merkle_root_upload_config(
+        ctx: Context<UpdateMerkleRootUploadConfig>,
+        authority: Pubkey,
+    ) -> Result<()> {
+        // Call the authorize function
+        UpdateMerkleRootUploadConfig::auth(&ctx)?;
+
+        // Update override authority
+        let merkle_root_upload_config = &mut ctx.accounts.merkle_root_upload_config;
+        merkle_root_upload_config.overide_authority = authority;
+
+        Ok(())
+    }
 }
 
 #[error_code]
@@ -566,6 +580,34 @@ pub struct InitializeMerkleRootUploadConfig<'info> {
 
 impl InitializeMerkleRootUploadConfig<'_> {
     fn auth(ctx: &Context<InitializeMerkleRootUploadConfig>) -> Result<()> {
+        if ctx.accounts.config.authority != ctx.accounts.authority.key() {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Accounts)]
+pub struct UpdateMerkleRootUploadConfig<'info> {
+    #[account(mut, rent_exempt = enforce)]
+    pub config: Account<'info, Config>,
+
+    #[account(mut)]
+    pub authority: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [MerkleRootUploadConfig::SEED],
+        bump,
+    )]
+    pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl UpdateMerkleRootUploadConfig<'_> {
+    fn auth(ctx: &Context<UpdateMerkleRootUploadConfig>) -> Result<()> {
         if ctx.accounts.config.authority != ctx.accounts.authority.key() {
             Err(Unauthorized.into())
         } else {
