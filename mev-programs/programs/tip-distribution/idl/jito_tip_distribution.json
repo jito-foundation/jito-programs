@@ -214,6 +214,48 @@
       ]
     },
     {
+      "name": "initialize_merkle_root_upload_config",
+      "discriminator": [
+        232,
+        87,
+        72,
+        14,
+        89,
+        40,
+        40,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merkle_root_upload_config",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
       "name": "initialize_tip_distribution_account",
       "docs": [
         "Initialize a new [TipDistributionAccount] associated with the given validator vote key",
@@ -271,6 +313,29 @@
       ]
     },
     {
+      "name": "migrate_tda_merkle_root_upload_authority",
+      "discriminator": [
+        13,
+        226,
+        163,
+        144,
+        56,
+        202,
+        214,
+        23
+      ],
+      "accounts": [
+        {
+          "name": "tip_distribution_account",
+          "writable": true
+        },
+        {
+          "name": "merkle_root_upload_config"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "update_config",
       "docs": [
         "Update config fields. Only the [Config] authority can invoke this."
@@ -304,6 +369,43 @@
               "name": "Config"
             }
           }
+        }
+      ]
+    },
+    {
+      "name": "update_merkle_root_upload_config",
+      "discriminator": [
+        128,
+        227,
+        159,
+        139,
+        176,
+        128,
+        118,
+        2
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "merkle_root_upload_config",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
         }
       ]
     },
@@ -385,6 +487,19 @@
         250,
         204,
         130
+      ]
+    },
+    {
+      "name": "MerkleRootUploadConfig",
+      "discriminator": [
+        213,
+        125,
+        30,
+        192,
+        25,
+        121,
+        87,
+        33
       ]
     },
     {
@@ -582,6 +697,11 @@
       "code": 6014,
       "name": "Unauthorized",
       "msg": "Unauthorized signer."
+    },
+    {
+      "code": 6015,
+      "name": "InvalidTdaForMigration",
+      "msg": "TDA not valid for migration."
     }
   ],
   "types": [
@@ -823,6 +943,31 @@
           {
             "name": "new_authority",
             "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MerkleRootUploadConfig",
+      "docs": [
+        "Singleton account that allows overriding TDA's merkle upload authority"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "overide_authority",
+            "docs": [
+              "The authority that overrides the TipDistributionAccount merkle_root_upload_authority"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "The bump used to genearte this account"
+            ],
+            "type": "u8"
           }
         ]
       }
