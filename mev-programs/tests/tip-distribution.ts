@@ -945,6 +945,39 @@ describe("tests tip_distribution", () => {
       overrideAuthority.publicKey.toString(),
     );
   });
+
+  it("#update_merkle_root_upload_conifg happy path", async () => {
+    await setup_initTipDistributionAccount();
+
+    const [merkleRootUploadConfigKey, merkleRootUploadConfigBump] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(ROOT_UPLOAD_CONFIG_SEED, "utf8")],
+        tipDistribution.programId,
+      );
+
+    const newOverrideAuthority = anchor.web3.Keypair.generate();
+
+    await tipDistribution.methods
+      .updateMerkleRootUploadConfig(newOverrideAuthority.publicKey)
+      .accounts({
+        config: configAccount,
+        authority: authority.publicKey,
+        merkleRootUploadConfig: merkleRootUploadConfigKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([authority])
+      .rpc({ skipPreflight: true });
+
+    const updatedMerkleRootUploadConfig =
+      await tipDistribution.account.merkleRootUploadConfig.fetch(
+        merkleRootUploadConfigKey,
+      );
+    // Validate the MerkleRootUploadConfig authority is the new authority
+    assert.equal(
+      updatedMerkleRootUploadConfig.overideAuthority.toString(),
+      newOverrideAuthority.publicKey.toString(),
+    );
+  });
 });
 
 // utils
