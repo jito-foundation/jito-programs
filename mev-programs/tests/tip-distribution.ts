@@ -18,6 +18,9 @@ const TIP_DISTRIBUTION_ACCOUNT_LEN = 168;
 const CLAIM_STATUS_SEED = "CLAIM_STATUS";
 const CLAIM_STATUS_LEN = 104;
 const ROOT_UPLOAD_CONFIG_SEED = "ROOT_UPLOAD_CONFIG";
+const JITO_MERKLE_UPLOAD_AUTHORITY = new anchor.web3.PublicKey(
+  "GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib",
+);
 
 const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
   commitment: "confirmed",
@@ -29,7 +32,7 @@ const tipDistribution = anchor.workspace
   .JitoTipDistribution as Program<JitoTipDistribution>;
 
 // globals
-let configAccount, configBump;
+let configAccount, configBump, merkleRootUploadConfigKey;
 let authority: anchor.web3.Keypair;
 
 describe("tests tip_distribution", () => {
@@ -41,6 +44,10 @@ describe("tests tip_distribution", () => {
     configAccount = acc;
     configBump = bump;
     authority = await generateAccount(100000000000000);
+    [merkleRootUploadConfigKey] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from(ROOT_UPLOAD_CONFIG_SEED, "utf8")],
+      tipDistribution.programId,
+    );
   });
 
   it("#initialize happy path", async () => {
@@ -913,7 +920,7 @@ describe("tests tip_distribution", () => {
   it("#iniialize_merkle_root_upload_conifg happy path", async () => {
     await setup_initTipDistributionAccount();
 
-    const [merkleRootUploadConfigKey, merkleRootUploadConfigBump] =
+    const [_merkleRootUploadConfigKey, merkleRootUploadConfigBump] =
       anchor.web3.PublicKey.findProgramAddressSync(
         [Buffer.from(ROOT_UPLOAD_CONFIG_SEED, "utf8")],
         tipDistribution.programId,
@@ -949,12 +956,6 @@ describe("tests tip_distribution", () => {
   it("#update_merkle_root_upload_conifg happy path", async () => {
     await setup_initTipDistributionAccount();
 
-    const [merkleRootUploadConfigKey, merkleRootUploadConfigBump] =
-      anchor.web3.PublicKey.findProgramAddressSync(
-        [Buffer.from(ROOT_UPLOAD_CONFIG_SEED, "utf8")],
-        tipDistribution.programId,
-      );
-
     const newOverrideAuthority = anchor.web3.Keypair.generate();
 
     await tipDistribution.methods
@@ -977,6 +978,146 @@ describe("tests tip_distribution", () => {
       updatedMerkleRootUploadConfig.overideAuthority.toString(),
       newOverrideAuthority.publicKey.toString(),
     );
+  });
+
+  it("#migrate_tda_merkle_root_upload_authority happy path", async () => {
+    const {
+      validatorVoteAccount,
+      validatorIdentityKeypair,
+      maxValidatorCommissionBps,
+      tipDistributionAccount,
+      bump,
+    } = await setup_initTipDistributionAccount();
+    await call_initTipDistributionAccount({
+      validatorCommissionBps: maxValidatorCommissionBps,
+      config: configAccount,
+      validatorIdentityKeypair,
+      systemProgram: SystemProgram.programId,
+      merkleRootUploadAuthority: JITO_MERKLE_UPLOAD_AUTHORITY,
+      validatorVoteAccount,
+      tipDistributionAccount,
+      bump,
+    });
+
+    const merkleRootUploadConfig =
+      await tipDistribution.account.merkleRootUploadConfig.fetch(
+        merkleRootUploadConfigKey,
+      );
+
+    await tipDistribution.methods
+      .migrateTdaMerkleRootUploadAuthority()
+      .accounts({
+        tipDistributionAccount: tipDistributionAccount,
+        merkleRootUploadConfig: merkleRootUploadConfigKey,
+      })
+      .rpc({ skipPreflight: true });
+
+    const tda = await tipDistribution.account.tipDistributionAccount.fetch(
+      tipDistributionAccount,
+    );
+    assert.equal(
+      tda.merkleRootUploadAuthority.toString(),
+      merkleRootUploadConfig.overideAuthority.toString(),
+    );
+  });
+
+  it("#migrate_tda_merkle_root_upload_authority should error if TDA not Jito authority", async () => {
+    const {
+      validatorVoteAccount,
+      validatorIdentityKeypair,
+      maxValidatorCommissionBps,
+      tipDistributionAccount,
+      bump,
+    } = await setup_initTipDistributionAccount();
+    await call_initTipDistributionAccount({
+      validatorCommissionBps: maxValidatorCommissionBps,
+      config: configAccount,
+      validatorIdentityKeypair,
+      systemProgram: SystemProgram.programId,
+      merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+      validatorVoteAccount,
+      tipDistributionAccount,
+      bump,
+    });
+    try {
+      await tipDistribution.methods
+        .migrateTdaMerkleRootUploadAuthority()
+        .accounts({
+          tipDistributionAccount: tipDistributionAccount,
+          merkleRootUploadConfig: merkleRootUploadConfigKey,
+        })
+        .rpc({ skipPreflight: true });
+      assert.fail("expected exception to be thrown");
+    } catch (e) {
+      const err: AnchorError = e;
+      assert(err.error.errorCode.code === "InvalidTdaForMigration");
+    }
+  });
+
+  it("#migrate_tda_merkle_root_upload_authority should error if merkle root is already uploaded", async () => {
+    const {
+      validatorVoteAccount,
+      validatorIdentityKeypair,
+      maxValidatorCommissionBps,
+      tipDistributionAccount,
+      bump,
+    } = await setup_initTipDistributionAccount();
+    await call_initTipDistributionAccount({
+      validatorCommissionBps: maxValidatorCommissionBps,
+      config: configAccount,
+      validatorIdentityKeypair,
+      systemProgram: SystemProgram.programId,
+      merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+      validatorVoteAccount,
+      tipDistributionAccount,
+      bump,
+    });
+
+    const amount0 = 1_000_000;
+    const amount1 = 2_000_000;
+    await provider.connection.confirmTransaction(
+      await provider.connection.requestAirdrop(
+        tipDistributionAccount,
+        amount0 + amount1,
+      ),
+      "confirmed",
+    );
+    const preBalance0 = 10000000000;
+    const user0 = await generateAccount(preBalance0);
+    const user1 = await generateAccount(preBalance0);
+    const demoData = [
+      { account: user0.publicKey, amount: new u64(amount0) },
+      { account: user1.publicKey, amount: new u64(amount1) },
+    ].map(({ account, amount }) => balanceToBuffer(account, amount));
+
+    const tree = new MerkleTree(demoData);
+    const root = tree.getRoot();
+    const maxTotalClaim = new anchor.BN(amount0 + amount1);
+    const maxNumNodes = new anchor.BN(2);
+    await sleepForEpochs(1);
+
+    await tipDistribution.methods
+      .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
+      .accounts({
+        tipDistributionAccount,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+        config: configAccount,
+      })
+      .signers([validatorVoteAccount])
+      .rpc();
+    try {
+      await tipDistribution.methods
+        .migrateTdaMerkleRootUploadAuthority()
+        .accounts({
+          tipDistributionAccount: tipDistributionAccount,
+          merkleRootUploadConfig: merkleRootUploadConfigKey,
+        })
+        .rpc({ skipPreflight: true });
+      assert.fail("expected exception to be thrown");
+    } catch (e) {
+      const err: AnchorError = e;
+      assert(err.error.errorCode.code === "InvalidTdaForMigration");
+    }
   });
 });
 
