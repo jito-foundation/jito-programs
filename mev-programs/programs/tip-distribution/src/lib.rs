@@ -206,6 +206,8 @@ pub mod jito_tip_distribution {
 
     /// Claims tokens from the [TipDistributionAccount].
     pub fn claim(ctx: Context<Claim>, bump: u8, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+        Claim::auth(&ctx)?;
+
         let claim_status = &mut ctx.accounts.claim_status;
         claim_status.bump = bump;
 
@@ -521,11 +523,7 @@ impl CloseTipDistributionAccount<'_> {
 pub struct Claim<'info> {
     pub config: Account<'info, Config>,
 
-    #[account(
-        mut,
-        has_one = merkle_root_upload_authority @ Unauthorized,
-        rent_exempt = enforce,
-    )]
+    #[account(mut, rent_exempt = enforce)]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
     pub merkle_root_upload_authority: Signer<'info>,
@@ -555,6 +553,20 @@ pub struct Claim<'info> {
     pub payer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
+}
+impl Claim<'_> {
+    fn auth(ctx: &Context<Claim>) -> Result<()> {
+        if ctx.accounts.merkle_root_upload_authority.key()
+            != ctx
+                .accounts
+                .tip_distribution_account
+                .merkle_root_upload_authority
+        {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[derive(Accounts)]
@@ -591,7 +603,6 @@ pub struct InitializeMerkleRootUploadConfig<'info> {
     #[account(mut, rent_exempt = enforce)]
     pub config: Account<'info, Config>,
 
-    #[account(mut)]
     pub authority: Signer<'info>,
 
     #[account(
@@ -621,16 +632,16 @@ impl InitializeMerkleRootUploadConfig<'_> {
 
 #[derive(Accounts)]
 pub struct UpdateMerkleRootUploadConfig<'info> {
-    #[account(mut, rent_exempt = enforce)]
+    #[account(rent_exempt = enforce)]
     pub config: Account<'info, Config>,
 
-    #[account(mut)]
     pub authority: Signer<'info>,
 
     #[account(
         mut,
         seeds = [MerkleRootUploadConfig::SEED],
         bump,
+        rent_exempt = enforce,
     )]
     pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
 
@@ -655,6 +666,7 @@ pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
     #[account(
         seeds = [MerkleRootUploadConfig::SEED],
         bump,
+        rent_exempt = enforce,
     )]
     pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
 }

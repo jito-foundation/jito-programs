@@ -241,7 +241,6 @@
         },
         {
           "name": "authority",
-          "writable": true,
           "signer": true
         },
         {
@@ -390,12 +389,10 @@
       ],
       "accounts": [
         {
-          "name": "config",
-          "writable": true
+          "name": "config"
         },
         {
           "name": "authority",
-          "writable": true,
           "signer": true
         },
         {
