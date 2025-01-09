@@ -31,6 +31,10 @@
           "writable": true
         },
         {
+          "name": "merkle_root_upload_authority",
+          "signer": true
+        },
+        {
           "name": "claim_status",
           "docs": [
             "Status of the claim. Used to prevent the same party from claiming multiple times."

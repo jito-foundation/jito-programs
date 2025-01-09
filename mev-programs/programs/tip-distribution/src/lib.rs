@@ -521,8 +521,14 @@ impl CloseTipDistributionAccount<'_> {
 pub struct Claim<'info> {
     pub config: Account<'info, Config>,
 
-    #[account(mut, rent_exempt = enforce)]
+    #[account(
+        mut,
+        has_one = merkle_root_upload_authority @ Unauthorized,
+        rent_exempt = enforce,
+    )]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+
+    pub merkle_root_upload_authority: Signer<'info>,
 
     /// Status of the claim. Used to prevent the same party from claiming multiple times.
     #[account(

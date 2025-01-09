@@ -249,6 +249,7 @@ pub struct ClaimArgs {
 pub struct ClaimAccounts {
     pub config: Pubkey,
     pub tip_distribution_account: Pubkey,
+    pub merkle_root_upload_authority: Pubkey,
     pub claim_status: Pubkey,
     pub claimant: Pubkey,
     pub payer: Pubkey,
@@ -264,6 +265,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
     let ClaimAccounts {
         config,
         tip_distribution_account,
+        merkle_root_upload_authority,
         claim_status,
         claimant,
         payer,
@@ -281,6 +283,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
         accounts: jito_tip_distribution::accounts::Claim {
             config,
             tip_distribution_account,
+            merkle_root_upload_authority,
             claimant,
             claim_status,
             payer,
