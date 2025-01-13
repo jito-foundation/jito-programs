@@ -26,8 +26,6 @@ pub mod state;
 
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
-static JITO_LABS_UPLOAD_AUTHORITY: Pubkey = pubkey!("GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib");
-
 #[program]
 pub mod jito_tip_distribution {
     use jito_programs_vote_state::VoteState;
@@ -290,20 +288,23 @@ pub mod jito_tip_distribution {
     pub fn initialize_merkle_root_upload_config(
         ctx: Context<InitializeMerkleRootUploadConfig>,
         authority: Pubkey,
+        original_authority: Pubkey,
     ) -> Result<()> {
         // Call the authorize function
         InitializeMerkleRootUploadConfig::auth(&ctx)?;
 
         // Set the bump and override authority
         let merkle_root_upload_config = &mut ctx.accounts.merkle_root_upload_config;
-        merkle_root_upload_config.bump = ctx.bumps.merkle_root_upload_config;
         merkle_root_upload_config.override_authority = authority;
+        merkle_root_upload_config.original_upload_authority = original_authority;
+        merkle_root_upload_config.bump = ctx.bumps.merkle_root_upload_config;
         Ok(())
     }
 
     pub fn update_merkle_root_upload_config(
         ctx: Context<UpdateMerkleRootUploadConfig>,
         authority: Pubkey,
+        original_authority: Pubkey,
     ) -> Result<()> {
         // Call the authorize function
         UpdateMerkleRootUploadConfig::auth(&ctx)?;
@@ -311,6 +312,7 @@ pub mod jito_tip_distribution {
         // Update override authority
         let merkle_root_upload_config = &mut ctx.accounts.merkle_root_upload_config;
         merkle_root_upload_config.override_authority = authority;
+        merkle_root_upload_config.original_upload_authority = original_authority;
 
         Ok(())
     }
@@ -323,8 +325,8 @@ pub mod jito_tip_distribution {
         if distribution_account.merkle_root.is_some() {
             return Err(InvalidTdaForMigration.into());
         }
-        // Validate the TDA key is Jito's key
-        if distribution_account.merkle_root_upload_authority != JITO_LABS_UPLOAD_AUTHORITY {
+        // Validate the TDA key is the acceptable original authority (i.e. the original Jito Lab's authority)
+        if distribution_account.merkle_root_upload_authority != ctx.accounts.merkle_root_upload_config.original_upload_authority {
             return Err(InvalidTdaForMigration.into());
         }
 

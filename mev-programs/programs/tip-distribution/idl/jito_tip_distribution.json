@@ -231,12 +231,11 @@
       ],
       "accounts": [
         {
-          "name": "payer",
-          "writable": true,
-          "signer": true
+          "name": "config",
+          "writable": true
         },
         {
-          "name": "config",
+          "name": "merkle_root_upload_config",
           "writable": true
         },
         {
@@ -244,8 +243,9 @@
           "signer": true
         },
         {
-          "name": "merkle_root_upload_config",
-          "writable": true
+          "name": "payer",
+          "writable": true,
+          "signer": true
         },
         {
           "name": "system_program"
@@ -254,6 +254,10 @@
       "args": [
         {
           "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "original_authority",
           "type": "pubkey"
         }
       ]
@@ -392,12 +396,12 @@
           "name": "config"
         },
         {
-          "name": "authority",
-          "signer": true
-        },
-        {
           "name": "merkle_root_upload_config",
           "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
         },
         {
           "name": "system_program"
@@ -406,6 +410,10 @@
       "args": [
         {
           "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "original_authority",
           "type": "pubkey"
         }
       ]
@@ -957,16 +965,24 @@
         "kind": "struct",
         "fields": [
           {
-            "name": "overide_authority",
+            "name": "override_authority",
             "docs": [
               "The authority that overrides the TipDistributionAccount merkle_root_upload_authority"
             ],
             "type": "pubkey"
           },
           {
+            "name": "original_upload_authority",
+            "docs": [
+              "The original merkle root upload authority that can be changed to the new overrided",
+              "authority. E.g. Jito Labs authority GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib"
+            ],
+            "type": "pubkey"
+          },
+          {
             "name": "bump",
             "docs": [
-              "The bump used to genearte this account"
+              "The bump used to generate this account"
             ],
             "type": "u8"
           }

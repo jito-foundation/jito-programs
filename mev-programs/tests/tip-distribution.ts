@@ -5,7 +5,6 @@ import { JitoTipDistribution } from "../target/types/jito_tip_distribution";
 import { assert, expect } from "chai";
 import {
   PublicKey,
-  TransactionInstruction,
   VoteInit,
   VoteProgram,
 } from "@solana/web3.js";
@@ -925,7 +924,7 @@ describe("tests tip_distribution", () => {
     }
   });
 
-  it("#iniialize_merkle_root_upload_conifg happy path", async () => {
+  it("#initialize_merkle_root_upload_conifg happy path", async () => {
     await setup_initTipDistributionAccount();
 
     const [_merkleRootUploadConfigKey, merkleRootUploadConfigBump] =
@@ -935,9 +934,14 @@ describe("tests tip_distribution", () => {
       );
     const overrideAuthority = anchor.web3.Keypair.generate();
 
+    const originalAuthority = anchor.web3.Keypair.generate();
+
     // call the init instruction
     await tipDistribution.methods
-      .initializeMerkleRootUploadConfig(overrideAuthority.publicKey)
+      .initializeMerkleRootUploadConfig(
+        overrideAuthority.publicKey,
+        originalAuthority.publicKey,
+      )
       .accounts({
         payer: tipDistribution.provider.publicKey,
         config: configAccount,
@@ -956,8 +960,12 @@ describe("tests tip_distribution", () => {
     // Validate the MerkleRootUploadConfig authority is the Config authority
     assert.equal(merkleRootUploadConfig.bump, merkleRootUploadConfigBump);
     assert.equal(
-      merkleRootUploadConfig.overideAuthority.toString(),
+      merkleRootUploadConfig.overrideAuthority.toString(),
       overrideAuthority.publicKey.toString(),
+    );
+    assert.equal(
+      merkleRootUploadConfig.originalUploadAuthority.toString(),
+      originalAuthority.publicKey.toString(),
     );
   });
 
@@ -967,7 +975,10 @@ describe("tests tip_distribution", () => {
     const newOverrideAuthority = anchor.web3.Keypair.generate();
 
     await tipDistribution.methods
-      .updateMerkleRootUploadConfig(newOverrideAuthority.publicKey)
+      .updateMerkleRootUploadConfig(
+        newOverrideAuthority.publicKey,
+        JITO_MERKLE_UPLOAD_AUTHORITY,
+      )
       .accounts({
         config: configAccount,
         authority: authority.publicKey,
@@ -983,8 +994,12 @@ describe("tests tip_distribution", () => {
       );
     // Validate the MerkleRootUploadConfig authority is the new authority
     assert.equal(
-      updatedMerkleRootUploadConfig.overideAuthority.toString(),
+      updatedMerkleRootUploadConfig.overrideAuthority.toString(),
       newOverrideAuthority.publicKey.toString(),
+    );
+    assert.equal(
+      updatedMerkleRootUploadConfig.originalUploadAuthority.toString(),
+      JITO_MERKLE_UPLOAD_AUTHORITY.toString(),
     );
   });
 
@@ -1025,7 +1040,7 @@ describe("tests tip_distribution", () => {
     );
     assert.equal(
       tda.merkleRootUploadAuthority.toString(),
-      merkleRootUploadConfig.overideAuthority.toString(),
+      merkleRootUploadConfig.overrideAuthority.toString(),
     );
   });
 
