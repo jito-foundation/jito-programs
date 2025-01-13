@@ -181,9 +181,9 @@ impl ClaimStatus {
 #[derive(Default)]
 pub struct MerkleRootUploadConfig {
     /// The authority that overrides the TipDistributionAccount merkle_root_upload_authority
-    pub overide_authority: Pubkey,
+    pub override_authority: Pubkey,
 
-    /// The bump used to genearte this account
+    /// The bump used to generate this account
     pub bump: u8,
 }
 
