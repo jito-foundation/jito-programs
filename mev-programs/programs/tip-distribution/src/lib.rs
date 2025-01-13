@@ -597,13 +597,8 @@ impl UploadMerkleRoot<'_> {
 
 #[derive(Accounts)]
 pub struct InitializeMerkleRootUploadConfig<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
     #[account(mut, rent_exempt = enforce)]
     pub config: Account<'info, Config>,
-
-    pub authority: Signer<'info>,
 
     #[account(
         init,
@@ -616,6 +611,11 @@ pub struct InitializeMerkleRootUploadConfig<'info> {
         payer = payer
     )]
     pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+
+    pub authority: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
@@ -635,8 +635,6 @@ pub struct UpdateMerkleRootUploadConfig<'info> {
     #[account(rent_exempt = enforce)]
     pub config: Account<'info, Config>,
 
-    pub authority: Signer<'info>,
-
     #[account(
         mut,
         seeds = [MerkleRootUploadConfig::SEED],
@@ -644,6 +642,8 @@ pub struct UpdateMerkleRootUploadConfig<'info> {
         rent_exempt = enforce,
     )]
     pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+
+    pub authority: Signer<'info>,
 
     pub system_program: Program<'info, System>,
 }
