@@ -3,7 +3,7 @@ use anchor_lang::{prelude::*, solana_program::clock::Clock};
 use solana_security_txt::security_txt;
 
 use crate::{
-    state::{ClaimStatus, Config, MerkleRoot, TipDistributionAccount},
+    state::{ClaimStatus, Config, MerkleRoot, MerkleRootUploadConfig, TipDistributionAccount},
     ErrorCode::Unauthorized,
 };
 
@@ -204,6 +204,8 @@ pub mod jito_tip_distribution {
 
     /// Claims tokens from the [TipDistributionAccount].
     pub fn claim(ctx: Context<Claim>, bump: u8, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+        Claim::auth(&ctx)?;
+
         let claim_status = &mut ctx.accounts.claim_status;
         claim_status.bump = bump;
 
@@ -282,6 +284,58 @@ pub mod jito_tip_distribution {
 
         Ok(())
     }
+
+    pub fn initialize_merkle_root_upload_config(
+        ctx: Context<InitializeMerkleRootUploadConfig>,
+        authority: Pubkey,
+        original_authority: Pubkey,
+    ) -> Result<()> {
+        // Call the authorize function
+        InitializeMerkleRootUploadConfig::auth(&ctx)?;
+
+        // Set the bump and override authority
+        let merkle_root_upload_config = &mut ctx.accounts.merkle_root_upload_config;
+        merkle_root_upload_config.override_authority = authority;
+        merkle_root_upload_config.original_upload_authority = original_authority;
+        merkle_root_upload_config.bump = ctx.bumps.merkle_root_upload_config;
+        Ok(())
+    }
+
+    pub fn update_merkle_root_upload_config(
+        ctx: Context<UpdateMerkleRootUploadConfig>,
+        authority: Pubkey,
+        original_authority: Pubkey,
+    ) -> Result<()> {
+        // Call the authorize function
+        UpdateMerkleRootUploadConfig::auth(&ctx)?;
+
+        // Update override authority
+        let merkle_root_upload_config = &mut ctx.accounts.merkle_root_upload_config;
+        merkle_root_upload_config.override_authority = authority;
+        merkle_root_upload_config.original_upload_authority = original_authority;
+
+        Ok(())
+    }
+
+    pub fn migrate_tda_merkle_root_upload_authority(
+        ctx: Context<MigrateTdaMerkleRootUploadAuthority>,
+    ) -> Result<()> {
+        let distribution_account = &mut ctx.accounts.tip_distribution_account;
+        // Validate TDA has no MerkleRoot uploaded to it
+        if distribution_account.merkle_root.is_some() {
+            return Err(InvalidTdaForMigration.into());
+        }
+        // Validate the TDA key is the acceptable original authority (i.e. the original Jito Lab's authority)
+        if distribution_account.merkle_root_upload_authority != ctx.accounts.merkle_root_upload_config.original_upload_authority {
+            return Err(InvalidTdaForMigration.into());
+        }
+
+        // Change the TDA's root upload authority
+        distribution_account.merkle_root_upload_authority =
+            ctx.accounts.merkle_root_upload_config.override_authority;
+
+        Ok(())
+    }
 }
 
 #[error_code]
@@ -330,6 +384,9 @@ pub enum ErrorCode {
 
     #[msg("Unauthorized signer.")]
     Unauthorized,
+
+    #[msg("TDA not valid for migration.")]
+    InvalidTdaForMigration,
 }
 
 #[derive(Accounts)]
@@ -471,6 +528,8 @@ pub struct Claim<'info> {
     #[account(mut, rent_exempt = enforce)]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
+    pub merkle_root_upload_authority: Signer<'info>,
+
     /// Status of the claim. Used to prevent the same party from claiming multiple times.
     #[account(
         init,
@@ -497,6 +556,20 @@ pub struct Claim<'info> {
 
     pub system_program: Program<'info, System>,
 }
+impl Claim<'_> {
+    fn auth(ctx: &Context<Claim>) -> Result<()> {
+        if ctx.accounts.merkle_root_upload_authority.key()
+            != ctx
+                .accounts
+                .tip_distribution_account
+                .merkle_root_upload_authority
+        {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
+}
 
 #[derive(Accounts)]
 pub struct UploadMerkleRoot<'info> {
@@ -522,6 +595,82 @@ impl UploadMerkleRoot<'_> {
             Ok(())
         }
     }
+}
+
+#[derive(Accounts)]
+pub struct InitializeMerkleRootUploadConfig<'info> {
+    #[account(mut, rent_exempt = enforce)]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        init,
+        rent_exempt = enforce,
+        seeds = [
+            MerkleRootUploadConfig::SEED,
+        ],
+        bump,
+        space = MerkleRootUploadConfig::SIZE,
+        payer = payer
+    )]
+    pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+
+    pub authority: Signer<'info>,
+
+    #[account(mut)]
+    pub payer: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl InitializeMerkleRootUploadConfig<'_> {
+    fn auth(ctx: &Context<InitializeMerkleRootUploadConfig>) -> Result<()> {
+        if ctx.accounts.config.authority != ctx.accounts.authority.key() {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Accounts)]
+pub struct UpdateMerkleRootUploadConfig<'info> {
+    #[account(rent_exempt = enforce)]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        seeds = [MerkleRootUploadConfig::SEED],
+        bump,
+        rent_exempt = enforce,
+    )]
+    pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+
+    pub authority: Signer<'info>,
+
+    pub system_program: Program<'info, System>,
+}
+
+impl UpdateMerkleRootUploadConfig<'_> {
+    fn auth(ctx: &Context<UpdateMerkleRootUploadConfig>) -> Result<()> {
+        if ctx.accounts.config.authority != ctx.accounts.authority.key() {
+            Err(Unauthorized.into())
+        } else {
+            Ok(())
+        }
+    }
+}
+
+#[derive(Accounts)]
+pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
+    #[account(mut, rent_exempt = enforce)]
+    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+
+    #[account(
+        seeds = [MerkleRootUploadConfig::SEED],
+        bump,
+        rent_exempt = enforce,
+    )]
+    pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
 }
 
 // Events
