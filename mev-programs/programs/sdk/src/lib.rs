@@ -1,8 +1,7 @@
-pub mod instructions;
+pub mod instruction;
 
 use anchor_lang::{prelude::Pubkey, solana_program::clock::Epoch};
-
-use crate::{Config, TipDistributionAccount};
+use jito_tip_distribution::state::{Config, TipDistributionAccount};
 
 pub fn derive_tip_distribution_account_address(
     tip_distribution_program_id: &Pubkey,
