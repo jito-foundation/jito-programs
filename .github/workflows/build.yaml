@@ -15,10 +15,10 @@ jobs:
 
     steps:
       # Setup
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-solana/
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         name: Cache Cargo registry + index
         id: cache-anchor
         with:
