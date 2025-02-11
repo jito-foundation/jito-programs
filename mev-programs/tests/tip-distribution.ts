@@ -3,18 +3,23 @@ import * as anchor from "@coral-xyz/anchor";
 import { AnchorError, Program } from "@coral-xyz/anchor";
 import { JitoTipDistribution } from "../target/types/jito_tip_distribution";
 import { assert, expect } from "chai";
-import {PublicKey, TransactionInstruction, VoteInit, VoteProgram} from "@solana/web3.js";
-import { MerkleTree } from "./merkle-tree";
+import {
+  PublicKey,
+  VoteInit,
+  VoteProgram,
+} from "@solana/web3.js";
+import { convertBufProofToNumber, MerkleTree } from "./merkle-tree";
 
-const {
-  SystemProgram,
-  sendAndConfirmTransaction,
-  LAMPORTS_PER_SOL,
-} = anchor.web3;
+const { SystemProgram, sendAndConfirmTransaction, LAMPORTS_PER_SOL } =
+  anchor.web3;
 const CONFIG_ACCOUNT_SEED = "CONFIG_ACCOUNT";
 const TIP_DISTRIBUTION_ACCOUNT_LEN = 168;
 const CLAIM_STATUS_SEED = "CLAIM_STATUS";
 const CLAIM_STATUS_LEN = 104;
+const ROOT_UPLOAD_CONFIG_SEED = "ROOT_UPLOAD_CONFIG";
+const JITO_MERKLE_UPLOAD_AUTHORITY = new anchor.web3.PublicKey(
+  "GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib",
+);
 
 const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
   commitment: "confirmed",
@@ -22,25 +27,31 @@ const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
 });
 anchor.setProvider(provider);
 
-const tipDistribution = anchor.workspace.JitoTipDistribution as Program<JitoTipDistribution>;
+const tipDistribution = anchor.workspace
+  .JitoTipDistribution as Program<JitoTipDistribution>;
 
 // globals
-let configAccount, configBump;
+let configAccount, configBump, merkleRootUploadConfigKey;
+let authority: anchor.web3.Keypair;
 
 describe("tests tip_distribution", () => {
   before(async () => {
-    const [acc, bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [acc, bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [Buffer.from(CONFIG_ACCOUNT_SEED, "utf8")],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
     configAccount = acc;
     configBump = bump;
+    authority = await generateAccount(100000000000000);
+    [merkleRootUploadConfigKey] = anchor.web3.PublicKey.findProgramAddressSync(
+      [Buffer.from(ROOT_UPLOAD_CONFIG_SEED, "utf8")],
+      tipDistribution.programId,
+    );
   });
 
   it("#initialize happy path", async () => {
     // given
     const initializer = await generateAccount(100000000000000);
-    const authority = await generateAccount(100000000000000);
     const expiredFundsAccount = await generateAccount(100000000000000);
     const numEpochsValid = new anchor.BN(3);
     const maxValidatorCommissionBps = 1000;
@@ -60,7 +71,7 @@ describe("tests tip_distribution", () => {
             initializer: initializer.publicKey,
           },
           signers: [initializer],
-        }
+        },
       );
     } catch (e) {
       assert.fail("unexpected error: " + e);
@@ -68,7 +79,7 @@ describe("tests tip_distribution", () => {
 
     // expect
     const actualConfig = await tipDistribution.account.config.fetch(
-      configAccount
+      configAccount,
     );
     const expected = {
       authority: authority.publicKey,
@@ -108,7 +119,7 @@ describe("tests tip_distribution", () => {
 
     // expect
     const actual = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
     const expected = {
       validatorVoteAccount: validatorVoteAccount.publicKey,
@@ -147,8 +158,8 @@ describe("tests tip_distribution", () => {
       // expect
       assert(
         e.errorLogs[0].includes(
-          "Validator's commission basis points must be less than or equal to the Config account's max_validator_commission_bps."
-        )
+          "Validator's commission basis points must be less than or equal to the Config account's max_validator_commission_bps.",
+        ),
       );
     }
   });
@@ -175,14 +186,14 @@ describe("tests tip_distribution", () => {
     });
 
     const actualConfig = await tipDistribution.account.config.fetch(
-      configAccount
+      configAccount,
     );
     const tda = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
 
     const balStart = await provider.connection.getBalance(
-      validatorVoteAccount.publicKey
+      validatorVoteAccount.publicKey,
     );
     await sleepForEpochs(4);
 
@@ -198,19 +209,19 @@ describe("tests tip_distribution", () => {
       .rpc();
 
     const balEnd = await provider.connection.getBalance(
-      validatorVoteAccount.publicKey
+      validatorVoteAccount.publicKey,
     );
 
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
-        TIP_DISTRIBUTION_ACCOUNT_LEN
+        TIP_DISTRIBUTION_ACCOUNT_LEN,
       );
     assert(balEnd - balStart === minRentExempt);
 
     try {
       // cannot fetch a closed account
       await tipDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+        tipDistributionAccount,
       );
       assert.fail("fetch should fail");
     } catch (_err) {
@@ -267,14 +278,14 @@ describe("tests tip_distribution", () => {
             config: configAccount,
           },
           signers: [validatorVoteAccount],
-        }
+        },
       );
     } catch (e) {
       assert.fail("Unexpected error: " + e);
     }
 
     const actual = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
     const expected = {
       validatorVoteAccount: validatorVoteAccount.publicKey,
@@ -316,9 +327,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -348,25 +359,27 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([user1])
+      .signers([user1, validatorVoteAccount])
       .rpc();
 
     await sleepForEpochs(4); // wait for TDA to expire
@@ -412,9 +425,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -445,25 +458,27 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([user1])
+      .signers([user1, validatorVoteAccount])
       .rpc();
 
     // should usually wait a few epochs after claiming to close the ClaimAccount
@@ -511,9 +526,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -544,25 +559,27 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([user1])
+      .signers([user1, validatorVoteAccount])
       .rpc();
 
     await sleepForEpochs(3); // wait for TDA to expire
@@ -579,20 +596,22 @@ describe("tests tip_distribution", () => {
     try {
       // claim second time, this should fail since the TDA has expired
       await tipDistribution.methods
-        .claim(_bump, amount, proof)
+        .claim(_bump, amount, convertBufProofToNumber(proof))
         .accounts({
           config: configAccount,
           tipDistributionAccount,
+          merkleRootUploadAuthority: validatorVoteAccount.publicKey,
           claimStatus,
           claimant: claimant.publicKey,
           payer: user1.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
         })
-        .signers([user1])
+        .signers([user1, validatorVoteAccount])
         .rpc();
       assert.fail("expected exception to be thrown");
     } catch (e) {
       const err: AnchorError = e;
-      assert(err.error.errorCode.code === "ExpiredTipDistributionAccount");
+      assert.equal(err.error.errorCode.code, "ExpiredTipDistributionAccount");
     }
   });
 
@@ -621,9 +640,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -654,25 +673,27 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
         tipDistributionAccount.toBuffer(),
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey, //payer receives rent from closing ClaimAccount
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([user1])
+      .signers([user1, validatorVoteAccount])
       .rpc();
 
     await sleepForEpochs(4); // wait for TDA to expire
@@ -690,7 +711,7 @@ describe("tests tip_distribution", () => {
     const balEnd = await provider.connection.getBalance(user1.publicKey);
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
-        CLAIM_STATUS_LEN
+        CLAIM_STATUS_LEN,
       );
     assert(balEnd - balStart === minRentExempt);
   });
@@ -719,9 +740,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -752,34 +773,37 @@ describe("tests tip_distribution", () => {
     const amount = new anchor.BN(amount0);
     const proof = tree.getProof(index);
     const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        Buffer.from(CLAIM_STATUS_SEED, "utf8"),
-        claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
-      ],
-      tipDistribution.programId
-    );
+    const [claimStatus, _bump] =
+      await anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from(CLAIM_STATUS_SEED, "utf8"),
+          claimant.publicKey.toBuffer(),
+          tipDistributionAccount.toBuffer(),
+        ],
+        tipDistribution.programId,
+      );
 
     await tipDistribution.methods
-      .claim(_bump, amount, proof)
+      .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
         tipDistributionAccount,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
         payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
       })
-      .signers([user1])
+      .signers([user1, validatorVoteAccount])
       .rpc();
 
     await sleepForEpochs(3);
 
     const actualConfig = await tipDistribution.account.config.fetch(
-      configAccount
+      configAccount,
     );
     const tda = await tipDistribution.account.tipDistributionAccount.fetch(
-      tipDistributionAccount
+      tipDistributionAccount,
     );
 
     //close the account
@@ -805,7 +829,7 @@ describe("tests tip_distribution", () => {
     const balEnd = await provider.connection.getBalance(user1.publicKey);
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
-        CLAIM_STATUS_LEN
+        CLAIM_STATUS_LEN,
       );
     assert(balEnd - balStart === minRentExempt);
   });
@@ -813,10 +837,252 @@ describe("tests tip_distribution", () => {
   // move to end due to PrivilegeEscalation warning
   it("#claim happy path", async () => {
     const {
+      amount0,
+      preBalance0,
+      root,
+      tipDistributionAccount,
+      tree,
+      user0,
+      user1,
       validatorVoteAccount,
+    } = await setupWithUploadedMerkleRoot();
+
+    const index = 0;
+    const amount = new anchor.BN(amount0);
+    const proof = tree.getProof(index);
+    assert(tree.verifyProof(0, proof, root));
+
+    const claimant = user0;
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from(CLAIM_STATUS_SEED, "utf8"),
+        claimant.publicKey.toBuffer(),
+        tipDistributionAccount.toBuffer(),
+      ],
+      tipDistribution.programId,
+    );
+
+    await tipDistribution.methods
+      .claim(_bump, amount, convertBufProofToNumber(proof))
+      .accounts({
+        config: configAccount,
+        tipDistributionAccount,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+        claimStatus,
+        claimant: claimant.publicKey,
+        payer: user1.publicKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([user1, validatorVoteAccount])
+      .rpc();
+
+    const user0Info = await tipDistribution.provider.connection.getAccountInfo(
+      user0.publicKey,
+    );
+    assert.equal(user0Info.lamports, preBalance0 + amount0);
+  });
+
+  it("#claim fails if TDA merkle root upload authority not signer ", async () => {
+    const { amount0, root, tipDistributionAccount, tree, user0, user1 } =
+      await setupWithUploadedMerkleRoot();
+
+    const index = 0;
+    const amount = new anchor.BN(amount0);
+    const proof = tree.getProof(index);
+    assert(tree.verifyProof(0, proof, root));
+
+    const claimant = user0;
+    const [claimStatus, _bump] = anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from(CLAIM_STATUS_SEED, "utf8"),
+        claimant.publicKey.toBuffer(),
+        tipDistributionAccount.toBuffer(),
+      ],
+      tipDistribution.programId,
+    );
+
+    const badAuthority = anchor.web3.Keypair.generate();
+
+    try {
+      await tipDistribution.methods
+        .claim(_bump, amount, convertBufProofToNumber(proof))
+        .accounts({
+          config: configAccount,
+          tipDistributionAccount,
+          merkleRootUploadAuthority: badAuthority.publicKey,
+          claimStatus,
+          claimant: claimant.publicKey,
+          payer: user1.publicKey,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([user1, badAuthority])
+        .rpc();
+      assert.fail("expected exception to be thrown");
+    } catch (e) {
+      const err: AnchorError = e;
+      assert(err.error.errorCode.code === "Unauthorized");
+    }
+  });
+
+  it("#initialize_merkle_root_upload_conifg happy path", async () => {
+    await setup_initTipDistributionAccount();
+
+    const [_merkleRootUploadConfigKey, merkleRootUploadConfigBump] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [Buffer.from(ROOT_UPLOAD_CONFIG_SEED, "utf8")],
+        tipDistribution.programId,
+      );
+    const overrideAuthority = anchor.web3.Keypair.generate();
+
+    const originalAuthority = anchor.web3.Keypair.generate();
+
+    // call the init instruction
+    await tipDistribution.methods
+      .initializeMerkleRootUploadConfig(
+        overrideAuthority.publicKey,
+        originalAuthority.publicKey,
+      )
+      .accounts({
+        payer: tipDistribution.provider.publicKey,
+        config: configAccount,
+        authority: authority.publicKey,
+        merkleRootUploadConfig: merkleRootUploadConfigKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([authority])
+      .rpc({ skipPreflight: true });
+
+    // Valdiate that the MerkleRootUploadConfig account was created
+    const merkleRootUploadConfig =
+      await tipDistribution.account.merkleRootUploadConfig.fetch(
+        merkleRootUploadConfigKey,
+      );
+    // Validate the MerkleRootUploadConfig authority is the Config authority
+    assert.equal(merkleRootUploadConfig.bump, merkleRootUploadConfigBump);
+    assert.equal(
+      merkleRootUploadConfig.overrideAuthority.toString(),
+      overrideAuthority.publicKey.toString(),
+    );
+    assert.equal(
+      merkleRootUploadConfig.originalUploadAuthority.toString(),
+      originalAuthority.publicKey.toString(),
+    );
+  });
+
+  it("#update_merkle_root_upload_conifg happy path", async () => {
+    await setup_initTipDistributionAccount();
+
+    const newOverrideAuthority = anchor.web3.Keypair.generate();
+
+    await tipDistribution.methods
+      .updateMerkleRootUploadConfig(
+        newOverrideAuthority.publicKey,
+        JITO_MERKLE_UPLOAD_AUTHORITY,
+      )
+      .accounts({
+        config: configAccount,
+        authority: authority.publicKey,
+        merkleRootUploadConfig: merkleRootUploadConfigKey,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([authority])
+      .rpc({ skipPreflight: true });
+
+    const updatedMerkleRootUploadConfig =
+      await tipDistribution.account.merkleRootUploadConfig.fetch(
+        merkleRootUploadConfigKey,
+      );
+    // Validate the MerkleRootUploadConfig authority is the new authority
+    assert.equal(
+      updatedMerkleRootUploadConfig.overrideAuthority.toString(),
+      newOverrideAuthority.publicKey.toString(),
+    );
+    assert.equal(
+      updatedMerkleRootUploadConfig.originalUploadAuthority.toString(),
+      JITO_MERKLE_UPLOAD_AUTHORITY.toString(),
+    );
+  });
+
+  it("#migrate_tda_merkle_root_upload_authority happy path", async () => {
+    const {
+      validatorVoteAccount,
+      validatorIdentityKeypair,
       maxValidatorCommissionBps,
       tipDistributionAccount,
+      bump,
+    } = await setup_initTipDistributionAccount();
+    await call_initTipDistributionAccount({
+      validatorCommissionBps: maxValidatorCommissionBps,
+      config: configAccount,
       validatorIdentityKeypair,
+      systemProgram: SystemProgram.programId,
+      merkleRootUploadAuthority: JITO_MERKLE_UPLOAD_AUTHORITY,
+      validatorVoteAccount,
+      tipDistributionAccount,
+      bump,
+    });
+
+    const merkleRootUploadConfig =
+      await tipDistribution.account.merkleRootUploadConfig.fetch(
+        merkleRootUploadConfigKey,
+      );
+
+    await tipDistribution.methods
+      .migrateTdaMerkleRootUploadAuthority()
+      .accounts({
+        tipDistributionAccount: tipDistributionAccount,
+        merkleRootUploadConfig: merkleRootUploadConfigKey,
+      })
+      .rpc({ skipPreflight: true });
+
+    const tda = await tipDistribution.account.tipDistributionAccount.fetch(
+      tipDistributionAccount,
+    );
+    assert.equal(
+      tda.merkleRootUploadAuthority.toString(),
+      merkleRootUploadConfig.overrideAuthority.toString(),
+    );
+  });
+
+  it("#migrate_tda_merkle_root_upload_authority should error if TDA not Jito authority", async () => {
+    const {
+      validatorVoteAccount,
+      validatorIdentityKeypair,
+      maxValidatorCommissionBps,
+      tipDistributionAccount,
+      bump,
+    } = await setup_initTipDistributionAccount();
+    await call_initTipDistributionAccount({
+      validatorCommissionBps: maxValidatorCommissionBps,
+      config: configAccount,
+      validatorIdentityKeypair,
+      systemProgram: SystemProgram.programId,
+      merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+      validatorVoteAccount,
+      tipDistributionAccount,
+      bump,
+    });
+    try {
+      await tipDistribution.methods
+        .migrateTdaMerkleRootUploadAuthority()
+        .accounts({
+          tipDistributionAccount: tipDistributionAccount,
+          merkleRootUploadConfig: merkleRootUploadConfigKey,
+        })
+        .rpc({ skipPreflight: true });
+      assert.fail("expected exception to be thrown");
+    } catch (e) {
+      const err: AnchorError = e;
+      assert(err.error.errorCode.code === "InvalidTdaForMigration");
+    }
+  });
+
+  it("#migrate_tda_merkle_root_upload_authority should error if merkle root is already uploaded", async () => {
+    const {
+      validatorVoteAccount,
+      validatorIdentityKeypair,
+      maxValidatorCommissionBps,
+      tipDistributionAccount,
       bump,
     } = await setup_initTipDistributionAccount();
     await call_initTipDistributionAccount({
@@ -835,9 +1101,9 @@ describe("tests tip_distribution", () => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         tipDistributionAccount,
-        amount0 + amount1
+        amount0 + amount1,
       ),
-      "confirmed"
+      "confirmed",
     );
     const preBalance0 = 10000000000;
     const user0 = await generateAccount(preBalance0);
@@ -851,7 +1117,6 @@ describe("tests tip_distribution", () => {
     const root = tree.getRoot();
     const maxTotalClaim = new anchor.BN(amount0 + amount1);
     const maxNumNodes = new anchor.BN(2);
-
     await sleepForEpochs(1);
 
     await tipDistribution.methods
@@ -863,38 +1128,19 @@ describe("tests tip_distribution", () => {
       })
       .signers([validatorVoteAccount])
       .rpc();
-
-    const index = 0;
-    const amount = new anchor.BN(amount0);
-    const proof = tree.getProof(index);
-    assert(tree.verifyProof(0, proof, root));
-
-    const claimant = user0;
-    const [claimStatus, _bump] = await anchor.web3.PublicKey.findProgramAddress(
-      [
-        Buffer.from(CLAIM_STATUS_SEED, "utf8"),
-        claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
-      ],
-      tipDistribution.programId
-    );
-
-    await tipDistribution.methods
-      .claim(_bump, amount, proof)
-      .accounts({
-        config: configAccount,
-        tipDistributionAccount,
-        claimStatus,
-        claimant: claimant.publicKey,
-        payer: user1.publicKey,
-      })
-      .signers([user1])
-      .rpc();
-
-    const user0Info = await tipDistribution.provider.connection.getAccountInfo(
-      user0.publicKey
-    );
-    assert.equal(user0Info.lamports, preBalance0 + amount0);
+    try {
+      await tipDistribution.methods
+        .migrateTdaMerkleRootUploadAuthority()
+        .accounts({
+          tipDistributionAccount: tipDistributionAccount,
+          merkleRootUploadConfig: merkleRootUploadConfigKey,
+        })
+        .rpc({ skipPreflight: true });
+      assert.fail("expected exception to be thrown");
+    } catch (e) {
+      const err: AnchorError = e;
+      assert(err.error.errorCode.code === "InvalidTdaForMigration");
+    }
   });
 });
 
@@ -924,26 +1170,26 @@ const assertConfigState = (actual, expected) => {
   assert.equal(actual.authority.toString(), expected.authority.toString());
   assert.equal(
     actual.expiredFundsAccount.toString(),
-    expected.expiredFundsAccount.toString()
+    expected.expiredFundsAccount.toString(),
   );
   assert.equal(
     actual.maxValidatorCommissionBps,
-    expected.maxValidatorCommissionBps
+    expected.maxValidatorCommissionBps,
   );
   assert.equal(
     actual.numEpochsValid.toString(),
-    expected.numEpochsValid.toString()
+    expected.numEpochsValid.toString(),
   );
 };
 
 const assertDistributionAccount = (actual, expected) => {
   assert.equal(
     actual.validatorVoteAccount.toString(),
-    expected.validatorVoteAccount.toString()
+    expected.validatorVoteAccount.toString(),
   );
   assert.equal(
     actual.merkleRootUploadAuthority.toString(),
-    expected.merkleRootUploadAuthority.toString()
+    expected.merkleRootUploadAuthority.toString(),
   );
   assert.equal(actual.epochCreatedAt, expected.epochCreatedAt);
   assert.equal(actual.validatorCommissionBps, expected.validatorCommissionBps);
@@ -951,23 +1197,23 @@ const assertDistributionAccount = (actual, expected) => {
   if (actual.merkleRoot && expected.merkleRoot) {
     assert.equal(
       actual.merkleRoot.root.toString(),
-      expected.merkleRoot.root.toString()
+      expected.merkleRoot.root.toString(),
     );
     assert.equal(
       actual.merkleRoot.maxTotalClaim.toString(),
-      expected.merkleRoot.maxTotalClaim.toString()
+      expected.merkleRoot.maxTotalClaim.toString(),
     );
     assert.equal(
       actual.merkleRoot.maxNumNodes.toString(),
-      expected.merkleRoot.maxNumNodes.toString()
+      expected.merkleRoot.maxNumNodes.toString(),
     );
     assert.equal(
       actual.merkleRoot.totalFundsClaimed.toString(),
-      expected.merkleRoot.totalFundsClaimed.toString()
+      expected.merkleRoot.totalFundsClaimed.toString(),
     );
     assert.equal(
       actual.merkleRoot.numNodesClaimed.toString(),
-      expected.merkleRoot.numNodesClaimed.toString()
+      expected.merkleRoot.numNodesClaimed.toString(),
     );
   } else if (actual.merkleRoot || expected.merkleRoot) {
     assert.fail();
@@ -980,9 +1226,9 @@ const generateAccount = async (airdropAmount: number) => {
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         account.publicKey,
-        airdropAmount
+        airdropAmount,
       ),
-      "confirmed"
+      "confirmed",
     );
   }
 
@@ -1002,10 +1248,10 @@ const setup_initTipDistributionAccount = async () => {
     validatorIdentityKeypair.publicKey,
     validatorIdentityKeypair.publicKey,
     validatorIdentityKeypair.publicKey,
-    0
+    0,
   );
   const lamports = await provider.connection.getMinimumBalanceForRentExemption(
-    VoteProgram.space
+    VoteProgram.space,
   );
   const tx = VoteProgram.createAccount({
     fromPubkey: validatorIdentityKeypair.publicKey,
@@ -1037,13 +1283,13 @@ const setup_initTipDistributionAccount = async () => {
   const epochInfo = await provider.connection.getEpochInfo("confirmed");
   const epoch = new anchor.BN(epochInfo.epoch).toArrayLike(Buffer, "le", 8);
   const [tipDistributionAccount, bump] =
-    await anchor.web3.PublicKey.findProgramAddress(
+    anchor.web3.PublicKey.findProgramAddressSync(
       [
         Buffer.from("TIP_DISTRIBUTION_ACCOUNT", "utf8"),
         validatorVoteAccount.publicKey.toBuffer(),
         epoch,
       ],
-      tipDistribution.programId
+      tipDistribution.programId,
     );
 
   return {
@@ -1081,8 +1327,73 @@ const call_initTipDistributionAccount = async ({
         tipDistributionAccount,
       },
       signers: [validatorIdentityKeypair],
-    }
+    },
   );
+};
+
+const setupWithUploadedMerkleRoot = async () => {
+  const {
+    validatorVoteAccount,
+    maxValidatorCommissionBps,
+    tipDistributionAccount,
+    validatorIdentityKeypair,
+    bump,
+  } = await setup_initTipDistributionAccount();
+  await call_initTipDistributionAccount({
+    validatorCommissionBps: maxValidatorCommissionBps,
+    config: configAccount,
+    validatorIdentityKeypair,
+    systemProgram: SystemProgram.programId,
+    merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+    validatorVoteAccount,
+    tipDistributionAccount,
+    bump,
+  });
+
+  const amount0 = 1_000_000;
+  const amount1 = 2_000_000;
+  await provider.connection.confirmTransaction(
+    await provider.connection.requestAirdrop(
+      tipDistributionAccount,
+      amount0 + amount1,
+    ),
+    "confirmed",
+  );
+  const preBalance0 = 10000000000;
+  const user0 = await generateAccount(preBalance0);
+  const user1 = await generateAccount(preBalance0);
+  const demoData = [
+    { account: user0.publicKey, amount: new u64(amount0) },
+    { account: user1.publicKey, amount: new u64(amount1) },
+  ].map(({ account, amount }) => balanceToBuffer(account, amount));
+
+  const tree = new MerkleTree(demoData);
+  const root = tree.getRoot();
+  const maxTotalClaim = new anchor.BN(amount0 + amount1);
+  const maxNumNodes = new anchor.BN(2);
+
+  await sleepForEpochs(1);
+
+  await tipDistribution.methods
+    .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
+    .accounts({
+      tipDistributionAccount,
+      merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+      config: configAccount,
+    })
+    .signers([validatorVoteAccount])
+    .rpc();
+  return {
+    amount0,
+    amount1,
+    preBalance0,
+    root,
+    tipDistributionAccount,
+    tree,
+    user0,
+    user1,
+    validatorVoteAccount,
+  };
 };
 
 const sleep = (ms: number) => {

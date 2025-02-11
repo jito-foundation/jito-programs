@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anchor-lang = "0.28.0"
+anchor-lang = "0.30.1"
 anyhow = "1.0"
 bs58 = "0.5.1"
 clap = { version = "=4.0", features = ["derive"] }
 jito-tip-distribution = { path = "../programs/tip-distribution", features = ["no-entrypoint"] }
-solana-client = "1.16"
-solana-sdk = "1.16" 
+jito-tip-distribution-sdk = { path = "../programs/sdk" }
+solana-client = "1.18"
+solana-sdk = "1.18" 

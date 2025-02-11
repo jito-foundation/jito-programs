@@ -1,293 +1,63 @@
 {
-  "version": "0.1.5",
-  "name": "jito_tip_distribution",
+  "address": "4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7",
+  "metadata": {
+    "name": "jito_tip_distribution",
+    "version": "0.1.5",
+    "spec": "0.1.0",
+    "description": "Tip distribution program, responsible for distributing funds to entitled parties."
+  },
   "instructions": [
-    {
-      "name": "initialize",
-      "docs": [
-        "Initialize a singleton instance of the [Config] account."
-      ],
-      "accounts": [
-        {
-          "name": "config",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "initializer",
-          "isMut": true,
-          "isSigner": true
-        }
-      ],
-      "args": [
-        {
-          "name": "authority",
-          "type": "publicKey"
-        },
-        {
-          "name": "expiredFundsAccount",
-          "type": "publicKey"
-        },
-        {
-          "name": "numEpochsValid",
-          "type": "u64"
-        },
-        {
-          "name": "maxValidatorCommissionBps",
-          "type": "u16"
-        },
-        {
-          "name": "bump",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "initializeTipDistributionAccount",
-      "docs": [
-        "Initialize a new [TipDistributionAccount] associated with the given validator vote key",
-        "and current epoch."
-      ],
-      "accounts": [
-        {
-          "name": "config",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tipDistributionAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "validatorVoteAccount",
-          "isMut": false,
-          "isSigner": false,
-          "docs": [
-            "The validator's vote account is used to check this transaction's signer is also the authorized withdrawer."
-          ]
-        },
-        {
-          "name": "signer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Must be equal to the supplied validator vote account's authorized withdrawer."
-          ]
-        },
-        {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
-        }
-      ],
-      "args": [
-        {
-          "name": "merkleRootUploadAuthority",
-          "type": "publicKey"
-        },
-        {
-          "name": "validatorCommissionBps",
-          "type": "u16"
-        },
-        {
-          "name": "bump",
-          "type": "u8"
-        }
-      ]
-    },
-    {
-      "name": "updateConfig",
-      "docs": [
-        "Update config fields. Only the [Config] authority can invoke this."
-      ],
-      "accounts": [
-        {
-          "name": "config",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "authority",
-          "isMut": true,
-          "isSigner": true
-        }
-      ],
-      "args": [
-        {
-          "name": "newConfig",
-          "type": {
-            "defined": "Config"
-          }
-        }
-      ]
-    },
-    {
-      "name": "uploadMerkleRoot",
-      "docs": [
-        "Uploads a merkle root to the provided [TipDistributionAccount]. This instruction may be",
-        "invoked many times as long as the account is at least one epoch old and not expired; and",
-        "no funds have already been claimed. Only the `merkle_root_upload_authority` has the",
-        "authority to invoke."
-      ],
-      "accounts": [
-        {
-          "name": "config",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tipDistributionAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "merkleRootUploadAuthority",
-          "isMut": true,
-          "isSigner": true
-        }
-      ],
-      "args": [
-        {
-          "name": "root",
-          "type": {
-            "array": [
-              "u8",
-              32
-            ]
-          }
-        },
-        {
-          "name": "maxTotalClaim",
-          "type": "u64"
-        },
-        {
-          "name": "maxNumNodes",
-          "type": "u64"
-        }
-      ]
-    },
-    {
-      "name": "closeClaimStatus",
-      "docs": [
-        "Anyone can invoke this only after the [TipDistributionAccount] has expired.",
-        "This instruction will return any rent back to `claimant` and close the account"
-      ],
-      "accounts": [
-        {
-          "name": "config",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "claimStatus",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "claimStatusPayer",
-          "isMut": true,
-          "isSigner": false,
-          "docs": [
-            "Receiver of the funds."
-          ]
-        }
-      ],
-      "args": []
-    },
-    {
-      "name": "closeTipDistributionAccount",
-      "docs": [
-        "Anyone can invoke this only after the [TipDistributionAccount] has expired.",
-        "This instruction will send any unclaimed funds to the designated `expired_funds_account`",
-        "before closing and returning the rent exempt funds to the validator."
-      ],
-      "accounts": [
-        {
-          "name": "config",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "expiredFundsAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tipDistributionAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "validatorVoteAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "signer",
-          "isMut": true,
-          "isSigner": true,
-          "docs": [
-            "Anyone can crank this instruction."
-          ]
-        }
-      ],
-      "args": [
-        {
-          "name": "epoch",
-          "type": "u64"
-        }
-      ]
-    },
     {
       "name": "claim",
       "docs": [
         "Claims tokens from the [TipDistributionAccount]."
       ],
+      "discriminator": [
+        62,
+        198,
+        214,
+        193,
+        213,
+        159,
+        108,
+        210
+      ],
       "accounts": [
         {
-          "name": "config",
-          "isMut": false,
-          "isSigner": false
+          "name": "config"
         },
         {
-          "name": "tipDistributionAccount",
-          "isMut": true,
-          "isSigner": false
+          "name": "tip_distribution_account",
+          "writable": true
         },
         {
-          "name": "claimStatus",
-          "isMut": true,
-          "isSigner": false,
+          "name": "merkle_root_upload_authority",
+          "signer": true
+        },
+        {
+          "name": "claim_status",
           "docs": [
             "Status of the claim. Used to prevent the same party from claiming multiple times."
-          ]
+          ],
+          "writable": true
         },
         {
           "name": "claimant",
-          "isMut": true,
-          "isSigner": false,
           "docs": [
             "Receiver of the funds."
-          ]
+          ],
+          "writable": true
         },
         {
           "name": "payer",
-          "isMut": true,
-          "isSigner": true,
           "docs": [
             "Who is paying for the claim."
-          ]
+          ],
+          "writable": true,
+          "signer": true
         },
         {
-          "name": "systemProgram",
-          "isMut": false,
-          "isSigner": false
+          "name": "system_program"
         }
       ],
       "args": [
@@ -311,359 +81,553 @@
           }
         }
       ]
+    },
+    {
+      "name": "close_claim_status",
+      "docs": [
+        "Anyone can invoke this only after the [TipDistributionAccount] has expired.",
+        "This instruction will return any rent back to `claimant` and close the account"
+      ],
+      "discriminator": [
+        163,
+        214,
+        191,
+        165,
+        245,
+        188,
+        17,
+        185
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "claim_status",
+          "writable": true
+        },
+        {
+          "name": "claim_status_payer",
+          "docs": [
+            "Receiver of the funds."
+          ],
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "close_tip_distribution_account",
+      "docs": [
+        "Anyone can invoke this only after the [TipDistributionAccount] has expired.",
+        "This instruction will send any unclaimed funds to the designated `expired_funds_account`",
+        "before closing and returning the rent exempt funds to the validator."
+      ],
+      "discriminator": [
+        47,
+        136,
+        208,
+        190,
+        125,
+        243,
+        74,
+        227
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "expired_funds_account",
+          "writable": true
+        },
+        {
+          "name": "tip_distribution_account",
+          "writable": true
+        },
+        {
+          "name": "validator_vote_account",
+          "writable": true
+        },
+        {
+          "name": "signer",
+          "docs": [
+            "Anyone can crank this instruction."
+          ],
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "_epoch",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Initialize a singleton instance of the [Config] account."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "system_program"
+        },
+        {
+          "name": "initializer",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "expired_funds_account",
+          "type": "pubkey"
+        },
+        {
+          "name": "num_epochs_valid",
+          "type": "u64"
+        },
+        {
+          "name": "max_validator_commission_bps",
+          "type": "u16"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "initialize_merkle_root_upload_config",
+      "discriminator": [
+        232,
+        87,
+        72,
+        14,
+        89,
+        40,
+        40,
+        27
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "merkle_root_upload_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "original_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "initialize_tip_distribution_account",
+      "docs": [
+        "Initialize a new [TipDistributionAccount] associated with the given validator vote key",
+        "and current epoch."
+      ],
+      "discriminator": [
+        120,
+        191,
+        25,
+        182,
+        111,
+        49,
+        179,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "tip_distribution_account",
+          "writable": true
+        },
+        {
+          "name": "validator_vote_account",
+          "docs": [
+            "The validator's vote account is used to check this transaction's signer is also the authorized withdrawer."
+          ]
+        },
+        {
+          "name": "signer",
+          "docs": [
+            "Must be equal to the supplied validator vote account's authorized withdrawer."
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "merkle_root_upload_authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "validator_commission_bps",
+          "type": "u16"
+        },
+        {
+          "name": "bump",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "migrate_tda_merkle_root_upload_authority",
+      "discriminator": [
+        13,
+        226,
+        163,
+        144,
+        56,
+        202,
+        214,
+        23
+      ],
+      "accounts": [
+        {
+          "name": "tip_distribution_account",
+          "writable": true
+        },
+        {
+          "name": "merkle_root_upload_config"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_config",
+      "docs": [
+        "Update config fields. Only the [Config] authority can invoke this."
+      ],
+      "discriminator": [
+        29,
+        158,
+        252,
+        191,
+        10,
+        83,
+        219,
+        99
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_config",
+          "type": {
+            "defined": {
+              "name": "Config"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "update_merkle_root_upload_config",
+      "discriminator": [
+        128,
+        227,
+        159,
+        139,
+        176,
+        128,
+        118,
+        2
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "merkle_root_upload_config",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        },
+        {
+          "name": "system_program"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        },
+        {
+          "name": "original_authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "upload_merkle_root",
+      "docs": [
+        "Uploads a merkle root to the provided [TipDistributionAccount]. This instruction may be",
+        "invoked many times as long as the account is at least one epoch old and not expired; and",
+        "no funds have already been claimed. Only the `merkle_root_upload_authority` has the",
+        "authority to invoke."
+      ],
+      "discriminator": [
+        70,
+        3,
+        110,
+        29,
+        199,
+        190,
+        205,
+        176
+      ],
+      "accounts": [
+        {
+          "name": "config"
+        },
+        {
+          "name": "tip_distribution_account",
+          "writable": true
+        },
+        {
+          "name": "merkle_root_upload_authority",
+          "writable": true,
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "max_total_claim",
+          "type": "u64"
+        },
+        {
+          "name": "max_num_nodes",
+          "type": "u64"
+        }
+      ]
     }
   ],
   "accounts": [
     {
+      "name": "ClaimStatus",
+      "discriminator": [
+        22,
+        183,
+        249,
+        157,
+        247,
+        95,
+        150,
+        96
+      ]
+    },
+    {
       "name": "Config",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "authority",
-            "docs": [
-              "Account with authority over this PDA."
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "expiredFundsAccount",
-            "docs": [
-              "We want to expire funds after some time so that validators can be refunded the rent.",
-              "Expired funds will get transferred to this account."
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "numEpochsValid",
-            "docs": [
-              "Specifies the number of epochs a merkle root is valid for before expiring."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "maxValidatorCommissionBps",
-            "docs": [
-              "The maximum commission a validator can set on their distribution account."
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "bump",
-            "docs": [
-              "The bump used to generate this account"
-            ],
-            "type": "u8"
-          }
-        ]
-      }
+      "discriminator": [
+        155,
+        12,
+        170,
+        224,
+        30,
+        250,
+        204,
+        130
+      ]
+    },
+    {
+      "name": "MerkleRootUploadConfig",
+      "discriminator": [
+        213,
+        125,
+        30,
+        192,
+        25,
+        121,
+        87,
+        33
+      ]
     },
     {
       "name": "TipDistributionAccount",
-      "docs": [
-        "The account that validators register as **tip_receiver** with the tip-payment program."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "validatorVoteAccount",
-            "docs": [
-              "The validator's vote account, also the recipient of remaining lamports after",
-              "upon closing this account."
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "merkleRootUploadAuthority",
-            "docs": [
-              "The only account authorized to upload a merkle-root for this account."
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "merkleRoot",
-            "docs": [
-              "The merkle root used to verify user claims from this account."
-            ],
-            "type": {
-              "option": {
-                "defined": "MerkleRoot"
-              }
-            }
-          },
-          {
-            "name": "epochCreatedAt",
-            "docs": [
-              "Epoch for which this account was created."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "validatorCommissionBps",
-            "docs": [
-              "The commission basis points this validator charges."
-            ],
-            "type": "u16"
-          },
-          {
-            "name": "expiresAt",
-            "docs": [
-              "The epoch (upto and including) that tip funds can be claimed."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "docs": [
-              "The bump used to generate this account"
-            ],
-            "type": "u8"
-          }
-        ]
-      }
-    },
-    {
-      "name": "ClaimStatus",
-      "docs": [
-        "Gives us an audit trail of who and what was claimed; also enforces and only-once claim by any party."
-      ],
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "isClaimed",
-            "docs": [
-              "If true, the tokens have been claimed."
-            ],
-            "type": "bool"
-          },
-          {
-            "name": "claimant",
-            "docs": [
-              "Authority that claimed the tokens. Allows for delegated rewards claiming."
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "claimStatusPayer",
-            "docs": [
-              "The payer who created the claim."
-            ],
-            "type": "publicKey"
-          },
-          {
-            "name": "slotClaimedAt",
-            "docs": [
-              "When the funds were claimed."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "amount",
-            "docs": [
-              "Amount of funds claimed."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "expiresAt",
-            "docs": [
-              "The epoch (upto and including) that tip funds can be claimed.",
-              "Copied since TDA can be closed, need to track to avoid making multiple claims"
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "bump",
-            "docs": [
-              "The bump used to generate this account"
-            ],
-            "type": "u8"
-          }
-        ]
-      }
-    }
-  ],
-  "types": [
-    {
-      "name": "MerkleRoot",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "root",
-            "docs": [
-              "The 256-bit merkle root."
-            ],
-            "type": {
-              "array": [
-                "u8",
-                32
-              ]
-            }
-          },
-          {
-            "name": "maxTotalClaim",
-            "docs": [
-              "Maximum number of funds that can ever be claimed from this [MerkleRoot]."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "maxNumNodes",
-            "docs": [
-              "Maximum number of nodes that can ever be claimed from this [MerkleRoot]."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "totalFundsClaimed",
-            "docs": [
-              "Total funds that have been claimed."
-            ],
-            "type": "u64"
-          },
-          {
-            "name": "numNodesClaimed",
-            "docs": [
-              "Number of nodes that have been claimed."
-            ],
-            "type": "u64"
-          }
-        ]
-      }
+      "discriminator": [
+        85,
+        64,
+        113,
+        198,
+        234,
+        94,
+        120,
+        123
+      ]
     }
   ],
   "events": [
     {
-      "name": "TipDistributionAccountInitializedEvent",
-      "fields": [
-        {
-          "name": "tipDistributionAccount",
-          "type": "publicKey",
-          "index": false
-        }
-      ]
-    },
-    {
-      "name": "ValidatorCommissionBpsUpdatedEvent",
-      "fields": [
-        {
-          "name": "tipDistributionAccount",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "oldCommissionBps",
-          "type": "u16",
-          "index": false
-        },
-        {
-          "name": "newCommissionBps",
-          "type": "u16",
-          "index": false
-        }
-      ]
-    },
-    {
-      "name": "MerkleRootUploadAuthorityUpdatedEvent",
-      "fields": [
-        {
-          "name": "oldAuthority",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "newAuthority",
-          "type": "publicKey",
-          "index": false
-        }
-      ]
-    },
-    {
-      "name": "ConfigUpdatedEvent",
-      "fields": [
-        {
-          "name": "authority",
-          "type": "publicKey",
-          "index": false
-        }
+      "name": "ClaimStatusClosedEvent",
+      "discriminator": [
+        188,
+        143,
+        237,
+        229,
+        192,
+        182,
+        164,
+        118
       ]
     },
     {
       "name": "ClaimedEvent",
-      "fields": [
-        {
-          "name": "tipDistributionAccount",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "payer",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "claimant",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "amount",
-          "type": "u64",
-          "index": false
-        }
+      "discriminator": [
+        144,
+        172,
+        209,
+        86,
+        144,
+        87,
+        84,
+        115
+      ]
+    },
+    {
+      "name": "ConfigUpdatedEvent",
+      "discriminator": [
+        245,
+        158,
+        129,
+        99,
+        60,
+        100,
+        214,
+        220
+      ]
+    },
+    {
+      "name": "MerkleRootUploadAuthorityUpdatedEvent",
+      "discriminator": [
+        83,
+        157,
+        58,
+        165,
+        200,
+        171,
+        8,
+        106
       ]
     },
     {
       "name": "MerkleRootUploadedEvent",
-      "fields": [
-        {
-          "name": "merkleRootUploadAuthority",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "tipDistributionAccount",
-          "type": "publicKey",
-          "index": false
-        }
+      "discriminator": [
+        94,
+        233,
+        236,
+        49,
+        52,
+        224,
+        181,
+        167
       ]
     },
     {
       "name": "TipDistributionAccountClosedEvent",
-      "fields": [
-        {
-          "name": "expiredFundsAccount",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "tipDistributionAccount",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "expiredAmount",
-          "type": "u64",
-          "index": false
-        }
+      "discriminator": [
+        246,
+        152,
+        49,
+        154,
+        9,
+        79,
+        25,
+        58
       ]
     },
     {
-      "name": "ClaimStatusClosedEvent",
-      "fields": [
-        {
-          "name": "claimStatusPayer",
-          "type": "publicKey",
-          "index": false
-        },
-        {
-          "name": "claimStatusAccount",
-          "type": "publicKey",
-          "index": false
-        }
+      "name": "TipDistributionAccountInitializedEvent",
+      "discriminator": [
+        39,
+        165,
+        224,
+        61,
+        40,
+        140,
+        139,
+        255
+      ]
+    },
+    {
+      "name": "ValidatorCommissionBpsUpdatedEvent",
+      "discriminator": [
+        4,
+        34,
+        92,
+        25,
+        228,
+        88,
+        51,
+        206
       ]
     }
   ],
@@ -742,6 +706,438 @@
       "code": 6014,
       "name": "Unauthorized",
       "msg": "Unauthorized signer."
+    },
+    {
+      "code": 6015,
+      "name": "InvalidTdaForMigration",
+      "msg": "TDA not valid for migration."
+    }
+  ],
+  "types": [
+    {
+      "name": "ClaimStatus",
+      "docs": [
+        "Gives us an audit trail of who and what was claimed; also enforces and only-once claim by any party."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "is_claimed",
+            "docs": [
+              "If true, the tokens have been claimed."
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "claimant",
+            "docs": [
+              "Authority that claimed the tokens. Allows for delegated rewards claiming."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "claim_status_payer",
+            "docs": [
+              "The payer who created the claim."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "slot_claimed_at",
+            "docs": [
+              "When the funds were claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Amount of funds claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "expires_at",
+            "docs": [
+              "The epoch (upto and including) that tip funds can be claimed.",
+              "Copied since TDA can be closed, need to track to avoid making multiple claims"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "The bump used to generate this account"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimStatusClosedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "claim_status_payer",
+            "docs": [
+              "Account where funds were transferred to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "claim_status_account",
+            "docs": [
+              "[ClaimStatus] account that was closed."
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ClaimedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tip_distribution_account",
+            "docs": [
+              "[TipDistributionAccount] claimed from."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "payer",
+            "docs": [
+              "User that paid for the claim, may or may not be the same as claimant."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "claimant",
+            "docs": [
+              "Account that received the funds."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "amount",
+            "docs": [
+              "Amount of funds to distribute."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Config",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "Account with authority over this PDA."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "expired_funds_account",
+            "docs": [
+              "We want to expire funds after some time so that validators can be refunded the rent.",
+              "Expired funds will get transferred to this account."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "num_epochs_valid",
+            "docs": [
+              "Specifies the number of epochs a merkle root is valid for before expiring."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_validator_commission_bps",
+            "docs": [
+              "The maximum commission a validator can set on their distribution account."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "The bump used to generate this account"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigUpdatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "docs": [
+              "Who updated it."
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MerkleRoot",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "root",
+            "docs": [
+              "The 256-bit merkle root."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "max_total_claim",
+            "docs": [
+              "Maximum number of funds that can ever be claimed from this [MerkleRoot]."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "max_num_nodes",
+            "docs": [
+              "Maximum number of nodes that can ever be claimed from this [MerkleRoot]."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_funds_claimed",
+            "docs": [
+              "Total funds that have been claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "num_nodes_claimed",
+            "docs": [
+              "Number of nodes that have been claimed."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MerkleRootUploadAuthorityUpdatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "old_authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_authority",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MerkleRootUploadConfig",
+      "docs": [
+        "Singleton account that allows overriding TDA's merkle upload authority"
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "override_authority",
+            "docs": [
+              "The authority that overrides the TipDistributionAccount merkle_root_upload_authority"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "original_upload_authority",
+            "docs": [
+              "The original merkle root upload authority that can be changed to the new overrided",
+              "authority. E.g. Jito Labs authority GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "The bump used to generate this account"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MerkleRootUploadedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "merkle_root_upload_authority",
+            "docs": [
+              "Who uploaded the root."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tip_distribution_account",
+            "docs": [
+              "Where the root was uploaded to."
+            ],
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TipDistributionAccount",
+      "docs": [
+        "The account that validators register as **tip_receiver** with the tip-payment program."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "validator_vote_account",
+            "docs": [
+              "The validator's vote account, also the recipient of remaining lamports after",
+              "upon closing this account."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "merkle_root_upload_authority",
+            "docs": [
+              "The only account authorized to upload a merkle-root for this account."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "merkle_root",
+            "docs": [
+              "The merkle root used to verify user claims from this account."
+            ],
+            "type": {
+              "option": {
+                "defined": {
+                  "name": "MerkleRoot"
+                }
+              }
+            }
+          },
+          {
+            "name": "epoch_created_at",
+            "docs": [
+              "Epoch for which this account was created."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "validator_commission_bps",
+            "docs": [
+              "The commission basis points this validator charges."
+            ],
+            "type": "u16"
+          },
+          {
+            "name": "expires_at",
+            "docs": [
+              "The epoch (upto and including) that tip funds can be claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "The bump used to generate this account"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TipDistributionAccountClosedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "expired_funds_account",
+            "docs": [
+              "Account where unclaimed funds were transferred to."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "tip_distribution_account",
+            "docs": [
+              "[TipDistributionAccount] closed."
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "expired_amount",
+            "docs": [
+              "Unclaimed amount transferred."
+            ],
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TipDistributionAccountInitializedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tip_distribution_account",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ValidatorCommissionBpsUpdatedEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "tip_distribution_account",
+            "type": "pubkey"
+          },
+          {
+            "name": "old_commission_bps",
+            "type": "u16"
+          },
+          {
+            "name": "new_commission_bps",
+            "type": "u16"
+          }
+        ]
+      }
     }
   ]
 }

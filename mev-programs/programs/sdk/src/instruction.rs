@@ -38,7 +38,7 @@ pub fn initialize_ix(
 
     Instruction {
         program_id,
-        data: crate::instruction::Initialize {
+        data: jito_tip_distribution::instruction::Initialize {
             authority,
             expired_funds_account,
             num_epochs_valid,
@@ -46,7 +46,7 @@ pub fn initialize_ix(
             bump,
         }
         .data(),
-        accounts: crate::accounts::Initialize {
+        accounts: jito_tip_distribution::accounts::Initialize {
             config,
             system_program,
             initializer,
@@ -88,13 +88,13 @@ pub fn initialize_tip_distribution_account_ix(
 
     Instruction {
         program_id,
-        data: crate::instruction::InitializeTipDistributionAccount {
+        data: jito_tip_distribution::instruction::InitializeTipDistributionAccount {
             merkle_root_upload_authority,
             validator_commission_bps,
             bump,
         }
         .data(),
-        accounts: crate::accounts::InitializeTipDistributionAccount {
+        accounts: jito_tip_distribution::accounts::InitializeTipDistributionAccount {
             config,
             signer,
             system_program,
@@ -124,8 +124,8 @@ pub fn close_claim_status_ix(
 
     Instruction {
         program_id,
-        data: crate::instruction::CloseClaimStatus {}.data(),
-        accounts: crate::accounts::CloseClaimStatus {
+        data: jito_tip_distribution::instruction::CloseClaimStatus {}.data(),
+        accounts: jito_tip_distribution::accounts::CloseClaimStatus {
             config,
             claim_status,
             claim_status_payer,
@@ -152,8 +152,9 @@ pub fn update_config_ix(
 
     Instruction {
         program_id,
-        data: crate::instruction::UpdateConfig { new_config }.data(),
-        accounts: crate::accounts::UpdateConfig { config, authority }.to_account_metas(None),
+        data: jito_tip_distribution::instruction::UpdateConfig { new_config }.data(),
+        accounts: jito_tip_distribution::accounts::UpdateConfig { config, authority }
+            .to_account_metas(None),
     }
 }
 
@@ -186,13 +187,13 @@ pub fn upload_merkle_root_ix(
 
     Instruction {
         program_id,
-        data: crate::instruction::UploadMerkleRoot {
+        data: jito_tip_distribution::instruction::UploadMerkleRoot {
             max_total_claim,
             max_num_nodes,
             root,
         }
         .data(),
-        accounts: crate::accounts::UploadMerkleRoot {
+        accounts: jito_tip_distribution::accounts::UploadMerkleRoot {
             config,
             merkle_root_upload_authority,
             tip_distribution_account,
@@ -228,8 +229,8 @@ pub fn close_tip_distribution_account_ix(
 
     Instruction {
         program_id,
-        data: crate::instruction::CloseTipDistributionAccount { _epoch }.data(),
-        accounts: crate::accounts::CloseTipDistributionAccount {
+        data: jito_tip_distribution::instruction::CloseTipDistributionAccount { _epoch }.data(),
+        accounts: jito_tip_distribution::accounts::CloseTipDistributionAccount {
             config,
             validator_vote_account,
             expired_funds_account,
@@ -248,6 +249,7 @@ pub struct ClaimArgs {
 pub struct ClaimAccounts {
     pub config: Pubkey,
     pub tip_distribution_account: Pubkey,
+    pub merkle_root_upload_authority: Pubkey,
     pub claim_status: Pubkey,
     pub claimant: Pubkey,
     pub payer: Pubkey,
@@ -263,6 +265,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
     let ClaimAccounts {
         config,
         tip_distribution_account,
+        merkle_root_upload_authority,
         claim_status,
         claimant,
         payer,
@@ -271,15 +274,16 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
 
     Instruction {
         program_id,
-        data: crate::instruction::Claim {
+        data: jito_tip_distribution::instruction::Claim {
             proof,
             amount,
             bump,
         }
         .data(),
-        accounts: crate::accounts::Claim {
+        accounts: jito_tip_distribution::accounts::Claim {
             config,
             tip_distribution_account,
+            merkle_root_upload_authority,
             claimant,
             claim_status,
             payer,

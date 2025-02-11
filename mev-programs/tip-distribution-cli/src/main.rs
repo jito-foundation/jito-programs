@@ -1,16 +1,14 @@
-use std::{rc::Rc, str::FromStr};
+use std::str::FromStr;
 
-use anchor_lang::{AccountDeserialize, AnchorSerialize};
+use anchor_lang::AccountDeserialize;
 use clap::{Parser, Subcommand};
-use jito_tip_distribution::{
-    sdk::{
-        derive_config_account_address, derive_tip_distribution_account_address,
-        instruction::{update_config_ix, UpdateConfigAccounts, UpdateConfigArgs},
-    },
-    state::{ClaimStatus, Config, TipDistributionAccount},
+use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
+use jito_tip_distribution_sdk::{
+    derive_config_account_address, derive_tip_distribution_account_address,
+    instruction::{update_config_ix, UpdateConfigAccounts, UpdateConfigArgs},
 };
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{pubkey::Pubkey, signature::Keypair};
+use solana_sdk::pubkey::Pubkey;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -91,8 +89,6 @@ fn main() -> anyhow::Result<()> {
 
     let program_id = Pubkey::from_str(&cli.program_id)?;
 
-    // Use a dummy keypair since we're only reading data
-    let payer = Rc::new(Keypair::new());
     let client = RpcClient::new(cli.rpc_url);
 
     match cli.command {
