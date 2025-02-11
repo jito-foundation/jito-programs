@@ -1,6 +1,8 @@
 [workspace]
 members = [
-    "programs/*"
+    "programs/*",
+    "tip-payment-cli",
+    "tip-distribution-cli",
 ]
 
 [profile.release]

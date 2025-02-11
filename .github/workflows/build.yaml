@@ -15,10 +15,10 @@ jobs:
 
     steps:
       # Setup
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: ./.github/actions/setup/
       - uses: ./.github/actions/setup-solana/
-      - uses: actions/cache@v2
+      - uses: actions/cache@v4
         name: Cache Cargo registry + index
         id: cache-anchor
         with:
@@ -65,7 +65,7 @@ jobs:
     runs-on: big-runner-1
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       # --force because the cargo cache has it saved
       - name: Install Solana Verify
@@ -80,7 +80,7 @@ jobs:
           solana-verify build --library-name jito_tip_payment
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           path: |
