@@ -11,4 +11,4 @@ anchor-lang = { path = "../../../../anchor/lang" }
 bincode = "1.3.3"
 serde = "1.0.138"
 serde_derive = "1.0.103"
-solana-program = { path = "../../../../sdk/program"}
+solana-program = { version = "=2.2.0" }
