@@ -46,10 +46,7 @@ jobs:
       # Build IDLs
       - name: Build jito_tip_distribution
         working-directory: ./mev-programs
-        run: anchor build --idl idl --program-name jito_tip_distribution
-      - name: Build jito_tip_payment
-        working-directory: ./mev-programs
-        run: anchor build --idl idl --program-name jito_tip_payment
+        run: anchor build
 
       # Test
       - name: Run Anchor test
