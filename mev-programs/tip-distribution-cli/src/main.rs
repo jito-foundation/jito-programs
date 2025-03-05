@@ -23,7 +23,7 @@ use solana_sdk::{pubkey::Pubkey, system_program};
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// RPC URL for the Solana cluster
-    #[arg(short, long, default_value = "http://localhost:8899")]
+    #[arg(short, long, default_value = "https://api.mainnet-beta.solana.com")]
     rpc_url: String,
 
     /// Tip Distribution program ID
@@ -125,6 +125,9 @@ enum Commands {
         #[arg(long)]
         original_authority: String,
     },
+
+    /// Prints out the merkle root upload config account information
+    GetMerkleRootUploadConfig,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -339,6 +342,29 @@ fn main() -> anyhow::Result<()> {
             gov_ix_data.serialize(&mut buffer)?;
             let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
             println!("\nBase64 InstructionData: \n{:?}\n", base64_ix);
+        }
+
+        Commands::GetMerkleRootUploadConfig => {
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
+            println!(
+                "Merkle Root Upload Config Account Address: {}",
+                merkle_root_upload_config
+            );
+
+            let account_data = client.get_account(&merkle_root_upload_config)?.data;
+            let merkle_root_upload_config: MerkleRootUploadConfig =
+                MerkleRootUploadConfig::try_deserialize(&mut account_data.as_slice())?;
+
+            println!("Merkle Root Upload Config Account Data",);
+            println!(
+                " Original Upload Authority: {}",
+                merkle_root_upload_config.original_upload_authority
+            );
+            println!(
+                " Override Authority: {}",
+                merkle_root_upload_config.override_authority
+            );
         }
     }
 
