@@ -1,17 +1,23 @@
 use std::io::Cursor;
 use std::str::FromStr;
 
-use anchor_lang::{AccountDeserialize, InstructionData};
+use anchor_lang::{AccountDeserialize, AnchorSerialize};
 use base64::prelude::*;
-use borsh::BorshSerialize;
 use clap::{Parser, Subcommand};
-use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
+use jito_tip_distribution::state::{
+    ClaimStatus, Config, MerkleRootUploadConfig, TipDistributionAccount,
+};
 use jito_tip_distribution_sdk::{
     derive_config_account_address, derive_tip_distribution_account_address,
-    instruction::{update_config_ix, UpdateConfigAccounts, UpdateConfigArgs},
+    instruction::{
+        initialize_merkle_root_upload_config_ix, update_config_ix,
+        update_merkle_root_upload_config_ix, InitializeMerkleRootUploadConfigAccounts,
+        InitializeMerkleRootUploadConfigArgs, UpdateConfigAccounts, UpdateConfigArgs,
+        UpdateMerkleRootUploadConfigAccounts, UpdateMerkleRootUploadConfigArgs,
+    },
 };
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{pubkey::Pubkey, system_program};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -92,16 +98,28 @@ enum Commands {
         #[arg(long)]
         authority: String,
 
+        /// New authority pubkey
+        #[arg(long)]
+        override_authority: String,
+
         /// Original authority pubkey
         #[arg(long)]
         original_authority: String,
+
+        /// Payer pubkey
+        #[arg(long)]
+        payer: String,
     },
 
     /// Get the IX data for updating a merkle root upload config
     GetUpdateMerkleRootUploadConfigIx {
-        /// Authority pubkey
+        /// New authority pubkey
         #[arg(long)]
         authority: String,
+
+        /// New authority pubkey
+        #[arg(long)]
+        override_authority: String,
 
         /// Original authority pubkey
         #[arg(long)]
@@ -250,37 +268,77 @@ fn main() -> anyhow::Result<()> {
 
         Commands::GetInitializeMerkleRootUploadConfigIx {
             authority,
+            override_authority,
             original_authority,
+            payer,
         } => {
-            let ix_data = jito_tip_distribution::instruction::InitializeMerkleRootUploadConfig {
-                authority: Pubkey::from_str(&authority)?,
-                original_authority: Pubkey::from_str(&original_authority)?,
-            }
-            .data();
+            let authority = Pubkey::from_str(&authority)?;
+            let override_authority = Pubkey::from_str(&override_authority)?;
+            let original_authority = Pubkey::from_str(&original_authority)?;
+            let payer = Pubkey::from_str(&payer)?;
+            let (config, _) = derive_config_account_address(&program_id);
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
+
+            let args = InitializeMerkleRootUploadConfigArgs {
+                authority: override_authority,
+                original_authority,
+            };
+
+            let accounts = InitializeMerkleRootUploadConfigAccounts {
+                config,
+                authority,
+                merkle_root_upload_config,
+                payer,
+                system_program: system_program::id(),
+            };
+
+            let ix: solana_sdk::instruction::Instruction =
+                initialize_merkle_root_upload_config_ix(program_id, args, accounts);
+
+            let gov_ix_data =
+                spl_governance::state::proposal_transaction::InstructionData::from(ix);
 
             let mut buffer = Cursor::new(Vec::new());
-            ix_data.serialize(&mut buffer)?;
+            gov_ix_data.serialize(&mut buffer)?;
             let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
             println!("Base64 InstructionData: {:?}", base64_ix);
         }
 
         Commands::GetUpdateMerkleRootUploadConfigIx {
             authority,
+            override_authority,
             original_authority,
         } => {
-            let authority_pubkey = Pubkey::from_str(&authority)?;
-            let original_authority_pubkey = Pubkey::from_str(&original_authority)?;
+            let authority = Pubkey::from_str(&authority)?;
+            let override_authority = Pubkey::from_str(&override_authority)?;
+            let original_authority = Pubkey::from_str(&original_authority)?;
+            let (config, _) = derive_config_account_address(&program_id);
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
 
-            let ix_data = jito_tip_distribution::instruction::UpdateMerkleRootUploadConfig {
-                authority: authority_pubkey,
-                original_authority: original_authority_pubkey,
-            }
-            .data();
+            let args = UpdateMerkleRootUploadConfigArgs {
+                authority: override_authority,
+                original_authority,
+            };
+
+            let accounts = UpdateMerkleRootUploadConfigAccounts {
+                config,
+                authority,
+                merkle_root_upload_config,
+                system_program: system_program::id(),
+            };
+
+            let ix: solana_sdk::instruction::Instruction =
+                update_merkle_root_upload_config_ix(program_id, args, accounts);
+
+            let gov_ix_data =
+                spl_governance::state::proposal_transaction::InstructionData::from(ix);
 
             let mut buffer = Cursor::new(Vec::new());
-            ix_data.serialize(&mut buffer)?;
+            gov_ix_data.serialize(&mut buffer)?;
             let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
-            println!("Base64 InstructionData: {}", base64_ix);
+            println!("Base64 InstructionData: {:?}", base64_ix);
         }
     }
 

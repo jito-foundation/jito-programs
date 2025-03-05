@@ -326,7 +326,12 @@ pub mod jito_tip_distribution {
             return Err(InvalidTdaForMigration.into());
         }
         // Validate the TDA key is the acceptable original authority (i.e. the original Jito Lab's authority)
-        if distribution_account.merkle_root_upload_authority != ctx.accounts.merkle_root_upload_config.original_upload_authority {
+        if distribution_account.merkle_root_upload_authority
+            != ctx
+                .accounts
+                .merkle_root_upload_config
+                .original_upload_authority
+        {
             return Err(InvalidTdaForMigration.into());
         }
 
