@@ -284,7 +284,7 @@ fn main() -> anyhow::Result<()> {
                 Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
 
             let args = InitializeMerkleRootUploadConfigArgs {
-                authority: override_authority,
+                override_authority,
                 original_authority,
             };
 

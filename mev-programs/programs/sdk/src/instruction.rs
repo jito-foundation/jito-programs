@@ -106,7 +106,7 @@ pub fn initialize_tip_distribution_account_ix(
 }
 
 pub struct InitializeMerkleRootUploadConfigArgs {
-    pub authority: Pubkey,
+    pub override_authority: Pubkey,
     pub original_authority: Pubkey,
 }
 pub struct InitializeMerkleRootUploadConfigAccounts {
@@ -122,7 +122,7 @@ pub fn initialize_merkle_root_upload_config_ix(
     accounts: InitializeMerkleRootUploadConfigAccounts,
 ) -> Instruction {
     let InitializeMerkleRootUploadConfigArgs {
-        authority: _,
+        override_authority,
         original_authority,
     } = args;
 
@@ -137,7 +137,7 @@ pub fn initialize_merkle_root_upload_config_ix(
     Instruction {
         program_id,
         data: jito_tip_distribution::instruction::InitializeMerkleRootUploadConfig {
-            authority,
+            authority: override_authority,
             original_authority,
         }
         .data(),
