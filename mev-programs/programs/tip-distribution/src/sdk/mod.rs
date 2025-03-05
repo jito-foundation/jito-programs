@@ -22,3 +22,9 @@ pub fn derive_tip_distribution_account_address(
 pub fn derive_config_account_address(tip_distribution_program_id: &Pubkey) -> (Pubkey, u8) {
     Pubkey::find_program_address(&[Config::SEED], tip_distribution_program_id)
 }
+
+pub fn derive_merkle_root_upload_config_address(
+    tip_distribution_program_id: &Pubkey,
+) -> (Pubkey, u8) {
+    Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], tip_distribution_program_id)
+}

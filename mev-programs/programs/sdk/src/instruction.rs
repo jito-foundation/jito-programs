@@ -105,6 +105,98 @@ pub fn initialize_tip_distribution_account_ix(
     }
 }
 
+pub struct InitializeMerkleRootUploadConfigArgs {
+    pub override_authority: Pubkey,
+    pub original_authority: Pubkey,
+}
+pub struct InitializeMerkleRootUploadConfigAccounts {
+    pub authority: Pubkey,
+    pub config: Pubkey,
+    pub merkle_root_upload_config: Pubkey,
+    pub payer: Pubkey,
+    pub system_program: Pubkey,
+}
+pub fn initialize_merkle_root_upload_config_ix(
+    program_id: Pubkey,
+    args: InitializeMerkleRootUploadConfigArgs,
+    accounts: InitializeMerkleRootUploadConfigAccounts,
+) -> Instruction {
+    let InitializeMerkleRootUploadConfigArgs {
+        override_authority,
+        original_authority,
+    } = args;
+
+    let InitializeMerkleRootUploadConfigAccounts {
+        authority,
+        config,
+        merkle_root_upload_config,
+        payer,
+        system_program,
+    } = accounts;
+
+    Instruction {
+        program_id,
+        data: jito_tip_distribution::instruction::InitializeMerkleRootUploadConfig {
+            authority: override_authority,
+            original_authority,
+        }
+        .data(),
+        accounts: jito_tip_distribution::accounts::InitializeMerkleRootUploadConfig {
+            authority,
+            config,
+            merkle_root_upload_config,
+            payer,
+            system_program,
+        }
+        .to_account_metas(None),
+    }
+}
+
+pub struct UpdateMerkleRootUploadConfigArgs {
+    pub override_authority: Pubkey,
+    pub original_authority: Pubkey,
+}
+pub struct UpdateMerkleRootUploadConfigAccounts {
+    pub authority: Pubkey,
+    pub config: Pubkey,
+    pub merkle_root_upload_config: Pubkey,
+    pub system_program: Pubkey,
+}
+
+pub fn update_merkle_root_upload_config_ix(
+    program_id: Pubkey,
+    args: UpdateMerkleRootUploadConfigArgs,
+    accounts: UpdateMerkleRootUploadConfigAccounts,
+) -> Instruction {
+    let UpdateMerkleRootUploadConfigArgs {
+        override_authority,
+        original_authority,
+    } = args;
+
+    let UpdateMerkleRootUploadConfigAccounts {
+        authority,
+        config,
+        merkle_root_upload_config,
+        system_program,
+    } = accounts;
+
+    Instruction {
+        program_id,
+        data: jito_tip_distribution::instruction::UpdateMerkleRootUploadConfig {
+            authority: override_authority,
+            original_authority,
+        }
+        .data(),
+        accounts: jito_tip_distribution::accounts::UpdateMerkleRootUploadConfig {
+            authority,
+            config,
+            merkle_root_upload_config,
+            system_program,
+        }
+        .to_account_metas(None),
+    }
+}
+
 pub struct CloseClaimStatusArgs;
 pub struct CloseClaimStatusAccounts {
     pub config: Pubkey,
