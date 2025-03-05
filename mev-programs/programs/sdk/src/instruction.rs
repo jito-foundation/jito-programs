@@ -153,7 +153,7 @@ pub fn initialize_merkle_root_upload_config_ix(
 }
 
 pub struct UpdateMerkleRootUploadConfigArgs {
-    pub authority: Pubkey,
+    pub override_authority: Pubkey,
     pub original_authority: Pubkey,
 }
 pub struct UpdateMerkleRootUploadConfigAccounts {
@@ -169,7 +169,7 @@ pub fn update_merkle_root_upload_config_ix(
     accounts: UpdateMerkleRootUploadConfigAccounts,
 ) -> Instruction {
     let UpdateMerkleRootUploadConfigArgs {
-        authority: _,
+        override_authority,
         original_authority,
     } = args;
 
@@ -183,7 +183,7 @@ pub fn update_merkle_root_upload_config_ix(
     Instruction {
         program_id,
         data: jito_tip_distribution::instruction::UpdateMerkleRootUploadConfig {
-            authority,
+            authority: override_authority,
             original_authority,
         }
         .data(),
