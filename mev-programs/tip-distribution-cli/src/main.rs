@@ -258,41 +258,13 @@ fn main() -> anyhow::Result<()> {
             bump,
         } => {
             let merkle_root_upload_authority = Pubkey::from_str(&merkle_root_upload_authority)?;
-
-            // let args: InitializeTipDistributionAccountArgs = InitializeTipDistributionAccountArgs {
-            //     merkle_root_upload_authority: Pubkey::from_str(&merkle_root_upload_authority)?,
-            //     validator_commission_bps,
-            //     bump,
-            // };
-
-            // let validator_vote_account = Pubkey::from_str(&vote_account)?;
-            // let signer = Pubkey::from_str(&signer)?;
-            // let (config, _) = derive_config_account_address(&program_id);
-            // let (tip_distribution_account, _) = derive_tip_distribution_account_address(
-            //     &program_id,
-            //     &validator_vote_account,
-            //     epoch,
-            // );
-
-            // let accounts = InitializeTipDistributionAccountAccounts {
-            //     config,
-            //     signer,
-            //     system_program: system_program::id(),
-            //     tip_distribution_account,
-            //     validator_vote_account,
-            // };
-
             let ix_data = jito_tip_distribution::instruction::InitializeTipDistributionAccount {
                 merkle_root_upload_authority,
                 validator_commission_bps,
                 bump,
             }
             .data();
-            // let instruction = initialize_tip_distribution_account_ix(program_id, args, accounts);
 
-            // let ix_data = jito_tip_distribution::instruction::InitializeTipDistributionAccount::
-
-            // let gov_ix_data = spl_governance::state::proposal_transaction::InstructionData::from(ix);
             let mut buffer = Cursor::new(Vec::new());
             ix_data.serialize(&mut buffer)?;
             let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
