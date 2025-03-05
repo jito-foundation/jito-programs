@@ -135,7 +135,7 @@ pub fn close_claim_status_ix(
 }
 
 pub struct UpdateConfigArgs {
-    new_config: Config,
+    pub new_config: Config,
 }
 pub struct UpdateConfigAccounts {
     pub config: Pubkey,
