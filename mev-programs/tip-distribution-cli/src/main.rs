@@ -88,17 +88,13 @@ enum Commands {
 
     /// Get the IX data for initializing a tip distribution account
     GetInitializeMerkleRootUploadConfigIx {
-        /// Merkle root upload authority pubkey
+        /// New authority pubkey
         #[arg(long)]
-        merkle_root_upload_authority: String,
+        authority: String,
 
-        /// Validator commission BPS
+        /// Original authority pubkey
         #[arg(long)]
-        validator_commission_bps: u16,
-
-        /// Bump
-        #[arg(long)]
-        bump: u8,
+        original_authority: String,
     },
 
     /// Get the IX data for updating a merkle root upload config
@@ -253,15 +249,12 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::GetInitializeMerkleRootUploadConfigIx {
-            merkle_root_upload_authority,
-            validator_commission_bps,
-            bump,
+            authority,
+            original_authority,
         } => {
-            let merkle_root_upload_authority = Pubkey::from_str(&merkle_root_upload_authority)?;
-            let ix_data = jito_tip_distribution::instruction::InitializeTipDistributionAccount {
-                merkle_root_upload_authority,
-                validator_commission_bps,
-                bump,
+            let ix_data = jito_tip_distribution::instruction::InitializeMerkleRootUploadConfig {
+                authority: Pubkey::from_str(&authority)?,
+                original_authority: Pubkey::from_str(&original_authority)?,
             }
             .data();
 
