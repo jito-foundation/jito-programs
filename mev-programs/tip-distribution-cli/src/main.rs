@@ -1,6 +1,9 @@
+use std::io::Cursor;
 use std::str::FromStr;
 
-use anchor_lang::AccountDeserialize;
+use anchor_lang::{AccountDeserialize, InstructionData};
+use base64::prelude::*;
+use borsh::BorshSerialize;
 use clap::{Parser, Subcommand};
 use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
 use jito_tip_distribution_sdk::{
@@ -81,6 +84,32 @@ enum Commands {
         /// Bump
         #[arg(long)]
         bump: u8,
+    },
+
+    /// Get the IX data for initializing a tip distribution account
+    GetInitializeMerkleRootUploadConfigIx {
+        /// Merkle root upload authority pubkey
+        #[arg(long)]
+        merkle_root_upload_authority: String,
+
+        /// Validator commission BPS
+        #[arg(long)]
+        validator_commission_bps: u16,
+
+        /// Bump
+        #[arg(long)]
+        bump: u8,
+    },
+
+    /// Get the IX data for updating a merkle root upload config
+    GetUpdateMerkleRootUploadConfigIx {
+        /// Authority pubkey
+        #[arg(long)]
+        authority: String,
+
+        /// Original authority pubkey
+        #[arg(long)]
+        original_authority: String,
     },
 }
 
@@ -221,6 +250,72 @@ fn main() -> anyhow::Result<()> {
             let serialized_data = instruction.data;
             let base58_data = bs58::encode(serialized_data).into_string();
             println!("Base58 Serialized Data: {}", base58_data);
+        }
+
+        Commands::GetInitializeMerkleRootUploadConfigIx {
+            merkle_root_upload_authority,
+            validator_commission_bps,
+            bump,
+        } => {
+            let merkle_root_upload_authority = Pubkey::from_str(&merkle_root_upload_authority)?;
+
+            // let args: InitializeTipDistributionAccountArgs = InitializeTipDistributionAccountArgs {
+            //     merkle_root_upload_authority: Pubkey::from_str(&merkle_root_upload_authority)?,
+            //     validator_commission_bps,
+            //     bump,
+            // };
+
+            // let validator_vote_account = Pubkey::from_str(&vote_account)?;
+            // let signer = Pubkey::from_str(&signer)?;
+            // let (config, _) = derive_config_account_address(&program_id);
+            // let (tip_distribution_account, _) = derive_tip_distribution_account_address(
+            //     &program_id,
+            //     &validator_vote_account,
+            //     epoch,
+            // );
+
+            // let accounts = InitializeTipDistributionAccountAccounts {
+            //     config,
+            //     signer,
+            //     system_program: system_program::id(),
+            //     tip_distribution_account,
+            //     validator_vote_account,
+            // };
+
+            let ix_data = jito_tip_distribution::instruction::InitializeTipDistributionAccount {
+                merkle_root_upload_authority,
+                validator_commission_bps,
+                bump,
+            }
+            .data();
+            // let instruction = initialize_tip_distribution_account_ix(program_id, args, accounts);
+
+            // let ix_data = jito_tip_distribution::instruction::InitializeTipDistributionAccount::
+
+            // let gov_ix_data = spl_governance::state::proposal_transaction::InstructionData::from(ix);
+            let mut buffer = Cursor::new(Vec::new());
+            ix_data.serialize(&mut buffer)?;
+            let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
+            println!("Base64 InstructionData: {:?}", base64_ix);
+        }
+
+        Commands::GetUpdateMerkleRootUploadConfigIx {
+            authority,
+            original_authority,
+        } => {
+            let authority_pubkey = Pubkey::from_str(&authority)?;
+            let original_authority_pubkey = Pubkey::from_str(&original_authority)?;
+
+            let ix_data = jito_tip_distribution::instruction::UpdateMerkleRootUploadConfig {
+                authority: authority_pubkey,
+                original_authority: original_authority_pubkey,
+            }
+            .data();
+
+            let mut buffer = Cursor::new(Vec::new());
+            ix_data.serialize(&mut buffer)?;
+            let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
+            println!("Base64 InstructionData: {}", base64_ix);
         }
     }
 
