@@ -16,7 +16,7 @@ jito_tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
 
 [workspace]
 members = [
-    "programs/tip-distribution",
+    "programs/jito_tip_distribution",
     "programs/tip-payment"
 ]
 exclude = ["programs/vote-state"]
