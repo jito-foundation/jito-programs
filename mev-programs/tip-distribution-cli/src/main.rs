@@ -302,7 +302,7 @@ fn main() -> anyhow::Result<()> {
             let mut buffer = Cursor::new(Vec::new());
             gov_ix_data.serialize(&mut buffer)?;
             let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
-            println!("Base64 InstructionData: {:?}", base64_ix);
+            println!("\nBase64 InstructionData: \n{:?}\n", base64_ix);
         }
 
         Commands::GetUpdateMerkleRootUploadConfigIx {
@@ -338,7 +338,7 @@ fn main() -> anyhow::Result<()> {
             let mut buffer = Cursor::new(Vec::new());
             gov_ix_data.serialize(&mut buffer)?;
             let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
-            println!("Base64 InstructionData: {:?}", base64_ix);
+            println!("\nBase64 InstructionData: \n{:?}\n", base64_ix);
         }
     }
 
