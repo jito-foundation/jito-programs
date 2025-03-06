@@ -472,6 +472,8 @@ pub struct Claim<'info> {
     #[account(mut, rent_exempt = enforce)]
     pub tip_distribution_account: Account<'info, TipDistributionAccount>,
 
+    pub merkle_root_upload_authority: Signer<'info>,
+
     /// Status of the claim. Used to prevent the same party from claiming multiple times.
     #[account(
         init,
