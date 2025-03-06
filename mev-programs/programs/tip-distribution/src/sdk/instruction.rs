@@ -280,6 +280,7 @@ pub fn claim_ix(program_id: Pubkey, args: ClaimArgs, accounts: ClaimAccounts) ->
         accounts: crate::accounts::Claim {
             config,
             tip_distribution_account,
+            merkle_root_upload_authority: payer,
             claimant,
             claim_status,
             payer,
