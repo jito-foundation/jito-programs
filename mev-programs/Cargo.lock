@@ -2141,6 +2141,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "49f1f14873335454500d59611f1cf4a4b0f786f9ac11f4312a78e4cf2566695b"
 
 [[package]]
+name = "jito-priority-fee-distribution"
+version = "0.1.5"
+dependencies = [
+ "anchor-lang",
+ "jito-programs-vote-state",
+ "solana-program",
+ "solana-security-txt",
+]
+
+[[package]]
 name = "jito-programs-vote-state"
 version = "0.1.5"
 dependencies = [

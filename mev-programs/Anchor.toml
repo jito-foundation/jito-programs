@@ -16,6 +16,7 @@ jito_tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
 
 [workspace]
 members = [
+    "programs/priority-fee-distribution",
     "programs/tip-distribution",
     "programs/tip-payment"
 ]
