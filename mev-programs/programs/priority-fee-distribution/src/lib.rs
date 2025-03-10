@@ -203,11 +203,10 @@ pub mod jito_priority_fee_distribution {
     }
 
     /// Claims tokens from the [TipDistributionAccount].
-    pub fn claim(ctx: Context<Claim>, bump: u8, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+    pub fn claim(ctx: Context<Claim>, _bump: u8, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
         Claim::auth(&ctx)?;
 
         let claim_status = &mut ctx.accounts.claim_status;
-        claim_status.bump = bump;
 
         let claimant_account = &mut ctx.accounts.claimant;
         let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
@@ -252,7 +251,6 @@ pub mod jito_priority_fee_distribution {
         // Mark it claimed.
         claim_status.amount = amount;
         claim_status.is_claimed = true;
-        claim_status.slot_claimed_at = clock.slot;
         claim_status.claimant = claimant_account.key();
         claim_status.claim_status_payer = ctx.accounts.payer.key();
         claim_status.expires_at = tip_distribution_epoch_expires_at;

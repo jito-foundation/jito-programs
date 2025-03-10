@@ -143,6 +143,17 @@ impl TipDistributionAccount {
     }
 }
 
+// Epoch 751 had 1,286,573 delegations in the stake meta
+//
+// With current layout and fields:
+//      data length: 88 bytes
+//      rent exempt: 0.00150336 SOL
+//      1,286,573 x 0.00150336 = 1,934.18238528 SOL per epoch
+//
+// if we make expires at u32, cut claim status payer and force single payer, and pack bytes so is_claimed takes a single byte:
+//      data length: 45 bytes
+//      rent exempt: 0.00120408 SOL
+//      1,286,573 x 0.00120408 =  1,549.13681784 SOL per epoch
 /// Gives us an audit trail of who and what was claimed; also enforces and only-once claim by any party.
 #[account]
 #[derive(Default)]
@@ -154,20 +165,18 @@ pub struct ClaimStatus {
     pub claimant: Pubkey,
 
     /// The payer who created the claim.
+    // REVIEW SAVE SPACE: Used when claiming rent. Can we make an assumption that rent is 
+    //  always paid by Jito and can be returned to a single address? (Given the 
+    //  `merkle_root_upload_authority` is a co-signer)
     pub claim_status_payer: Pubkey,
-
-    /// When the funds were claimed.
-    pub slot_claimed_at: u64,
 
     /// Amount of funds claimed.
     pub amount: u64,
 
     /// The epoch (upto and including) that tip funds can be claimed.
     /// Copied since TDA can be closed, need to track to avoid making multiple claims
+    // REVIEW SAVE SPACE: could store as a u32 (~2 day epochs = ~23,534,000 years).
     pub expires_at: u64,
-
-    /// The bump used to generate this account
-    pub bump: u8,
 }
 
 impl ClaimStatus {
