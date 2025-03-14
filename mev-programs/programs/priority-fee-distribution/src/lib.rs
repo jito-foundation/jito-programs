@@ -216,11 +216,6 @@ pub mod jito_priority_fee_distribution {
             return Err(ExpiredTipDistributionAccount.into());
         }
 
-        // Redundant check since we shouldn't be able to init a claim status account using the same seeds.
-        if claim_status.is_claimed {
-            return Err(FundsAlreadyClaimed.into());
-        }
-
         let tip_distribution_info = tip_distribution_account.to_account_info();
         let tip_distribution_epoch_expires_at = tip_distribution_account.expires_at;
         let merkle_root = tip_distribution_account
@@ -249,10 +244,6 @@ pub mod jito_priority_fee_distribution {
         )?;
 
         // Mark it claimed.
-        claim_status.amount = amount;
-        claim_status.is_claimed = true;
-        claim_status.claimant = claimant_account.key();
-        claim_status.claim_status_payer = ctx.accounts.payer.key();
         claim_status.expires_at = tip_distribution_epoch_expires_at;
 
         merkle_root.total_funds_claimed = merkle_root
@@ -397,13 +388,18 @@ pub struct CloseClaimStatus<'info> {
     #[account(
         mut,
         close = claim_status_payer,
-        constraint = claim_status_payer.key() == claim_status.claim_status_payer
     )]
     pub claim_status: Account<'info, ClaimStatus>,
 
     /// CHECK: This is checked against claim_status in the constraint
     /// Receiver of the funds.
-    #[account(mut)]
+    /// 
+    // REVIEW: What should the constraint here be? Currently re-using the 
+    //  Config.expired_funds_account. Should there be an added config variable?
+    #[account(
+        mut,
+        address = config.expired_funds_account
+    )]
     pub claim_status_payer: UncheckedAccount<'info>,
 }
 

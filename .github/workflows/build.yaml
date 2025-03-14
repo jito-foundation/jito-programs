@@ -50,6 +50,9 @@ jobs:
       - name: Build jito_tip_payment
         working-directory: ./mev-programs
         run: anchor build --idl idl --program-name jito_tip_payment
+      - name: Build jito_priority_fee_distribution
+        working-directory: ./mev-programs
+        run: anchor build --idl idl --program-name jito_priority_fee_distribution
 
       # Test
       - name: Run Anchor test
@@ -81,6 +84,7 @@ jobs:
         run: |
           solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.1.11
           solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.1.11
+          solana-verify build --library-name jito_priority_fee_distribution --base-image solanafoundation/solana-verifiable-build:2.1.11
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4

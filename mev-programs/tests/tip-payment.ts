@@ -41,7 +41,8 @@ const provider = anchor.AnchorProvider.local("http://127.0.0.1:8899", {
   preflightCommitment: "confirmed",
 });
 anchor.setProvider(provider);
-const tipPaymentProg = anchor.workspace.JitoTipPayment as Program<JitoTipPayment>;
+const tipPaymentProg = anchor.workspace
+  .JitoTipPayment as Program<JitoTipPayment>;
 
 describe("tests tip_payment", () => {
   const sendTip = async (accountToTip: PublicKey, tipAmount: number) => {
@@ -143,17 +144,24 @@ describe("tests tip_payment", () => {
       tipPaymentAccount7: tipPaymentAccount7,
     };
 
+    const blockhash = await provider.connection.getLatestBlockhash();
+    const airdropTxId = await provider.connection.requestAirdrop(
+      initializerKeys.publicKey,
+      100 * anchor.web3.LAMPORTS_PER_SOL
+    );
+
     await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(
-        initializerKeys.publicKey,
-        100000000000000
-      ),
+      {
+        signature: airdropTxId,
+        blockhash: blockhash.blockhash,
+        lastValidBlockHeight: blockhash.lastValidBlockHeight,
+      },
       "confirmed"
     );
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
         blockProducerKeys.publicKey,
-        100000000000000
+        100 * anchor.web3.LAMPORTS_PER_SOL
       ),
       "confirmed"
     );
@@ -199,6 +207,7 @@ describe("tests tip_payment", () => {
         }
       );
     } catch (e) {
+      console.log("ERROR", e);
       assert.fail();
     }
     const configState = await tipPaymentProg.account.config.fetch(
@@ -611,7 +620,7 @@ const getBadTipPaymentAccounts = async (n: number) => {
   await provider.connection.confirmTransaction(
     await provider.connection.requestAirdrop(
       badTipPaymentAccount,
-      100000000000
+      100 * anchor.web3.LAMPORTS_PER_SOL
     ),
     "confirmed"
   );
