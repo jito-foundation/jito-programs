@@ -29,7 +29,7 @@ pub struct Config {
 /// The account that validators register as **tip_receiver** with the tip-payment program.
 #[account]
 #[derive(Default)]
-pub struct TipDistributionAccount {
+pub struct PriorityFeeDistributionAccount {
     /// The validator's vote account, also the recipient of remaining lamports after
     /// upon closing this account.
     pub validator_vote_account: Pubkey,
@@ -98,8 +98,8 @@ impl Config {
     }
 }
 
-impl TipDistributionAccount {
-    pub const SEED: &'static [u8] = b"TIP_DISTRIBUTION_ACCOUNT";
+impl PriorityFeeDistributionAccount {
+    pub const SEED: &'static [u8] = b"PF_DISTRIBUTION_ACCOUNT";
 
     pub const SIZE: usize = HEADER_SIZE + size_of::<Self>();
 
@@ -143,8 +143,9 @@ impl TipDistributionAccount {
     }
 }
 
-/// A PDA uniquely derived by the Tip Distribution account and claimant, which enforces an only-
-/// once claim by each claimant.
+/// A PDA uniquely derived by the PriorityFeeDistributionAccount and claimant, which enforces an only-
+/// once claim by each claimant. 
+/// @dev **this is very different than TipDistributor's ClaimStatus structure**
 #[account]
 #[derive(Default)]
 pub struct ClaimStatus {
@@ -163,7 +164,7 @@ impl ClaimStatus {
 #[account]
 #[derive(Default)]
 pub struct MerkleRootUploadConfig {
-    /// The authority that overrides the TipDistributionAccount merkle_root_upload_authority
+    /// The authority that overrides the PriorityFeeDistributionAccount merkle_root_upload_authority
     pub override_authority: Pubkey,
 
     /// The original merkle root upload authority that can be changed to the new overrided 
