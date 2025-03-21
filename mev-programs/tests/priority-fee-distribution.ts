@@ -9,7 +9,8 @@ import { JitoPriorityFeeDistribution } from "../target/types/jito_priority_fee_d
 const { SystemProgram, sendAndConfirmTransaction, LAMPORTS_PER_SOL } =
   anchor.web3;
 const CONFIG_ACCOUNT_SEED = "CONFIG_ACCOUNT";
-const TIP_DISTRIBUTION_ACCOUNT_LEN = 168;
+const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_SEED = "PF_DISTRIBUTION_ACCOUNT";
+const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_LEN = 168;
 const CLAIM_STATUS_SEED = "CLAIM_STATUS";
 const CLAIM_STATUS_LEN = 16;
 const ROOT_UPLOAD_CONFIG_SEED = "ROOT_UPLOAD_CONFIG";
@@ -87,13 +88,13 @@ describe("tests priority_fee_distribution", () => {
     assertConfigState(actualConfig, expected);
   });
 
-  it("#init_tip_distribution_account happy path", async () => {
+  it("#init_priority_fee_distribution_account happy path", async () => {
     // given
     const {
       validatorVoteAccount,
       validatorIdentityKeypair,
       maxValidatorCommissionBps: validatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       epochInfo,
       bump,
     } = await setup_initTipDistributionAccount();
@@ -107,7 +108,7 @@ describe("tests priority_fee_distribution", () => {
         systemProgram: SystemProgram.programId,
         validatorVoteAccount,
         validatorIdentityKeypair,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         bump,
       });
     } catch (e) {
@@ -116,8 +117,8 @@ describe("tests priority_fee_distribution", () => {
 
     // expect
     const actual =
-      await priorityFeeDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+      await priorityFeeDistribution.account.priorityFeeDistributionAccount.fetch(
+        priorityFeeDistributionAccount
       );
     const expected = {
       validatorVoteAccount: validatorVoteAccount.publicKey,
@@ -129,13 +130,13 @@ describe("tests priority_fee_distribution", () => {
     assertDistributionAccount(actual, expected);
   });
 
-  it("#init_tip_distribution_account fails with [ErrorCode::InvalidValidatorCommissionFeeBps]", async () => {
+  it("#init_priority_fee_distribution_account fails with [ErrorCode::InvalidValidatorCommissionFeeBps]", async () => {
     // given
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps,
       validatorIdentityKeypair,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     } = await setup_initTipDistributionAccount();
 
@@ -148,7 +149,7 @@ describe("tests priority_fee_distribution", () => {
         validatorIdentityKeypair,
         systemProgram: SystemProgram.programId,
         validatorVoteAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         bump,
       });
       assert.fail("expected exception to be thrown");
@@ -162,12 +163,12 @@ describe("tests priority_fee_distribution", () => {
     }
   });
 
-  it("#close_tip_distribution_account happy path", async () => {
+  it("#close_priority_fee_distribution_account happy path", async () => {
     // given
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps: validatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       validatorIdentityKeypair,
       bump,
     } = await setup_initTipDistributionAccount();
@@ -179,7 +180,7 @@ describe("tests priority_fee_distribution", () => {
       config: configAccount,
       systemProgram: SystemProgram.programId,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -187,8 +188,8 @@ describe("tests priority_fee_distribution", () => {
       configAccount
     );
     const tda =
-      await priorityFeeDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+      await priorityFeeDistribution.account.priorityFeeDistributionAccount.fetch(
+        priorityFeeDistributionAccount
       );
 
     const balStart = await provider.connection.getBalance(
@@ -198,10 +199,10 @@ describe("tests priority_fee_distribution", () => {
 
     //close the account
     await priorityFeeDistribution.methods
-      .closeTipDistributionAccount(tda.epochCreatedAt)
+      .closePriorityFeeDistributionAccount(tda.epochCreatedAt)
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         expiredFundsAccount: actualConfig.expiredFundsAccount,
         validatorVoteAccount: validatorVoteAccount.publicKey, //funds transferred to this account
       })
@@ -213,14 +214,14 @@ describe("tests priority_fee_distribution", () => {
 
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
-        TIP_DISTRIBUTION_ACCOUNT_LEN
+        PRIORITY_FEE_DISTRIBUTION_ACCOUNT_LEN
       );
     assert(balEnd - balStart === minRentExempt);
 
     try {
       // cannot fetch a closed account
-      await priorityFeeDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+      await priorityFeeDistribution.account.priorityFeeDistributionAccount.fetch(
+        priorityFeeDistributionAccount
       );
       assert.fail("fetch should fail");
     } catch (_err) {
@@ -233,7 +234,7 @@ describe("tests priority_fee_distribution", () => {
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       validatorIdentityKeypair,
       epochInfo,
       bump,
@@ -245,7 +246,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -272,7 +273,7 @@ describe("tests priority_fee_distribution", () => {
         maxNumNodes,
         {
           accounts: {
-            tipDistributionAccount,
+            priorityFeeDistributionAccount,
             merkleRootUploadAuthority: validatorVoteAccount.publicKey,
             config: configAccount,
           },
@@ -284,8 +285,8 @@ describe("tests priority_fee_distribution", () => {
     }
 
     const actual =
-      await priorityFeeDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+      await priorityFeeDistribution.account.priorityFeeDistributionAccount.fetch(
+        priorityFeeDistributionAccount
       );
     const expected = {
       validatorVoteAccount: validatorVoteAccount.publicKey,
@@ -307,7 +308,7 @@ describe("tests priority_fee_distribution", () => {
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       validatorIdentityKeypair,
       bump,
     } = await setup_initTipDistributionAccount();
@@ -318,7 +319,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -326,7 +327,7 @@ describe("tests priority_fee_distribution", () => {
     const amount1 = 2_000_000;
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         amount0 + amount1
       ),
       "confirmed"
@@ -348,7 +349,7 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
       .accounts({
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         config: configAccount,
       })
@@ -363,7 +364,7 @@ describe("tests priority_fee_distribution", () => {
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
+        priorityFeeDistributionAccount.toBuffer(),
       ],
       priorityFeeDistribution.programId
     );
@@ -372,7 +373,7 @@ describe("tests priority_fee_distribution", () => {
       .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
@@ -405,7 +406,7 @@ describe("tests priority_fee_distribution", () => {
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       validatorIdentityKeypair,
       bump,
     } = await setup_initTipDistributionAccount();
@@ -416,7 +417,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -424,7 +425,7 @@ describe("tests priority_fee_distribution", () => {
     const amount1 = 2_000_000;
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         amount0 + amount1
       ),
       "confirmed"
@@ -447,7 +448,7 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
       .accounts({
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         config: configAccount,
       })
@@ -462,7 +463,7 @@ describe("tests priority_fee_distribution", () => {
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
+        priorityFeeDistributionAccount.toBuffer(),
       ],
       priorityFeeDistribution.programId
     );
@@ -471,7 +472,7 @@ describe("tests priority_fee_distribution", () => {
       .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
@@ -506,7 +507,7 @@ describe("tests priority_fee_distribution", () => {
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       validatorIdentityKeypair,
       bump,
     } = await setup_initTipDistributionAccount();
@@ -517,7 +518,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -525,7 +526,7 @@ describe("tests priority_fee_distribution", () => {
     const amount1 = 2_000_000;
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         amount0 + amount1
       ),
       "confirmed"
@@ -548,7 +549,7 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
       .accounts({
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         config: configAccount,
       })
@@ -563,7 +564,7 @@ describe("tests priority_fee_distribution", () => {
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
+        priorityFeeDistributionAccount.toBuffer(),
       ],
       priorityFeeDistribution.programId
     );
@@ -572,7 +573,7 @@ describe("tests priority_fee_distribution", () => {
       .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
@@ -599,7 +600,7 @@ describe("tests priority_fee_distribution", () => {
         .claim(_bump, amount, convertBufProofToNumber(proof))
         .accounts({
           config: configAccount,
-          tipDistributionAccount,
+          priorityFeeDistributionAccount,
           merkleRootUploadAuthority: validatorVoteAccount.publicKey,
           claimStatus,
           claimant: claimant.publicKey,
@@ -611,7 +612,7 @@ describe("tests priority_fee_distribution", () => {
       assert.fail("expected exception to be thrown");
     } catch (e) {
       const err: AnchorError = e;
-      assert.equal(err.error.errorCode.code, "ExpiredTipDistributionAccount");
+      assert.equal(err.error.errorCode.code, "ExpiredPriorityFeeDistributionAccount");
     }
   });
 
@@ -621,7 +622,7 @@ describe("tests priority_fee_distribution", () => {
       validatorVoteAccount,
       maxValidatorCommissionBps,
       validatorIdentityKeypair,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     } = await setup_initTipDistributionAccount();
     await call_initTipDistributionAccount({
@@ -631,7 +632,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -639,7 +640,7 @@ describe("tests priority_fee_distribution", () => {
     const amount1 = 2_000_000;
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         amount0 + amount1
       ),
       "confirmed"
@@ -662,7 +663,7 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
       .accounts({
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         config: configAccount,
       })
@@ -677,7 +678,7 @@ describe("tests priority_fee_distribution", () => {
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
+        priorityFeeDistributionAccount.toBuffer(),
       ],
       priorityFeeDistribution.programId
     );
@@ -686,7 +687,7 @@ describe("tests priority_fee_distribution", () => {
       .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
@@ -725,7 +726,7 @@ describe("tests priority_fee_distribution", () => {
       validatorVoteAccount,
       maxValidatorCommissionBps,
       validatorIdentityKeypair,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     } = await setup_initTipDistributionAccount();
     await call_initTipDistributionAccount({
@@ -735,7 +736,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -743,7 +744,7 @@ describe("tests priority_fee_distribution", () => {
     const amount1 = 2_000_000;
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         amount0 + amount1
       ),
       "confirmed"
@@ -766,7 +767,7 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
       .accounts({
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         config: configAccount,
       })
@@ -782,7 +783,7 @@ describe("tests priority_fee_distribution", () => {
         [
           Buffer.from(CLAIM_STATUS_SEED, "utf8"),
           claimant.publicKey.toBuffer(),
-          tipDistributionAccount.toBuffer(),
+          priorityFeeDistributionAccount.toBuffer(),
         ],
         priorityFeeDistribution.programId
       );
@@ -791,7 +792,7 @@ describe("tests priority_fee_distribution", () => {
       .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
@@ -807,16 +808,16 @@ describe("tests priority_fee_distribution", () => {
       configAccount
     );
     const tda =
-      await priorityFeeDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+      await priorityFeeDistribution.account.priorityFeeDistributionAccount.fetch(
+        priorityFeeDistributionAccount
       );
 
     //close the account
     await priorityFeeDistribution.methods
-      .closeTipDistributionAccount(tda.epochCreatedAt)
+      .closePriorityFeeDistributionAccount(tda.epochCreatedAt)
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         expiredFundsAccount: actualConfig.expiredFundsAccount,
         validatorVoteAccount: validatorVoteAccount.publicKey, //funds transferred to this account
       })
@@ -849,7 +850,7 @@ describe("tests priority_fee_distribution", () => {
       amount0,
       preBalance0,
       root,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       tree,
       user0,
       user1,
@@ -866,7 +867,7 @@ describe("tests priority_fee_distribution", () => {
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
+        priorityFeeDistributionAccount.toBuffer(),
       ],
       priorityFeeDistribution.programId
     );
@@ -875,7 +876,7 @@ describe("tests priority_fee_distribution", () => {
       .claim(_bump, amount, convertBufProofToNumber(proof))
       .accounts({
         config: configAccount,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         claimStatus,
         claimant: claimant.publicKey,
@@ -893,7 +894,7 @@ describe("tests priority_fee_distribution", () => {
   });
 
   it("#claim fails if TDA merkle root upload authority not signer ", async () => {
-    const { amount0, root, tipDistributionAccount, tree, user0, user1 } =
+    const { amount0, root, priorityFeeDistributionAccount, tree, user0, user1 } =
       await setupWithUploadedMerkleRoot();
 
     const index = 0;
@@ -906,7 +907,7 @@ describe("tests priority_fee_distribution", () => {
       [
         Buffer.from(CLAIM_STATUS_SEED, "utf8"),
         claimant.publicKey.toBuffer(),
-        tipDistributionAccount.toBuffer(),
+        priorityFeeDistributionAccount.toBuffer(),
       ],
       priorityFeeDistribution.programId
     );
@@ -918,7 +919,7 @@ describe("tests priority_fee_distribution", () => {
         .claim(_bump, amount, convertBufProofToNumber(proof))
         .accounts({
           config: configAccount,
-          tipDistributionAccount,
+          priorityFeeDistributionAccount,
           merkleRootUploadAuthority: badAuthority.publicKey,
           claimStatus,
           claimant: claimant.publicKey,
@@ -1018,7 +1019,7 @@ describe("tests priority_fee_distribution", () => {
       validatorVoteAccount,
       validatorIdentityKeypair,
       maxValidatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     } = await setup_initTipDistributionAccount();
     await call_initTipDistributionAccount({
@@ -1028,7 +1029,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: JITO_MERKLE_UPLOAD_AUTHORITY,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -1040,14 +1041,14 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .migrateTdaMerkleRootUploadAuthority()
       .accounts({
-        tipDistributionAccount: tipDistributionAccount,
+        priorityFeeDistributionAccount: priorityFeeDistributionAccount,
         merkleRootUploadConfig: merkleRootUploadConfigKey,
       })
       .rpc({ skipPreflight: true });
 
     const tda =
-      await priorityFeeDistribution.account.tipDistributionAccount.fetch(
-        tipDistributionAccount
+      await priorityFeeDistribution.account.priorityFeeDistributionAccount.fetch(
+        priorityFeeDistributionAccount
       );
     assert.equal(
       tda.merkleRootUploadAuthority.toString(),
@@ -1060,7 +1061,7 @@ describe("tests priority_fee_distribution", () => {
       validatorVoteAccount,
       validatorIdentityKeypair,
       maxValidatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     } = await setup_initTipDistributionAccount();
     await call_initTipDistributionAccount({
@@ -1070,14 +1071,14 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
     try {
       await priorityFeeDistribution.methods
         .migrateTdaMerkleRootUploadAuthority()
         .accounts({
-          tipDistributionAccount: tipDistributionAccount,
+          priorityFeeDistributionAccount: priorityFeeDistributionAccount,
           merkleRootUploadConfig: merkleRootUploadConfigKey,
         })
         .rpc({ skipPreflight: true });
@@ -1093,7 +1094,7 @@ describe("tests priority_fee_distribution", () => {
       validatorVoteAccount,
       validatorIdentityKeypair,
       maxValidatorCommissionBps,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     } = await setup_initTipDistributionAccount();
     await call_initTipDistributionAccount({
@@ -1103,7 +1104,7 @@ describe("tests priority_fee_distribution", () => {
       systemProgram: SystemProgram.programId,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       validatorVoteAccount,
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       bump,
     });
 
@@ -1111,7 +1112,7 @@ describe("tests priority_fee_distribution", () => {
     const amount1 = 2_000_000;
     await provider.connection.confirmTransaction(
       await provider.connection.requestAirdrop(
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         amount0 + amount1
       ),
       "confirmed"
@@ -1133,7 +1134,7 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
       .accounts({
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
         merkleRootUploadAuthority: validatorVoteAccount.publicKey,
         config: configAccount,
       })
@@ -1143,7 +1144,7 @@ describe("tests priority_fee_distribution", () => {
       await priorityFeeDistribution.methods
         .migrateTdaMerkleRootUploadAuthority()
         .accounts({
-          tipDistributionAccount: tipDistributionAccount,
+          priorityFeeDistributionAccount: priorityFeeDistributionAccount,
           merkleRootUploadConfig: merkleRootUploadConfigKey,
         })
         .rpc({ skipPreflight: true });
@@ -1295,10 +1296,10 @@ const setup_initTipDistributionAccount = async () => {
   // Fetch epoch info and derive TipDistributionAccount PDA.
   const epochInfo = await provider.connection.getEpochInfo("confirmed");
   const epoch = new anchor.BN(epochInfo.epoch).toArrayLike(Buffer, "le", 8);
-  const [tipDistributionAccount, bump] =
+  const [priorityFeeDistributionAccount, bump] =
     anchor.web3.PublicKey.findProgramAddressSync(
       [
-        Buffer.from("TIP_DISTRIBUTION_ACCOUNT", "utf8"),
+        Buffer.from(PRIORITY_FEE_DISTRIBUTION_ACCOUNT_SEED, "utf8"),
         validatorVoteAccount.publicKey.toBuffer(),
         epoch,
       ],
@@ -1309,7 +1310,7 @@ const setup_initTipDistributionAccount = async () => {
     maxValidatorCommissionBps: config.maxValidatorCommissionBps,
     validatorIdentityKeypair,
     validatorVoteAccount,
-    tipDistributionAccount,
+    priorityFeeDistributionAccount,
     bump,
     epochInfo,
   };
@@ -1324,10 +1325,10 @@ const call_initTipDistributionAccount = async ({
   validatorIdentityKeypair,
   // The validator's vote account.
   validatorVoteAccount,
-  tipDistributionAccount,
+  priorityFeeDistributionAccount,
   bump,
 }) => {
-  return await priorityFeeDistribution.rpc.initializeTipDistributionAccount(
+  return await priorityFeeDistribution.rpc.initializePriorityFeeDistributionAccount(
     merkleRootUploadAuthority,
     validatorCommissionBps,
     bump,
@@ -1337,7 +1338,7 @@ const call_initTipDistributionAccount = async ({
         systemProgram,
         signer: validatorIdentityKeypair.publicKey,
         validatorVoteAccount: validatorVoteAccount.publicKey,
-        tipDistributionAccount,
+        priorityFeeDistributionAccount,
       },
       signers: [validatorIdentityKeypair],
     }
@@ -1348,7 +1349,7 @@ const setupWithUploadedMerkleRoot = async () => {
   const {
     validatorVoteAccount,
     maxValidatorCommissionBps,
-    tipDistributionAccount,
+    priorityFeeDistributionAccount,
     validatorIdentityKeypair,
     bump,
   } = await setup_initTipDistributionAccount();
@@ -1359,7 +1360,7 @@ const setupWithUploadedMerkleRoot = async () => {
     systemProgram: SystemProgram.programId,
     merkleRootUploadAuthority: validatorVoteAccount.publicKey,
     validatorVoteAccount,
-    tipDistributionAccount,
+    priorityFeeDistributionAccount,
     bump,
   });
 
@@ -1367,7 +1368,7 @@ const setupWithUploadedMerkleRoot = async () => {
   const amount1 = 2_000_000;
   await provider.connection.confirmTransaction(
     await provider.connection.requestAirdrop(
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       amount0 + amount1
     ),
     "confirmed"
@@ -1390,7 +1391,7 @@ const setupWithUploadedMerkleRoot = async () => {
   await priorityFeeDistribution.methods
     .uploadMerkleRoot(root.toJSON().data, maxTotalClaim, maxNumNodes)
     .accounts({
-      tipDistributionAccount,
+      priorityFeeDistributionAccount,
       merkleRootUploadAuthority: validatorVoteAccount.publicKey,
       config: configAccount,
     })
@@ -1401,7 +1402,7 @@ const setupWithUploadedMerkleRoot = async () => {
     amount1,
     preBalance0,
     root,
-    tipDistributionAccount,
+    priorityFeeDistributionAccount,
     tree,
     user0,
     user1,
