@@ -144,7 +144,7 @@ impl PriorityFeeDistributionAccount {
 }
 
 /// A PDA uniquely derived by the PriorityFeeDistributionAccount and claimant, which enforces an only-
-/// once claim by each claimant. 
+/// once claim by each claimant.
 /// @dev **this is very different than TipDistributor's ClaimStatus structure**
 #[account]
 #[derive(Default)]
@@ -167,7 +167,7 @@ pub struct MerkleRootUploadConfig {
     /// The authority that overrides the PriorityFeeDistributionAccount merkle_root_upload_authority
     pub override_authority: Pubkey,
 
-    /// The original merkle root upload authority that can be changed to the new overrided 
+    /// The original merkle root upload authority that can be changed to the new overrided
     /// authority. E.g. Jito Labs authority GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib
     pub original_upload_authority: Pubkey,
 

@@ -3,7 +3,9 @@ use anchor_lang::{prelude::*, solana_program::clock::Clock};
 use solana_security_txt::security_txt;
 
 use crate::{
-    state::{ClaimStatus, Config, MerkleRoot, MerkleRootUploadConfig, PriorityFeeDistributionAccount},
+    state::{
+        ClaimStatus, Config, MerkleRoot, MerkleRootUploadConfig, PriorityFeeDistributionAccount,
+    },
     ErrorCode::Unauthorized,
 };
 
@@ -315,7 +317,12 @@ pub mod jito_priority_fee_distribution {
             return Err(InvalidTdaForMigration.into());
         }
         // Validate the TDA key is the acceptable original authority (i.e. the original Jito Lab's authority)
-        if distribution_account.merkle_root_upload_authority != ctx.accounts.merkle_root_upload_config.original_upload_authority {
+        if distribution_account.merkle_root_upload_authority
+            != ctx
+                .accounts
+                .merkle_root_upload_config
+                .original_upload_authority
+        {
             return Err(InvalidTdaForMigration.into());
         }
 
@@ -324,6 +331,37 @@ pub mod jito_priority_fee_distribution {
             ctx.accounts.merkle_root_upload_config.override_authority;
 
         Ok(())
+    }
+
+    pub fn transfer_priorty_fee_tips(
+        ctx: Context<TransferPriortyFeeTips>,
+        lamports: u64,
+    ) -> Result<()> {
+        let epoch = Clock::get()?.epoch;
+        // Valdiate the PFDA is in the current epoch
+        require!(
+            ctx.accounts
+                .priority_fee_distribution_account
+                .epoch_created_at
+                == epoch,
+            ErrorCode::AccountValidationFailure
+        );
+        // Transfer requested lamports from From to PFDA
+        let ix = solana_program::system_instruction::transfer(
+            ctx.accounts.from.key,
+            &ctx.accounts.priority_fee_distribution_account.key(),
+            lamports,
+        );
+        solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.from.to_account_info(),
+                ctx.accounts
+                    .priority_fee_distribution_account
+                    .to_account_info(),
+            ],
+        )
+        .map_err(Into::into)
     }
 }
 
@@ -393,8 +431,8 @@ pub struct CloseClaimStatus<'info> {
 
     /// CHECK: This is checked against claim_status in the constraint
     /// Receiver of the funds.
-    /// 
-    // REVIEW: What should the constraint here be? Currently re-using the 
+    ///
+    // REVIEW: What should the constraint here be? Currently re-using the
     //  Config.expired_funds_account. Should there be an added config variable?
     #[account(
         mut,
@@ -665,6 +703,19 @@ pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
         rent_exempt = enforce,
     )]
     pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+}
+
+#[derive(Accounts)]
+pub struct TransferPriortyFeeTips<'info> {
+    #[account(
+        mut,
+        rent_exempt = enforce
+    )]
+    pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
+
+    #[account(mut)]
+    pub from: Signer<'info>,
+    pub system_program: Program<'info, System>,
 }
 
 // Events
