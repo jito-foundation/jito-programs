@@ -344,16 +344,16 @@
       "args": []
     },
     {
-      "name": "transfer_priorty_fee_tips",
+      "name": "transfer_priority_fee_tips",
       "discriminator": [
-        196,
-        80,
-        236,
-        49,
-        85,
-        106,
-        165,
-        41
+        195,
+        208,
+        218,
+        42,
+        198,
+        181,
+        69,
+        74
       ],
       "accounts": [
         {

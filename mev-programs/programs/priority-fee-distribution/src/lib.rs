@@ -333,8 +333,8 @@ pub mod jito_priority_fee_distribution {
         Ok(())
     }
 
-    pub fn transfer_priorty_fee_tips(
-        ctx: Context<TransferPriortyFeeTips>,
+    pub fn transfer_priority_fee_tips(
+        ctx: Context<TransferPriorityFeeTips>,
         lamports: u64,
     ) -> Result<()> {
         let epoch = Clock::get()?.epoch;
@@ -706,7 +706,7 @@ pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
 }
 
 #[derive(Accounts)]
-pub struct TransferPriortyFeeTips<'info> {
+pub struct TransferPriorityFeeTips<'info> {
     #[account(
         mut,
         rent_exempt = enforce

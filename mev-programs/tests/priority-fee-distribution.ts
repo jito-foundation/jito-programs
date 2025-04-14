@@ -1194,7 +1194,7 @@ describe("tests priority_fee_distribution", () => {
       );
 
     await priorityFeeDistribution.methods
-      .transferPriortyFeeTips(new anchor.BN(lamportsToTransfer))
+      .transferPriorityFeeTips(new anchor.BN(lamportsToTransfer))
       .accounts({
         priorityFeeDistributionAccount,
         from: randomPayer.publicKey,
@@ -1241,7 +1241,7 @@ describe("tests priority_fee_distribution", () => {
     try {
       const lamportsToTransfer = 1.3 * LAMPORTS_PER_SOL;
       await priorityFeeDistribution.methods
-        .transferPriortyFeeTips(new anchor.BN(lamportsToTransfer))
+        .transferPriorityFeeTips(new anchor.BN(lamportsToTransfer))
         .accounts({
           priorityFeeDistributionAccount,
           from: randomPayer.publicKey,
