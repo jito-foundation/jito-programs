@@ -22,6 +22,9 @@ pub struct Config {
     /// The maximum commission a validator can set on their distribution account.
     pub max_validator_commission_bps: u16,
 
+    /// The epoch where lamports are transferred to the priority fee distribution account.
+    pub go_live_epoch: u64,
+
     /// The bump used to generate this account
     pub bump: u8,
 }
@@ -40,7 +43,7 @@ pub struct PriorityFeeDistributionAccount {
     /// The merkle root used to verify user claims from this account.
     pub merkle_root: Option<MerkleRoot>,
 
-    /// Epoch for which this account was created.  
+    /// Epoch for which this account was created.
     pub epoch_created_at: u64,
 
     /// The commission basis points this validator charges.
@@ -48,6 +51,9 @@ pub struct PriorityFeeDistributionAccount {
 
     /// The epoch (upto and including) that tip funds can be claimed.
     pub expires_at: u64,
+
+    /// The total lamports transferred to this account.
+    pub total_lamports_transferred: u64,
 
     /// The bump used to generate this account
     pub bump: u8,
@@ -129,6 +135,15 @@ impl PriorityFeeDistributionAccount {
 
     pub fn claim(from: AccountInfo, to: AccountInfo, amount: u64) -> Result<()> {
         Self::transfer_lamports(from, to, amount)
+    }
+
+    pub fn increment_total_lamports_transferred(&mut self, amount: u64) -> Result<()> {
+        let old_balance = self.total_lamports_transferred;
+        let new_balance = old_balance.checked_add(amount).ok_or(ArithmeticError)?;
+
+        self.total_lamports_transferred = new_balance;
+
+        Ok(())
     }
 
     fn transfer_lamports(from: AccountInfo, to: AccountInfo, amount: u64) -> Result<()> {
