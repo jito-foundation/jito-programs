@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "priority-fee-distribution-cli",
     "programs/*",
     "tip-payment-cli",
     "tip-distribution-cli",

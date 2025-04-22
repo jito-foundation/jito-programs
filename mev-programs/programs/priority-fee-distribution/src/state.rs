@@ -29,7 +29,7 @@ pub struct Config {
     pub bump: u8,
 }
 
-/// The account that validators register as **tip_receiver** with the tip-payment program.
+/// The account that validators send priority fees to
 #[account]
 #[derive(Default)]
 pub struct PriorityFeeDistributionAccount {
