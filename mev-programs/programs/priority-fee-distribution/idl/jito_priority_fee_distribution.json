@@ -357,6 +357,9 @@
       ],
       "accounts": [
         {
+          "name": "config"
+        },
+        {
           "name": "priority_fee_distribution_account",
           "writable": true
         },
@@ -862,6 +865,13 @@
             "type": "u16"
           },
           {
+            "name": "go_live_epoch",
+            "docs": [
+              "The epoch where lamports are transferred to the priority fee distribution account."
+            ],
+            "type": "u64"
+          },
+          {
             "name": "bump",
             "docs": [
               "The bump used to generate this account"
@@ -1008,7 +1018,7 @@
     {
       "name": "PriorityFeeDistributionAccount",
       "docs": [
-        "The account that validators register as **tip_receiver** with the tip-payment program."
+        "The account that validators send priority fees to"
       ],
       "type": {
         "kind": "struct",
@@ -1059,6 +1069,13 @@
             "name": "expires_at",
             "docs": [
               "The epoch (upto and including) that tip funds can be claimed."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "total_lamports_transferred",
+            "docs": [
+              "The total lamports transferred to this account."
             ],
             "type": "u64"
           },
