@@ -10,7 +10,7 @@ const { SystemProgram, sendAndConfirmTransaction, LAMPORTS_PER_SOL } =
   anchor.web3;
 const CONFIG_ACCOUNT_SEED = "CONFIG_ACCOUNT";
 const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_SEED = "PF_DISTRIBUTION_ACCOUNT";
-const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_LEN = 168;
+const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_LEN = 176;
 const CLAIM_STATUS_SEED = "CLAIM_STATUS";
 const CLAIM_STATUS_LEN = 16;
 const ROOT_UPLOAD_CONFIG_SEED = "ROOT_UPLOAD_CONFIG";
@@ -216,7 +216,7 @@ describe("tests priority_fee_distribution", () => {
       await provider.connection.getMinimumBalanceForRentExemption(
         PRIORITY_FEE_DISTRIBUTION_ACCOUNT_LEN
       );
-    assert(balEnd - balStart === minRentExempt);
+    assert.equal(balEnd - balStart, minRentExempt);
 
     try {
       // cannot fetch a closed account
@@ -1164,7 +1164,9 @@ describe("tests priority_fee_distribution", () => {
     }
   });
 
-  it("#transfer_priorty_fee_tips should transfer lamports from to distribution account - Happy Path", async () => {
+  it("#transfer_priorty_fee_tips should not make any transfer", async () => {
+    const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
+    await sleepForEpochs(1);
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps,
@@ -1183,8 +1185,6 @@ describe("tests priority_fee_distribution", () => {
       priorityFeeDistributionAccount,
       bump,
     });
-
-    const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
 
     const lamportsToTransfer = 2.7 * LAMPORTS_PER_SOL;
 
@@ -1196,6 +1196,7 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .transferPriorityFeeTips(new anchor.BN(lamportsToTransfer))
       .accounts({
+        config: configAccount,
         priorityFeeDistributionAccount,
         from: randomPayer.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
@@ -1207,53 +1208,144 @@ describe("tests priority_fee_distribution", () => {
       await priorityFeeDistribution.provider.connection.getAccountInfo(
         priorityFeeDistributionAccount
       );
+    // Validate no lamports were transferred
     assert.equal(
       distributionAccountInfoAfter.lamports -
         distributionAccountInfoBefore.lamports,
-      lamportsToTransfer
+      0
+    );
+
+    // Validate the transfer amount on the PriorityFeeDistributionAccount was incremented by the
+    // attempted transfer amount
+    const priorityFeeDistributionAccountBefore =
+      priorityFeeDistribution.coder.accounts.decode(
+        "priorityFeeDistributionAccount",
+        distributionAccountInfoBefore.data
+      ) as anchor.IdlAccounts<JitoPriorityFeeDistribution>["priorityFeeDistributionAccount"];
+    const priorityFeeDistributionAccountAfter =
+      priorityFeeDistribution.coder.accounts.decode(
+        "priorityFeeDistributionAccount",
+        distributionAccountInfoAfter.data
+      ) as anchor.IdlAccounts<JitoPriorityFeeDistribution>["priorityFeeDistributionAccount"];
+    assert.equal(
+      priorityFeeDistributionAccountAfter.totalLamportsTransferred
+        .sub(priorityFeeDistributionAccountBefore.totalLamportsTransferred)
+        .toString(),
+      lamportsToTransfer.toString()
     );
   });
 
-  it("#transfer_priorty_fee_tips distribution account is from old epoch", async () => {
-    const {
-      validatorVoteAccount,
-      maxValidatorCommissionBps,
-      priorityFeeDistributionAccount,
-      validatorIdentityKeypair,
-      epochInfo,
-      bump,
-    } = await setup_initTipDistributionAccount();
-    await call_initTipDistributionAccount({
-      validatorCommissionBps: maxValidatorCommissionBps,
-      config: configAccount,
-      validatorIdentityKeypair,
-      systemProgram: SystemProgram.programId,
-      merkleRootUploadAuthority: validatorVoteAccount.publicKey,
-      validatorVoteAccount,
-      priorityFeeDistributionAccount,
-      bump,
+  describe("After go_live_epoch", async () => {
+    before(async () => {
+      // Update Config.go_live_epoch to use current epoch
+      const [currentConfig, epochInfo] = await Promise.all([
+        priorityFeeDistribution.account.config.fetch(configAccount),
+        priorityFeeDistribution.provider.connection.getEpochInfo(),
+      ]);
+      await priorityFeeDistribution.methods
+        .updateConfig({
+          ...currentConfig,
+          goLiveEpoch: new anchor.BN(epochInfo.epoch),
+        })
+        .accounts({ config: configAccount, authority: currentConfig.authority })
+        .signers([authority])
+        .rpc();
     });
 
-    const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
+    it("#transfer_priorty_fee_tips should transfer lamports from to distribution account - Happy Path", async () => {
+      // We add this sleep to make this more deterministic. Often times the epoch would transition
+      // right at this test.
+      const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
+      await sleepForEpochs(1);
+      const {
+        validatorVoteAccount,
+        maxValidatorCommissionBps,
+        priorityFeeDistributionAccount,
+        validatorIdentityKeypair,
+        epochInfo,
+        bump,
+      } = await setup_initTipDistributionAccount();
+      await call_initTipDistributionAccount({
+        validatorCommissionBps: maxValidatorCommissionBps,
+        config: configAccount,
+        validatorIdentityKeypair,
+        systemProgram: SystemProgram.programId,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+        validatorVoteAccount,
+        priorityFeeDistributionAccount,
+        bump,
+      });
 
-    await sleepForEpochs(1);
+      const lamportsToTransfer = 2.7 * LAMPORTS_PER_SOL;
 
-    try {
-      const lamportsToTransfer = 1.3 * LAMPORTS_PER_SOL;
+      const distributionAccountInfoBefore =
+        await priorityFeeDistribution.provider.connection.getAccountInfo(
+          priorityFeeDistributionAccount
+        );
+
       await priorityFeeDistribution.methods
         .transferPriorityFeeTips(new anchor.BN(lamportsToTransfer))
         .accounts({
+          config: configAccount,
           priorityFeeDistributionAccount,
           from: randomPayer.publicKey,
           systemProgram: anchor.web3.SystemProgram.programId,
         })
         .signers([randomPayer])
         .rpc();
-      assert.fail("expected exception to be thrown");
-    } catch (e) {
-      const err: AnchorError = e;
-      assert(err.error.errorCode.code === "AccountValidationFailure");
-    }
+
+      const distributionAccountInfoAfter =
+        await priorityFeeDistribution.provider.connection.getAccountInfo(
+          priorityFeeDistributionAccount
+        );
+      assert.equal(
+        distributionAccountInfoAfter.lamports -
+          distributionAccountInfoBefore.lamports,
+        lamportsToTransfer
+      );
+    });
+
+    it("#transfer_priorty_fee_tips distribution account is from old epoch", async () => {
+      const {
+        validatorVoteAccount,
+        maxValidatorCommissionBps,
+        priorityFeeDistributionAccount,
+        validatorIdentityKeypair,
+        epochInfo,
+        bump,
+      } = await setup_initTipDistributionAccount();
+      await call_initTipDistributionAccount({
+        validatorCommissionBps: maxValidatorCommissionBps,
+        config: configAccount,
+        validatorIdentityKeypair,
+        systemProgram: SystemProgram.programId,
+        merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+        validatorVoteAccount,
+        priorityFeeDistributionAccount,
+        bump,
+      });
+      const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
+
+      await sleepForEpochs(1);
+
+      try {
+        const lamportsToTransfer = 1.3 * LAMPORTS_PER_SOL;
+        await priorityFeeDistribution.methods
+          .transferPriorityFeeTips(new anchor.BN(lamportsToTransfer))
+          .accounts({
+            config: configAccount,
+            priorityFeeDistributionAccount,
+            from: randomPayer.publicKey,
+            systemProgram: anchor.web3.SystemProgram.programId,
+          })
+          .signers([randomPayer])
+          .rpc();
+        assert.fail("expected exception to be thrown");
+      } catch (e) {
+        const err: AnchorError = e;
+        assert(err.error.errorCode.code === "AccountValidationFailure");
+      }
+    });
   });
 });
 

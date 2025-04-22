@@ -31,6 +31,7 @@ declare_id!("5DdB5ZuSR97rqgVHtjb4t1uz1auFEa2xQ32aAxjsJLEC");
 #[program]
 pub mod jito_priority_fee_distribution {
     use jito_programs_vote_state::VoteState;
+    use solana_program::native_token::lamports_to_sol;
 
     use super::*;
     use crate::ErrorCode::*;
@@ -49,6 +50,7 @@ pub mod jito_priority_fee_distribution {
         cfg.expired_funds_account = expired_funds_account;
         cfg.num_epochs_valid = num_epochs_valid;
         cfg.max_validator_commission_bps = max_validator_commission_bps;
+        cfg.go_live_epoch = u64::MAX;
         cfg.bump = bump;
         cfg.validate()?;
 
@@ -102,6 +104,7 @@ pub mod jito_priority_fee_distribution {
         config.expired_funds_account = new_config.expired_funds_account;
         config.num_epochs_valid = new_config.num_epochs_valid;
         config.max_validator_commission_bps = new_config.max_validator_commission_bps;
+        config.go_live_epoch = new_config.go_live_epoch;
         config.validate()?;
 
         emit!(ConfigUpdatedEvent {
@@ -346,6 +349,23 @@ pub mod jito_priority_fee_distribution {
                 == epoch,
             ErrorCode::AccountValidationFailure
         );
+
+        ctx.accounts
+            .priority_fee_distribution_account
+            .increment_total_lamports_transferred(lamports)?;
+
+        let go_live_epoch = ctx.accounts.config.go_live_epoch;
+        if go_live_epoch > epoch {
+            msg!(
+                "Priority fee transfer is not live yet. {}/{} - ({:.5})",
+                epoch,
+                go_live_epoch,
+                lamports_to_sol(lamports)
+            );
+
+            return Ok(());
+        }
+
         // Transfer requested lamports from From to PFDA
         let ix = solana_program::system_instruction::transfer(
             ctx.accounts.from.key,
@@ -707,6 +727,9 @@ pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
 
 #[derive(Accounts)]
 pub struct TransferPriorityFeeTips<'info> {
+    #[account(rent_exempt = enforce)]
+    pub config: Account<'info, Config>,
+
     #[account(
         mut,
         rent_exempt = enforce
