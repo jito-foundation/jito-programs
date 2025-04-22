@@ -30,8 +30,8 @@ declare_id!("5DdB5ZuSR97rqgVHtjb4t1uz1auFEa2xQ32aAxjsJLEC");
 
 #[program]
 pub mod jito_priority_fee_distribution {
+    use anchor_lang::solana_program::native_token::lamports_to_sol;
     use jito_programs_vote_state::VoteState;
-    use solana_program::native_token::lamports_to_sol;
 
     use super::*;
     use crate::ErrorCode::*;
@@ -451,7 +451,6 @@ pub struct CloseClaimStatus<'info> {
 
     /// CHECK: This is checked against claim_status in the constraint
     /// Receiver of the funds.
-    ///
     // REVIEW: What should the constraint here be? Currently re-using the
     //  Config.expired_funds_account. Should there be an added config variable?
     #[account(

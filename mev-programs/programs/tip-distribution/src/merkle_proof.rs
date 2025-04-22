@@ -1,7 +1,7 @@
 //! copy-pasta from [here](https://github.com/saber-hq/merkle-distributor/blob/ac937d1901033ecb7fa3b0db22f7b39569c8e052/programs/merkle-distributor/src/merkle_proof.rs)
 //! modified to include INTERMEDIATE_HASH prefix and sha256 hashing
 
-use solana_program;
+use anchor_lang::solana_program;
 
 /// This function deals with verification of Merkle trees (hash trees).
 /// Direct port of https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/cryptography/MerkleProof.sol
