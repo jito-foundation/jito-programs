@@ -1165,6 +1165,8 @@ describe("tests priority_fee_distribution", () => {
   });
 
   it("#transfer_priorty_fee_tips should not make any transfer", async () => {
+    const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
+    await sleepForEpochs(1);
     const {
       validatorVoteAccount,
       maxValidatorCommissionBps,
@@ -1183,8 +1185,6 @@ describe("tests priority_fee_distribution", () => {
       priorityFeeDistributionAccount,
       bump,
     });
-
-    const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
 
     const lamportsToTransfer = 2.7 * LAMPORTS_PER_SOL;
 
@@ -1255,6 +1255,7 @@ describe("tests priority_fee_distribution", () => {
     it("#transfer_priorty_fee_tips should transfer lamports from to distribution account - Happy Path", async () => {
       // We add this sleep to make this more deterministic. Often times the epoch would transition
       // right at this test.
+      const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
       await sleepForEpochs(1);
       const {
         validatorVoteAccount,
@@ -1274,8 +1275,6 @@ describe("tests priority_fee_distribution", () => {
         priorityFeeDistributionAccount,
         bump,
       });
-
-      const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
 
       const lamportsToTransfer = 2.7 * LAMPORTS_PER_SOL;
 
@@ -1325,7 +1324,6 @@ describe("tests priority_fee_distribution", () => {
         priorityFeeDistributionAccount,
         bump,
       });
-
       const randomPayer = await generateAccount(10 * LAMPORTS_PER_SOL);
 
       await sleepForEpochs(1);
