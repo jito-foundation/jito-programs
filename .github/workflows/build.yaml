@@ -36,7 +36,7 @@ jobs:
       - name: Install latest stable
         uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.76.0-x86_64-unknown-linux-gnu
+          toolchain: nightly-2025-04-01-x86_64-unknown-linux-gnu
           components: rustfmt, clippy
       - name: clippy
         working-directory: ./mev-programs
@@ -74,11 +74,10 @@ jobs:
 
       - uses: actions-rust-lang/setup-rust-toolchain@v1
 
-      - name: Install solana-verify from crates.io
-        uses: baptiste0928/cargo-install@v3
-        with:
-          crate: solana-verify
-          version: '0.4.1'
+      - name: Install Solana Verify
+        run: |
+          RUSTUP_TOOLCHAIN=nightly-2025-04-01 cargo install solana-verify@0.4.3
+          solana-verify --version
 
       - name: Verifiable Build
         working-directory: ./mev-programs
