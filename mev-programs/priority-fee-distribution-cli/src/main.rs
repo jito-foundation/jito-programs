@@ -1,13 +1,19 @@
-use std::str::FromStr;
+use std::{path::PathBuf, str::FromStr};
 
-use anchor_lang::{AccountDeserialize, InstructionData, ToAccountMetas};
+use anchor_lang::{system_program, AccountDeserialize, InstructionData, ToAccountMetas};
 use clap::{Parser, Subcommand};
 use jito_priority_fee_distribution::state::{ClaimStatus, Config, PriorityFeeDistributionAccount};
 use jito_priority_fee_distribution_sdk::{
     derive_config_account_address, derive_priority_fee_distribution_account_address,
 };
-use solana_client::rpc_client::RpcClient;
-use solana_sdk::{instruction::Instruction, pubkey::Pubkey};
+use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
+use solana_sdk::{
+    compute_budget::ComputeBudgetInstruction,
+    instruction::Instruction,
+    pubkey::Pubkey,
+    signer::{keypair::read_keypair_file, Signer},
+    transaction::Transaction,
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -85,6 +91,24 @@ enum Commands {
         ///  _transfer_priority_fee_tips_ instruction)
         #[arg(long)]
         go_live_epoch: u64,
+    },
+
+    TransferPriorityFeeTips {
+        /// Path to Keypair that will make the transfer
+        #[arg(long)]
+        keypair_path: PathBuf,
+        /// Validator vote account pubkey
+        #[arg(long)]
+        vote_account: String,
+
+        /// Epoch for the priority fee distribution account
+        #[arg(long)]
+        epoch: u64,
+
+        /// The amount of lamports to transfer from the Keypair to the
+        /// PriorityFeeDistributionAccount
+        #[arg(long)]
+        lamports: u64,
     },
 }
 
@@ -236,6 +260,53 @@ fn main() -> anyhow::Result<()> {
             let serialized_data = instruction.data;
             let base58_data = bs58::encode(serialized_data).into_string();
             println!("Base58 Serialized Data: {}", base58_data);
+        }
+        Commands::TransferPriorityFeeTips {
+            keypair_path,
+            vote_account,
+            epoch,
+            lamports,
+        } => {
+            let keypair = read_keypair_file(&keypair_path).expect("Failed to read keypair file");
+
+            let (config_pda, _) = derive_config_account_address(&program_id);
+            let vote_pubkey = Pubkey::from_str(&vote_account)?;
+            let (priority_fee_dist_pda, _) =
+                derive_priority_fee_distribution_account_address(&program_id, &vote_pubkey, epoch);
+
+            let instruction = Instruction {
+                program_id,
+                data: jito_priority_fee_distribution::instruction::TransferPriorityFeeTips {
+                    lamports,
+                }
+                .data(),
+                accounts: jito_priority_fee_distribution::accounts::TransferPriorityFeeTips {
+                    config: config_pda,
+                    priority_fee_distribution_account: priority_fee_dist_pda,
+                    from: keypair.pubkey(),
+                    system_program: system_program::ID,
+                }
+                .to_account_metas(None),
+            };
+
+            // tests show ~6,800 before go_live_epoch and ~6,400 after
+            let compute_ix = ComputeBudgetInstruction::set_compute_unit_limit(8_000);
+
+            let blockhash = client.get_latest_blockhash()?;
+
+            let tx = Transaction::new_signed_with_payer(
+                &[compute_ix, instruction],
+                Some(&keypair.pubkey()),
+                &vec![&keypair],
+                blockhash,
+            );
+            let result = client.send_and_confirm_transaction_with_spinner_and_config(
+                &tx,
+                client.commitment(),
+                RpcSendTransactionConfig::default(),
+            )?;
+
+            println!("TX Confirmed: {}", result);
         }
     }
 
