@@ -7,7 +7,7 @@ use jito_priority_fee_distribution_sdk::{
     derive_config_account_address, derive_priority_fee_distribution_account_address,
 };
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{instruction::Instruction, pubkey::Pubkey};
+use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signer::keypair::read_keypair_file};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -30,6 +30,9 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
+    /// Get the merkle root upload config account information
+    GetMerkleRootUploadConfig,
+
     /// Get the config account information
     GetConfig,
 
@@ -57,6 +60,48 @@ enum Commands {
         /// Claimant pubkey
         #[arg(long)]
         claimant: String,
+    },
+
+    /// Initialize the priority fee distribution config account
+    Initialize {
+        /// Path to the authority keypair file
+        #[arg(long)]
+        authority_keypair_path: String,
+
+        /// Authority pubkey
+        #[arg(long)]
+        authority: String,
+
+        /// Expired funds account pubkey
+        #[arg(long)]
+        expired_funds_account: String,
+
+        /// Max validator commission BPS
+        #[arg(long)]
+        max_validator_commission_bps: u16,
+
+        /// Number of epochs valid
+        #[arg(long)]
+        num_epochs_valid: u64,
+    },
+
+    /// Initialize the merkle root upload config account
+    InitializeMerkleRootUploadConfig {
+        /// Path to the authority keypair file
+        #[arg(long)]
+        authority_keypair_path: String,
+
+        /// Config account pubkey
+        #[arg(long)]
+        config: String,
+
+        /// Authority pubkey
+        #[arg(long)]
+        authority: String,
+
+        /// Payer pubkey
+        #[arg(long)]
+        payer: String,
     },
 
     /// Update the config account information
@@ -236,6 +281,114 @@ fn main() -> anyhow::Result<()> {
             let serialized_data = instruction.data;
             let base58_data = bs58::encode(serialized_data).into_string();
             println!("Base58 Serialized Data: {}", base58_data);
+        }
+
+        Commands::Initialize {
+            authority_keypair_path,
+            authority,
+            expired_funds_account,
+            max_validator_commission_bps,
+            num_epochs_valid,
+        } => {
+            let authority_keypair = read_keypair_file(authority_keypair_path)
+                .expect("Failed to read authority keypair file");
+            let authority_pubkey = Pubkey::from_str(&authority)?;
+            let expired_funds_account_pubkey = Pubkey::from_str(&expired_funds_account)?;
+            let (config_pda, bump) = derive_config_account_address(&program_id);
+            println!("Config Account Address: {}", config_pda);
+
+            let authority_pubkey = Pubkey::from_str(&authority)?;
+            let expired_funds_account_pubkey = Pubkey::from_str(&expired_funds_account)?;
+
+            let instruction = Instruction {
+                program_id,
+                data: jito_priority_fee_distribution::instruction::Initialize {
+                    authority: authority_pubkey,
+                    expired_funds_account: expired_funds_account_pubkey,
+                    num_epochs_valid,
+                    max_validator_commission_bps,
+                    bump,
+                }
+                .data(),
+                accounts: jito_priority_fee_distribution::accounts::Initialize {
+                    initializer: authority_pubkey,
+                    config: config_pda,
+                    system_program: solana_sdk::system_program::ID,
+                }
+                .to_account_metas(Some(true)),
+            };
+
+            let mut transaction =
+                solana_sdk::transaction::Transaction::new_with_payer(&[instruction], None);
+            transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
+            let signature = client.send_and_confirm_transaction_with_spinner(&transaction)?;
+            println!("Transaction Signature: {}", signature);
+        }
+
+        Commands::InitializeMerkleRootUploadConfig {
+            authority_keypair_path,
+            config,
+            authority,
+            payer,
+        } => {
+            let authority_keypair = read_keypair_file(authority_keypair_path)
+                .expect("Failed to read authority keypair file");
+            let config_pubkey = Pubkey::from_str(&config)?;
+            let authority_pubkey = Pubkey::from_str(&authority)?;
+            let payer_pubkey = Pubkey::from_str(&payer)?;
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[b"ROOT_UPLOAD_CONFIG"], &program_id);
+
+            let instruction = Instruction {
+                program_id,
+                data:
+                    jito_priority_fee_distribution::instruction::InitializeMerkleRootUploadConfig {
+                        original_authority: authority_pubkey,
+                        authority: authority_pubkey,
+                    }
+                    .data(),
+                accounts:
+                    jito_priority_fee_distribution::accounts::InitializeMerkleRootUploadConfig {
+                        config: config_pubkey,
+                        authority: authority_pubkey,
+                        payer: payer_pubkey,
+                        merkle_root_upload_config,
+                        system_program: solana_sdk::system_program::ID,
+                    }
+                    .to_account_metas(None),
+            };
+            let mut transaction =
+                solana_sdk::transaction::Transaction::new_with_payer(&[instruction], None);
+            transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
+            let signature = client.send_and_confirm_transaction_with_spinner_and_config(
+                &transaction,
+                solana_sdk::commitment_config::CommitmentConfig::confirmed(),
+                solana_client::rpc_config::RpcSendTransactionConfig {
+                    skip_preflight: true,
+                    ..Default::default()
+                },
+            )?;
+            println!("Transaction Signature: {}", signature);
+        }
+
+        Commands::GetMerkleRootUploadConfig => {
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[b"ROOT_UPLOAD_CONFIG"], &program_id);
+            println!(
+                "Merkle Root Upload Config Account Address: {}",
+                merkle_root_upload_config
+            );
+
+            let account_data = client.get_account(&merkle_root_upload_config)?.data;
+            let config: jito_priority_fee_distribution::state::MerkleRootUploadConfig =
+                jito_priority_fee_distribution::state::MerkleRootUploadConfig::try_deserialize(
+                    &mut account_data.as_slice(),
+                )?;
+
+            println!("Merkle Root Upload Config Account Data:");
+            println!("  Original Authority: {}", config.original_upload_authority);
+            println!("  Override Authority: {}", config.override_authority);
+            println!("  Bump: {}", config.bump);
         }
     }
 
