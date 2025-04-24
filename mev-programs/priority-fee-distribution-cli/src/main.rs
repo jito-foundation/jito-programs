@@ -97,6 +97,7 @@ enum Commands {
         /// Path to Keypair that will make the transfer
         #[arg(long)]
         keypair_path: PathBuf,
+
         /// Validator vote account pubkey
         #[arg(long)]
         vote_account: String,
