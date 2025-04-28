@@ -50,7 +50,7 @@ pub mod jito_tip_payment {
 
         let rent = Rent::get()?;
         bumps.tip_payment_account_0 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_0,
+            TIP_ACCOUNT_SEED_0,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_0,
             &ctx.accounts.payer,
@@ -58,7 +58,7 @@ pub mod jito_tip_payment {
             &rent,
         )?;
         bumps.tip_payment_account_1 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_1,
+            TIP_ACCOUNT_SEED_1,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_1,
             &ctx.accounts.payer,
@@ -66,7 +66,7 @@ pub mod jito_tip_payment {
             &rent,
         )?;
         bumps.tip_payment_account_2 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_2,
+            TIP_ACCOUNT_SEED_2,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_2,
             &ctx.accounts.payer,
@@ -74,7 +74,7 @@ pub mod jito_tip_payment {
             &rent,
         )?;
         bumps.tip_payment_account_3 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_3,
+            TIP_ACCOUNT_SEED_3,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_3,
             &ctx.accounts.payer,
@@ -82,7 +82,7 @@ pub mod jito_tip_payment {
             &rent,
         )?;
         bumps.tip_payment_account_4 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_4,
+            TIP_ACCOUNT_SEED_4,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_4,
             &ctx.accounts.payer,
@@ -90,7 +90,7 @@ pub mod jito_tip_payment {
             &rent,
         )?;
         bumps.tip_payment_account_5 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_5,
+            TIP_ACCOUNT_SEED_5,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_5,
             &ctx.accounts.payer,
@@ -98,7 +98,7 @@ pub mod jito_tip_payment {
             &rent,
         )?;
         bumps.tip_payment_account_6 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_6,
+            TIP_ACCOUNT_SEED_6,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_6,
             &ctx.accounts.payer,
@@ -106,7 +106,7 @@ pub mod jito_tip_payment {
             &rent,
         )?;
         bumps.tip_payment_account_7 = TipPaymentAccount::initialize(
-            &TIP_ACCOUNT_SEED_7,
+            TIP_ACCOUNT_SEED_7,
             ctx.program_id,
             &ctx.accounts.tip_payment_account_7,
             &ctx.accounts.payer,
@@ -697,10 +697,6 @@ impl TipPaymentAccount {
         Ok(tips)
     }
 
-    #[deprecated(
-        since = "0.1.5",
-        note = "please change back to Anchor's `#[account(init)]` method"
-    )]
     fn initialize<'info>(
         seeds: &[u8],
         program_id: &Pubkey,
@@ -743,7 +739,7 @@ impl TipPaymentAccount {
         let mut account_data: std::cell::RefMut<'_, &mut [u8]> =
             account_info.try_borrow_mut_data()?;
         account_data[..TipPaymentAccount::DISCRIMINATOR.len()]
-            .copy_from_slice(&TipPaymentAccount::DISCRIMINATOR);
+            .copy_from_slice(TipPaymentAccount::DISCRIMINATOR);
 
         Ok(bump)
     }

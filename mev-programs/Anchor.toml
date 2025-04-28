@@ -32,3 +32,6 @@ slots_per_epoch = "32"
 
 [features]
 resolution = false
+
+[toolchain]
+anchor_version = "0.31.1"

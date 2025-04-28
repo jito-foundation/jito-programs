@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-anchor-lang = "0.30.1" 
-jito-tip-distribution = { features = ["no-entrypoint", "no-idl"], path = "../tip-distribution" }
+anchor-lang = { workspace = true }
+jito-tip-distribution = { workspace = true }
