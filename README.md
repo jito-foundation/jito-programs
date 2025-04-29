@@ -13,3 +13,7 @@ This gitflow for this repo is as follows:
 - `git cherry-pick` your new commits into `submodule`
 - push `submodule`
 - 
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
