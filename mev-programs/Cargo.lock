@@ -2370,10 +2370,13 @@ dependencies = [
 name = "jito-tip-payment"
 version = "0.1.5"
 dependencies = [
+ "agave-feature-set",
  "anchor-lang",
+ "jito-tip-distribution",
  "solana-program",
  "solana-program-test",
  "solana-sdk",
+ "solana-sdk-ids",
  "solana-security-txt",
  "tokio",
 ]

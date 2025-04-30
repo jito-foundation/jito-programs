@@ -1,8 +1,13 @@
+use std::result;
+
 use anchor_lang::{prelude::*, Discriminator};
+use solana_program::loader_v4;
+use solana_sdk_ids::{
+    bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, config, native_loader,
+    secp256k1_program, secp256r1_program, sysvar,
+};
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
-
-use crate::TipPaymentError::ArithmeticError;
 
 #[cfg(not(feature = "no-entrypoint"))]
 security_txt! {
@@ -20,8 +25,8 @@ security_txt! {
 
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
 
-/// We've decided to hardcode the seeds, effectively meaning
-/// the following PDAs owned by this program are singleton.
+/// We've decided to hardcode the seeds, effectively meaning the following PDAs owned by this program are singleton.
+///
 /// This ensures that `initialize` can only be invoked once,
 /// otherwise the tx would fail since the accounts would have
 /// already been initialized on subsequent calls.
@@ -36,6 +41,34 @@ pub const TIP_ACCOUNT_SEED_6: &[u8] = b"TIP_ACCOUNT_6";
 pub const TIP_ACCOUNT_SEED_7: &[u8] = b"TIP_ACCOUNT_7";
 
 pub const HEADER: usize = 8;
+
+struct Fees {
+    block_builder_fee_lamports: u64,
+    tip_receiver_fee_lamports: u64,
+}
+
+impl Fees {
+    #[inline(always)]
+    fn calculate(
+        total_tips: u64,
+        block_builder_commission_pct: u64,
+    ) -> result::Result<Self, TipPaymentError> {
+        let block_builder_fee_lamports = total_tips
+            .checked_mul(block_builder_commission_pct)
+            .ok_or(TipPaymentError::ArithmeticError)?
+            .checked_div(100)
+            .ok_or(TipPaymentError::ArithmeticError)?;
+
+        let tip_receiver_fee_lamports = total_tips
+            .checked_sub(block_builder_fee_lamports)
+            .ok_or(TipPaymentError::ArithmeticError)?;
+
+        Ok(Self {
+            block_builder_fee_lamports,
+            tip_receiver_fee_lamports,
+        })
+    }
+}
 
 #[program]
 pub mod jito_tip_payment {
@@ -120,90 +153,26 @@ pub mod jito_tip_payment {
         Ok(())
     }
 
-    pub fn claim_tips(ctx: Context<ClaimTips>) -> Result<()> {
-        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
-
-        let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_commission_pct)
-            .ok_or(ArithmeticError)?
-            .checked_div(100)
-            .ok_or(ArithmeticError)?;
-
-        let tip_receiver_fee = total_tips
-            .checked_sub(block_builder_fee)
-            .ok_or(ArithmeticError)?;
-
-        if tip_receiver_fee > 0 {
-            **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? = ctx
-                .accounts
-                .tip_receiver
-                .lamports()
-                .checked_add(tip_receiver_fee)
-                .ok_or(ArithmeticError)?;
-        }
-
-        if block_builder_fee > 0 {
-            **ctx.accounts.block_builder.try_borrow_mut_lamports()? = ctx
-                .accounts
-                .block_builder
-                .lamports()
-                .checked_add(block_builder_fee)
-                .ok_or(ArithmeticError)?;
-        }
-
-        if block_builder_fee > 0 || tip_receiver_fee > 0 {
-            emit!(TipsClaimed {
-                tip_receiver: ctx.accounts.tip_receiver.key(),
-                tip_receiver_amount: tip_receiver_fee,
-                block_builder: ctx.accounts.block_builder.key(),
-                block_builder_amount: block_builder_fee,
-            });
-        }
-
-        Ok(())
-    }
-
     /// Validator should invoke this instruction before executing any transactions that contain tips.
     /// Validator should also ensure it calls it if there's a fork detected.
     pub fn change_tip_receiver(ctx: Context<ChangeTipReceiver>) -> Result<()> {
-        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
-
-        let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_commission_pct)
-            .ok_or(ArithmeticError)?
-            .checked_div(100)
-            .ok_or(ArithmeticError)?;
-
-        let tip_receiver_fee = total_tips
-            .checked_sub(block_builder_fee)
-            .ok_or(ArithmeticError)?;
-
-        if tip_receiver_fee > 0 {
-            **ctx.accounts.old_tip_receiver.try_borrow_mut_lamports()? = ctx
-                .accounts
-                .old_tip_receiver
-                .lamports()
-                .checked_add(tip_receiver_fee)
-                .ok_or(ArithmeticError)?;
+        if is_program(&ctx.accounts.new_tip_receiver)
+            || is_sysvar(&ctx.accounts.new_tip_receiver)
+            || is_config(&ctx.accounts.new_tip_receiver)
+        {
+            return Err(TipPaymentError::InvalidTipReceiver.into());
         }
 
-        if block_builder_fee > 0 {
-            **ctx.accounts.block_builder.try_borrow_mut_lamports()? = ctx
-                .accounts
-                .block_builder
-                .lamports()
-                .checked_add(block_builder_fee)
-                .ok_or(ArithmeticError)?;
-        }
+        let rent = Rent::get()?;
+        let tip_accounts = ctx.accounts.get_tip_accounts();
 
-        if block_builder_fee > 0 || tip_receiver_fee > 0 {
-            emit!(TipsClaimed {
-                tip_receiver: ctx.accounts.old_tip_receiver.key(),
-                tip_receiver_amount: tip_receiver_fee,
-                block_builder: ctx.accounts.block_builder.key(),
-                block_builder_amount: block_builder_fee,
-            });
-        }
+        handle_payments(
+            &rent,
+            &tip_accounts,
+            &ctx.accounts.old_tip_receiver,
+            &ctx.accounts.block_builder,
+            ctx.accounts.config.block_builder_commission_pct,
+        )?;
 
         // set new funding account
         ctx.accounts.config.tip_receiver = ctx.accounts.new_tip_receiver.key();
@@ -218,45 +187,23 @@ pub mod jito_tip_payment {
         block_builder_commission: u64,
     ) -> Result<()> {
         require_gte!(100, block_builder_commission, TipPaymentError::InvalidFee);
-
-        let total_tips = TipPaymentAccount::drain_accounts(ctx.accounts.get_tip_accounts())?;
-
-        let block_builder_fee = total_tips
-            .checked_mul(ctx.accounts.config.block_builder_commission_pct)
-            .ok_or(ArithmeticError)?
-            .checked_div(100)
-            .ok_or(ArithmeticError)?;
-
-        let tip_receiver_fee = total_tips
-            .checked_sub(block_builder_fee)
-            .ok_or(ArithmeticError)?;
-
-        if tip_receiver_fee > 0 {
-            **ctx.accounts.tip_receiver.try_borrow_mut_lamports()? = ctx
-                .accounts
-                .tip_receiver
-                .lamports()
-                .checked_add(tip_receiver_fee)
-                .ok_or(ArithmeticError)?;
+        if is_program(&ctx.accounts.new_block_builder)
+            || is_sysvar(&ctx.accounts.new_block_builder)
+            || is_config(&ctx.accounts.new_block_builder)
+        {
+            return Err(TipPaymentError::InvalidBlockBuilder.into());
         }
 
-        if block_builder_fee > 0 {
-            **ctx.accounts.old_block_builder.try_borrow_mut_lamports()? = ctx
-                .accounts
-                .old_block_builder
-                .lamports()
-                .checked_add(block_builder_fee)
-                .ok_or(ArithmeticError)?;
-        }
-
-        if block_builder_fee > 0 || tip_receiver_fee > 0 {
-            emit!(TipsClaimed {
-                tip_receiver: ctx.accounts.tip_receiver.key(),
-                tip_receiver_amount: tip_receiver_fee,
-                block_builder: ctx.accounts.old_block_builder.key(),
-                block_builder_amount: block_builder_fee,
-            });
-        }
+        let rent = Rent::get()?;
+        let tip_accounts = ctx.accounts.get_tip_accounts();
+        handle_payments(
+            &rent,
+            &tip_accounts,
+            &ctx.accounts.tip_receiver,
+            &ctx.accounts.old_block_builder,
+            // old block builder commission so new block builder can't rug the old one
+            ctx.accounts.config.block_builder_commission_pct,
+        )?;
 
         // set new funding account
         ctx.accounts.config.block_builder = ctx.accounts.new_block_builder.key();
@@ -265,10 +212,149 @@ pub mod jito_tip_payment {
     }
 }
 
+#[inline(always)]
+fn is_program(account: &AccountInfo) -> bool {
+    *account.owner == bpf_loader::id()
+        || *account.owner == bpf_loader_deprecated::id()
+        || *account.owner == bpf_loader_upgradeable::id()
+        || *account.owner == loader_v4::id()
+        || *account.owner == native_loader::id()
+
+        || *account.key == native_loader::id()
+        // can remove once feature enable_secp256r1_precompile gets activated
+        || *account.key == secp256r1_program::id()
+
+        // note: SIMD-0162 will remove support for this flag: https://github.com/solana-foundation/solana-improvement-documents/blob/main/proposals/0162-remove-accounts-executable-flag-checks.md
+        || account.executable
+}
+
+#[inline(always)]
+fn is_sysvar(account: &AccountInfo) -> bool {
+    *account.owner == sysvar::id()
+}
+
+#[inline(always)]
+fn is_config(account: &AccountInfo) -> bool {
+    *account.owner == config::id()
+}
+
+/// Assumptions:
+/// - The transfer_amount are "dangling" lamports and need to be transferred somewhere to have a balanced instruction.
+/// - The receiver needs to remain rent exempt
+#[inline(always)]
+fn transfer_or_credit_tip_pda(
+    rent: &Rent,
+    receiver: &AccountInfo,
+    transfer_amount: u64,
+    tip_pda_fallback: &AccountInfo,
+) -> Result<u64> {
+    let balance_post_transfer = receiver
+        .lamports()
+        .checked_add(transfer_amount)
+        .ok_or(TipPaymentError::ArithmeticError)?;
+
+    // Ensure the transfer amount is greater than 0, the account is rent-exempt after the transfer, and
+    // the transfer is not to a program
+    let can_transfer = transfer_amount > 0
+        && rent.is_exempt(balance_post_transfer, receiver.data_len())
+        // programs can't receive lamports until remove_accounts_executable_flag_checks is activated
+        && !is_program(receiver);
+
+    if can_transfer {
+        **receiver.try_borrow_mut_lamports()? = balance_post_transfer;
+        Ok(transfer_amount)
+    } else {
+        // These lamports can't be left dangling
+        let new_tip_pda_balance = tip_pda_fallback
+            .lamports()
+            .checked_add(transfer_amount)
+            .ok_or(TipPaymentError::ArithmeticError)?;
+        **tip_pda_fallback.try_borrow_mut_lamports()? = new_tip_pda_balance;
+        Ok(0)
+    }
+}
+
+/// Handles payment of the tips to the block builder and tip receiver
+/// Assumptions:
+/// - block_builder_commission_percent is a valid number (<= 100)
+#[inline(always)]
+fn handle_payments(
+    rent: &Rent,
+    tip_accounts: &[AccountInfo],
+    tip_receiver: &AccountInfo,
+    block_builder: &AccountInfo,
+    block_builder_commission_percent: u64,
+) -> Result<()> {
+    let total_tips = TipPaymentAccount::drain_accounts(rent, tip_accounts)?;
+
+    let Fees {
+        block_builder_fee_lamports,
+        tip_receiver_fee_lamports,
+    } = Fees::calculate(total_tips, block_builder_commission_percent)?;
+
+    let amount_transferred_to_tip_receiver = if tip_receiver_fee_lamports > 0 {
+        let amount_transferred_to_tip_receiver = transfer_or_credit_tip_pda(
+            rent,
+            tip_receiver,
+            tip_receiver_fee_lamports,
+            tip_accounts.first().unwrap(),
+        )?;
+        if amount_transferred_to_tip_receiver == 0 {
+            msg!(
+                "WARN: did not transfer tip receiver lamports to {:?}",
+                tip_receiver.key()
+            );
+        }
+        amount_transferred_to_tip_receiver
+    } else {
+        0
+    };
+
+    let amount_transferred_to_block_builder = if block_builder_fee_lamports > 0 {
+        let amount_transferred_to_block_builder = transfer_or_credit_tip_pda(
+            rent,
+            block_builder,
+            block_builder_fee_lamports,
+            tip_accounts.first().unwrap(),
+        )?;
+        if amount_transferred_to_block_builder == 0 {
+            msg!(
+                "WARN: did not transfer block builder lamports to {:?}",
+                block_builder.key()
+            );
+        }
+        amount_transferred_to_block_builder
+    } else {
+        0
+    };
+
+    if amount_transferred_to_tip_receiver > 0 || amount_transferred_to_block_builder > 0 {
+        let tip_receiver = if amount_transferred_to_tip_receiver > 0 {
+            tip_receiver.key()
+        } else {
+            Pubkey::default()
+        };
+        let block_builder = if amount_transferred_to_block_builder > 0 {
+            block_builder.key()
+        } else {
+            Pubkey::default()
+        };
+        emit!(TipsClaimed {
+            tip_receiver,
+            tip_receiver_amount: amount_transferred_to_tip_receiver,
+            block_builder,
+            block_builder_amount: amount_transferred_to_block_builder,
+        });
+    }
+    Ok(())
+}
+
 #[error_code]
 pub enum TipPaymentError {
     ArithmeticError,
     InvalidFee,
+    InvalidTipReceiver,
+    InvalidBlockBuilder,
 }
 
 /// Bumps used during initialization
@@ -417,21 +503,6 @@ pub struct ClaimTips<'info> {
     pub signer: Signer<'info>,
 }
 
-impl<'info> ClaimTips<'info> {
-    fn get_tip_accounts(&self) -> Vec<AccountInfo<'info>> {
-        vec![
-            self.tip_payment_account_0.to_account_info(),
-            self.tip_payment_account_1.to_account_info(),
-            self.tip_payment_account_2.to_account_info(),
-            self.tip_payment_account_3.to_account_info(),
-            self.tip_payment_account_4.to_account_info(),
-            self.tip_payment_account_5.to_account_info(),
-            self.tip_payment_account_6.to_account_info(),
-            self.tip_payment_account_7.to_account_info(),
-        ]
-    }
-}
-
 #[derive(Accounts)]
 pub struct ChangeTipReceiver<'info> {
     #[account(mut)]
@@ -520,8 +591,9 @@ pub struct ChangeTipReceiver<'info> {
 }
 
 impl<'info> ChangeTipReceiver<'info> {
-    fn get_tip_accounts(&self) -> Vec<AccountInfo<'info>> {
-        vec![
+    #[inline(always)]
+    fn get_tip_accounts(&self) -> [AccountInfo<'info>; 8] {
+        [
             self.tip_payment_account_0.to_account_info(),
             self.tip_payment_account_1.to_account_info(),
             self.tip_payment_account_2.to_account_info(),
@@ -622,8 +694,9 @@ pub struct ChangeBlockBuilder<'info> {
 }
 
 impl<'info> ChangeBlockBuilder<'info> {
-    fn get_tip_accounts(&self) -> Vec<AccountInfo<'info>> {
-        vec![
+    #[inline(always)]
+    fn get_tip_accounts(&self) -> [AccountInfo<'info>; 8] {
+        [
             self.tip_payment_account_0.to_account_info(),
             self.tip_payment_account_1.to_account_info(),
             self.tip_payment_account_2.to_account_info(),
@@ -666,33 +739,30 @@ impl TipPaymentAccount {
     pub const SIZE: usize = 8;
 
     /// Drains the tip accounts, leaves enough lamports for rent exemption.
-    fn drain_accounts(accounts: Vec<AccountInfo>) -> Result<u64> {
+    #[inline(always)]
+    fn drain_accounts(rent: &Rent, accounts: &[AccountInfo]) -> Result<u64> {
         let mut total_tips: u64 = 0;
         for a in accounts {
             total_tips = total_tips
-                .checked_add(Self::drain_account(&a)?)
-                .ok_or(ArithmeticError)?;
+                .checked_add(Self::drain_account(rent, a)?)
+                .ok_or(TipPaymentError::ArithmeticError)?;
         }
 
         Ok(total_tips)
     }
 
-    fn drain_account(account: &AccountInfo) -> Result<u64> {
+    #[inline(always)]
+    fn drain_account(rent: &Rent, account: &AccountInfo) -> Result<u64> {
         // Tips after rent exemption.
-        let tips = {
-            let rent = Rent::get()?;
-            let min_rent = rent.minimum_balance(account.data_len());
-
-            account
-                .lamports()
-                .checked_sub(min_rent)
-                .ok_or(ArithmeticError)
-        }?;
+        let tips = account
+            .lamports()
+            .checked_sub(rent.minimum_balance(account.data_len()))
+            .ok_or(TipPaymentError::ArithmeticError)?;
 
         **account.try_borrow_mut_lamports()? = account
             .lamports()
             .checked_sub(tips)
-            .ok_or(ArithmeticError)?;
+            .ok_or(TipPaymentError::ArithmeticError)?;
 
         Ok(tips)
     }

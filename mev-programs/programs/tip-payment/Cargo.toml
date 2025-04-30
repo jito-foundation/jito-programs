@@ -22,9 +22,12 @@ anchor-debug = ["anchor-lang/anchor-debug"]
 [dependencies]
 anchor-lang = { workspace = true }
 solana-program = { workspace = true }
+solana-sdk-ids = { workspace = true }
 solana-security-txt = { workspace = true }
 
 [dev-dependencies]
+agave-feature-set = { workspace = true }
+jito-tip-distribution = { workspace = true }
 solana-program-test = { workspace = true }
 solana-sdk = { workspace = true }
 tokio = { workspace = true }
