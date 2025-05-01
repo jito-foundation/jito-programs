@@ -2340,7 +2340,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jito-programs-vote-state"
-version = "0.1.6"
+version = "0.1.5"
 dependencies = [
  "anchor-lang",
  "bincode",
@@ -2350,7 +2350,7 @@ dependencies = [
 
 [[package]]
 name = "jito-tip-distribution"
-version = "0.1.6"
+version = "0.1.5"
 dependencies = [
  "anchor-lang",
  "jito-programs-vote-state",
@@ -2360,7 +2360,7 @@ dependencies = [
 
 [[package]]
 name = "jito-tip-distribution-sdk"
-version = "0.1.6"
+version = "0.1.5"
 dependencies = [
  "anchor-lang",
  "jito-tip-distribution",
@@ -2368,7 +2368,7 @@ dependencies = [
 
 [[package]]
 name = "jito-tip-payment"
-version = "0.1.6"
+version = "0.1.5"
 dependencies = [
  "agave-feature-set",
  "anchor-lang",
@@ -7295,7 +7295,7 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
 
 [[package]]
 name = "tip-distribution-cli"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "anchor-lang",
  "anyhow",
@@ -7309,7 +7309,7 @@ dependencies = [
 
 [[package]]
 name = "tip-payment-cli"
-version = "0.1.0"
+version = "0.1.5"
 dependencies = [
  "anchor-lang",
  "anyhow",
