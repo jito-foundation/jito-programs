@@ -1,10 +1,12 @@
 [package]
 name = "jito-tip-payment"
-version = "0.1.5"
 description = "Tip Payment Program"
-edition = "2021"
-license = "Apache-2.0"
-authors = ["Jito Foundation <team@jito.network>"]
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]

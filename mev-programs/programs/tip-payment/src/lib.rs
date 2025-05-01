@@ -4,7 +4,7 @@ use anchor_lang::{prelude::*, Discriminator};
 use solana_program::loader_v4;
 use solana_sdk_ids::{
     bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, config, native_loader,
-    secp256k1_program, secp256r1_program, sysvar,
+    secp256r1_program, sysvar,
 };
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
