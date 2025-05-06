@@ -7,7 +7,7 @@ use jito_priority_fee_distribution_sdk::{
     derive_config_account_address, derive_priority_fee_distribution_account_address,
 };
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signer::keypair::read_keypair_file};
+use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signer::{keypair::read_keypair_file, Signer}};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -106,6 +106,10 @@ enum Commands {
 
     /// Update the config account information
     UpdateConfig {
+        /// Path to the authority keypair file
+        #[arg(long)]
+        authority_keypair_path: String,
+
         /// Authority pubkey
         #[arg(long)]
         authority: String,
@@ -130,6 +134,25 @@ enum Commands {
         ///  _transfer_priority_fee_tips_ instruction)
         #[arg(long)]
         go_live_epoch: u64,
+    },
+
+    /// Update the merkle root upload config account
+    UpdateMerkleRootUploadConfig {
+        /// Path to the authority keypair file
+        #[arg(long)]
+        authority_keypair_path: String,
+
+        /// Config account pubkey
+        #[arg(long)]
+        config: String,
+
+        /// New authority pubkey
+        #[arg(long)]
+        new_authority: String,
+
+        /// Original authority pubkey
+        #[arg(long)]
+        original_authority: String,
     },
 }
 
@@ -244,6 +267,7 @@ fn main() -> anyhow::Result<()> {
         }
 
         Commands::UpdateConfig {
+            authority_keypair_path,
             authority,
             expired_funds_account,
             num_epochs_valid,
@@ -251,6 +275,8 @@ fn main() -> anyhow::Result<()> {
             bump,
             go_live_epoch,
         } => {
+            let authority_keypair = read_keypair_file(authority_keypair_path)
+                .expect("Failed to read authority keypair file");
             let authority_pubkey = Pubkey::from_str(&authority)?;
             let expired_funds_account_pubkey = Pubkey::from_str(&expired_funds_account)?;
 
@@ -278,9 +304,11 @@ fn main() -> anyhow::Result<()> {
                 .to_account_metas(None),
             };
 
-            let serialized_data = instruction.data;
-            let base58_data = bs58::encode(serialized_data).into_string();
-            println!("Base58 Serialized Data: {}", base58_data);
+            let mut transaction =
+                solana_sdk::transaction::Transaction::new_with_payer(&[instruction], None);
+            transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
+            let signature = client.send_and_confirm_transaction_with_spinner(&transaction)?;
+            println!("Transaction Signature: {}", signature);
         }
 
         Commands::Initialize {
@@ -368,6 +396,43 @@ fn main() -> anyhow::Result<()> {
                     ..Default::default()
                 },
             )?;
+            println!("Transaction Signature: {}", signature);
+        }
+
+        Commands::UpdateMerkleRootUploadConfig {
+            authority_keypair_path,
+            config,
+            new_authority,
+            original_authority,
+        } => {
+            let authority_keypair = read_keypair_file(authority_keypair_path)
+                .expect("Failed to read authority keypair file");
+            let config_pubkey = Pubkey::from_str(&config)?;
+            let new_authority_pubkey = Pubkey::from_str(&new_authority)?;
+            let original_authority_pubkey = Pubkey::from_str(&original_authority)?;
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[b"ROOT_UPLOAD_CONFIG"], &program_id);
+
+            let instruction = Instruction {
+                program_id,
+                data: jito_priority_fee_distribution::instruction::UpdateMerkleRootUploadConfig {
+                    authority: new_authority_pubkey,
+                    original_authority: original_authority_pubkey,
+                }
+                .data(),
+                accounts: jito_priority_fee_distribution::accounts::UpdateMerkleRootUploadConfig {
+                    config: config_pubkey,
+                    merkle_root_upload_config,
+                    authority: authority_keypair.pubkey(),
+                    system_program: solana_sdk::system_program::ID,
+                }
+                .to_account_metas(Some(true)),
+            };
+
+            let mut transaction =
+                solana_sdk::transaction::Transaction::new_with_payer(&[instruction], Some(&authority_keypair.pubkey()));
+            transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
+            let signature = client.send_and_confirm_transaction_with_spinner(&transaction)?;
             println!("Transaction Signature: {}", signature);
         }
 
