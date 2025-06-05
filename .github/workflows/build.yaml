@@ -93,5 +93,7 @@ jobs:
           path: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_priority_fee_distribution.so
             mev-programs/programs/tip-distribution/idl/jito_tip_distribution.json
             mev-programs/programs/tip-payment/idl/jito_tip_payment.json
+            mev-programs/programs/priority-fee-distribution/idl/jito_priority_fee_distribution.json
