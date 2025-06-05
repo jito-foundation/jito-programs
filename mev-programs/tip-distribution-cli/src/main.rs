@@ -1,20 +1,29 @@
+use std::io::Cursor;
 use std::str::FromStr;
 
-use anchor_lang::AccountDeserialize;
+use anchor_lang::{AccountDeserialize, AnchorSerialize};
+use base64::prelude::*;
 use clap::{Parser, Subcommand};
-use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
+use jito_tip_distribution::state::{
+    ClaimStatus, Config, MerkleRootUploadConfig, TipDistributionAccount,
+};
 use jito_tip_distribution_sdk::{
     derive_config_account_address, derive_tip_distribution_account_address,
-    instruction::{update_config_ix, UpdateConfigAccounts, UpdateConfigArgs},
+    instruction::{
+        initialize_merkle_root_upload_config_ix, update_config_ix,
+        update_merkle_root_upload_config_ix, InitializeMerkleRootUploadConfigAccounts,
+        InitializeMerkleRootUploadConfigArgs, UpdateConfigAccounts, UpdateConfigArgs,
+        UpdateMerkleRootUploadConfigAccounts, UpdateMerkleRootUploadConfigArgs,
+    },
 };
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{pubkey::Pubkey, system_program};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct Cli {
     /// RPC URL for the Solana cluster
-    #[arg(short, long, default_value = "http://localhost:8899")]
+    #[arg(short, long, default_value = "https://api.mainnet-beta.solana.com")]
     rpc_url: String,
 
     /// Tip Distribution program ID
@@ -82,6 +91,43 @@ enum Commands {
         #[arg(long)]
         bump: u8,
     },
+
+    /// Get the IX data for initializing a tip distribution account
+    GetInitializeMerkleRootUploadConfigIx {
+        /// New authority pubkey
+        #[arg(long)]
+        authority: String,
+
+        /// New authority pubkey
+        #[arg(long)]
+        override_authority: String,
+
+        /// Original authority pubkey
+        #[arg(long)]
+        original_authority: String,
+
+        /// Payer pubkey
+        #[arg(long)]
+        payer: String,
+    },
+
+    /// Get the IX data for updating a merkle root upload config
+    GetUpdateMerkleRootUploadConfigIx {
+        /// New authority pubkey
+        #[arg(long)]
+        authority: String,
+
+        /// New authority pubkey
+        #[arg(long)]
+        override_authority: String,
+
+        /// Original authority pubkey
+        #[arg(long)]
+        original_authority: String,
+    },
+
+    /// Prints out the merkle root upload config account information
+    GetMerkleRootUploadConfig,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -221,6 +267,104 @@ fn main() -> anyhow::Result<()> {
             let serialized_data = instruction.data;
             let base58_data = bs58::encode(serialized_data).into_string();
             println!("Base58 Serialized Data: {}", base58_data);
+        }
+
+        Commands::GetInitializeMerkleRootUploadConfigIx {
+            authority,
+            override_authority,
+            original_authority,
+            payer,
+        } => {
+            let authority = Pubkey::from_str(&authority)?;
+            let override_authority = Pubkey::from_str(&override_authority)?;
+            let original_authority = Pubkey::from_str(&original_authority)?;
+            let payer = Pubkey::from_str(&payer)?;
+            let (config, _) = derive_config_account_address(&program_id);
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
+
+            let args = InitializeMerkleRootUploadConfigArgs {
+                override_authority,
+                original_authority,
+            };
+
+            let accounts = InitializeMerkleRootUploadConfigAccounts {
+                config,
+                authority,
+                merkle_root_upload_config,
+                payer,
+                system_program: system_program::id(),
+            };
+
+            let ix: solana_sdk::instruction::Instruction =
+                initialize_merkle_root_upload_config_ix(program_id, args, accounts);
+
+            let gov_ix_data =
+                spl_governance::state::proposal_transaction::InstructionData::from(ix);
+
+            let mut buffer = Cursor::new(Vec::new());
+            gov_ix_data.serialize(&mut buffer)?;
+            let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
+            println!("\nBase64 InstructionData: \n{:?}\n", base64_ix);
+        }
+
+        Commands::GetUpdateMerkleRootUploadConfigIx {
+            authority,
+            override_authority,
+            original_authority,
+        } => {
+            let authority = Pubkey::from_str(&authority)?;
+            let override_authority = Pubkey::from_str(&override_authority)?;
+            let original_authority = Pubkey::from_str(&original_authority)?;
+            let (config, _) = derive_config_account_address(&program_id);
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
+
+            let args = UpdateMerkleRootUploadConfigArgs {
+                override_authority,
+                original_authority,
+            };
+
+            let accounts = UpdateMerkleRootUploadConfigAccounts {
+                config,
+                authority,
+                merkle_root_upload_config,
+                system_program: system_program::id(),
+            };
+
+            let ix: solana_sdk::instruction::Instruction =
+                update_merkle_root_upload_config_ix(program_id, args, accounts);
+
+            let gov_ix_data =
+                spl_governance::state::proposal_transaction::InstructionData::from(ix);
+
+            let mut buffer = Cursor::new(Vec::new());
+            gov_ix_data.serialize(&mut buffer)?;
+            let base64_ix = BASE64_STANDARD.encode(buffer.into_inner());
+            println!("\nBase64 InstructionData: \n{:?}\n", base64_ix);
+        }
+
+        Commands::GetMerkleRootUploadConfig => {
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
+            println!(
+                "Merkle Root Upload Config Account Address: {}",
+                merkle_root_upload_config
+            );
+
+            let account_data = client.get_account(&merkle_root_upload_config)?.data;
+            let merkle_root_upload_config: MerkleRootUploadConfig =
+                MerkleRootUploadConfig::try_deserialize(&mut account_data.as_slice())?;
+
+            println!("Merkle Root Upload Config Account Data",);
+            println!(
+                " Original Upload Authority: {}",
+                merkle_root_upload_config.original_upload_authority
+            );
+            println!(
+                " Override Authority: {}",
+                merkle_root_upload_config.override_authority
+            );
         }
     }
 

@@ -12,3 +12,6 @@ jito-tip-distribution = { path = "../programs/tip-distribution", features = ["no
 jito-tip-distribution-sdk = { path = "../programs/sdk" }
 solana-client = "1.18"
 solana-sdk = "1.18" 
+borsh = "1.5.1"
+base64 = "0.22.1"
+spl-governance = "4.0.0"
