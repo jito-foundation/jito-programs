@@ -67,17 +67,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # --force because the cargo cache has it saved
-      - name: Install Solana Verify
-        run: |
-          cargo install solana-verify --force
-          solana-verify --version
+      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.1.11
+
+      - uses: actions-rust-lang/setup-rust-toolchain@v1
+
+      - name: Install solana-verify from crates.io
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: solana-verify
 
       - name: Verifiable Build
         working-directory: ./mev-programs
         run: |
-          solana-verify build --library-name jito_tip_distribution
-          solana-verify build --library-name jito_tip_payment
+          solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.1.11
+          solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.1.11
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -86,5 +89,5 @@ jobs:
           path: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
-            mev-programs/target/idl/jito_tip_distribution.json
-            mev-programs/target/idl/jito_tip_payment.json
+            mev-programs/programs/tip-distribution/idl/jito_tip_distribution.json
+            mev-programs/programs/tip-payment/idl/jito_tip_payment.json
