@@ -26,7 +26,7 @@ struct Cli {
     #[arg(
         short,
         long,
-        default_value = "5DdB5ZuSR97rqgVHtjb4t1uz1auFEa2xQ32aAxjsJLEC"
+        default_value = "Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3"
     )]
     program_id: String,
 

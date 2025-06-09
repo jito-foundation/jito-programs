@@ -13,7 +13,7 @@ jito_tip_payment = "DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC"
 [programs.localnet]
 jito_tip_distribution = "4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7"
 jito_tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
-jito_priority_fee_distribution = "5DdB5ZuSR97rqgVHtjb4t1uz1auFEa2xQ32aAxjsJLEC"
+jito_priority_fee_distribution = "Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3"
 
 [workspace]
 members = [
