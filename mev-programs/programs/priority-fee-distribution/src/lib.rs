@@ -451,7 +451,6 @@ pub struct CloseClaimStatus<'info> {
 
     /// CHECK: This is checked against claim_status in the constraint
     /// Receiver of the funds.
-    ///
     // REVIEW: What should the constraint here be? Currently re-using the
     //  Config.expired_funds_account. Should there be an added config variable?
     #[account(
