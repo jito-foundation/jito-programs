@@ -26,7 +26,7 @@ security_txt! {
 pub mod merkle_proof;
 pub mod state;
 
-declare_id!("9yw8YAKz16nFmA9EvHzKyVCYErHAJ6ZKtmK6adDBvmuU");
+declare_id!("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
 
 #[program]
 pub mod jito_priority_fee_distribution {
