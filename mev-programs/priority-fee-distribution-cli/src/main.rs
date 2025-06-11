@@ -6,7 +6,6 @@ use jito_priority_fee_distribution::state::{ClaimStatus, Config, PriorityFeeDist
 use jito_priority_fee_distribution_sdk::{
     derive_config_account_address, derive_priority_fee_distribution_account_address,
 };
-use solana_sdk::{instruction::Instruction, pubkey::Pubkey, signer::keypair::read_keypair_file};
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{
     compute_budget::ComputeBudgetInstruction,
@@ -308,7 +307,7 @@ fn main() -> anyhow::Result<()> {
             let base58_data = bs58::encode(serialized_data).into_string();
             println!("Base58 Serialized Data: {}", base58_data);
         }
-      
+
         Commands::Initialize {
             authority_keypair_path,
             authority,
@@ -318,8 +317,6 @@ fn main() -> anyhow::Result<()> {
         } => {
             let authority_keypair = read_keypair_file(authority_keypair_path)
                 .expect("Failed to read authority keypair file");
-            let authority_pubkey = Pubkey::from_str(&authority)?;
-            let expired_funds_account_pubkey = Pubkey::from_str(&expired_funds_account)?;
             let (config_pda, bump) = derive_config_account_address(&program_id);
             println!("Config Account Address: {}", config_pda);
 
@@ -415,6 +412,8 @@ fn main() -> anyhow::Result<()> {
             println!("  Original Authority: {}", config.original_upload_authority);
             println!("  Override Authority: {}", config.override_authority);
             println!("  Bump: {}", config.bump);
+        }
+
         Commands::TransferPriorityFeeTips {
             keypair_path,
             vote_account,
