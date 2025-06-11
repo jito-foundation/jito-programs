@@ -167,6 +167,9 @@ pub struct ClaimStatus {
     /// The epoch (upto and including) that tip funds can be claimed.
     /// Copied since TDA can be closed, need to track to avoid making multiple claims
     pub expires_at: u64,
+
+    /// The account that pays the rent for this account
+    pub claim_status_payer: Pubkey,
 }
 
 impl ClaimStatus {

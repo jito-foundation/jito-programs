@@ -250,6 +250,7 @@ pub mod jito_priority_fee_distribution {
 
         // Mark it claimed.
         claim_status.expires_at = tip_distribution_epoch_expires_at;
+        claim_status.claim_status_payer = ctx.accounts.payer.key();
 
         merkle_root.total_funds_claimed = merkle_root
             .total_funds_claimed
@@ -438,9 +439,6 @@ pub enum ErrorCode {
 
 #[derive(Accounts)]
 pub struct CloseClaimStatus<'info> {
-    #[account(seeds = [Config::SEED], bump)]
-    pub config: Account<'info, Config>,
-
     // bypass seed check since owner check prevents attacker from passing in invalid data
     // account can only be transferred to us if it is zeroed, failing the deserialization check
     #[account(
@@ -451,12 +449,9 @@ pub struct CloseClaimStatus<'info> {
 
     /// CHECK: This is checked against claim_status in the constraint
     /// Receiver of the funds.
-    ///
-    // REVIEW: What should the constraint here be? Currently re-using the
-    //  Config.expired_funds_account. Should there be an added config variable?
     #[account(
         mut,
-        address = config.expired_funds_account
+        address = claim_status.claim_status_payer
     )]
     pub claim_status_payer: UncheckedAccount<'info>,
 }
