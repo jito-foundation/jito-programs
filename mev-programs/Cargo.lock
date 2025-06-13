@@ -2340,7 +2340,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jito-priority-fee-distribution"
-version = "0.1.5"
+version = "0.1.6"
 dependencies = [
  "anchor-lang",
  "jito-programs-vote-state",
@@ -3186,8 +3186,8 @@ version = "0.1.0"
 dependencies = [
  "anchor-lang",
  "anyhow",
- "bs58 0.5.1",
- "clap 4.0.32",
+ "bs58",
+ "clap",
  "jito-priority-fee-distribution",
  "jito-priority-fee-distribution-sdk",
  "solana-client",
