@@ -14,5 +14,5 @@ bs58 = "0.5.1"
 clap = { version = "=4.0", features = ["derive"] }
 jito-tip-distribution = { path = "../programs/tip-distribution", features = ["no-entrypoint"] }
 jito-tip-distribution-sdk = { path = "../programs/sdk" }
-solana-client = "2.1"
-solana-sdk = "2.1"
+solana-client = "2.2"
+solana-sdk = "2.2"
