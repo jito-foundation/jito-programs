@@ -1,10 +1,12 @@
 [package]
 name = "jito-tip-distribution"
-version = "0.1.5"
 description = "Tip distribution program, responsible for distributing funds to entitled parties."
-edition = "2021"
-license = "Apache-2.0"
-authors = ["Jito Foundation <team@jito.network>"]
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -13,12 +15,14 @@ name = "jito_tip_distribution"
 [features]
 no-entrypoint = []
 no-idl = []
+no-log-ix-name = []
 cpi = ["no-entrypoint"]
 default = []
 idl-build = ["anchor-lang/idl-build"]
+anchor-debug = ["anchor-lang/anchor-debug"]
 
 [dependencies]
-anchor-lang = "0.30.1"
-jito-programs-vote-state = { path = "../vote-state" }
-solana-program = "1.18"
-solana-security-txt = "1.1.1"
+anchor-lang = { workspace = true }
+jito-programs-vote-state = { workspace = true }
+solana-program = { workspace = true }
+solana-security-txt = { workspace = true }

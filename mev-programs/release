@@ -1,0 +1,20 @@
+#!/usr/bin/env sh
+set -euo pipefail
+
+# cargo install cargo-edit
+cargo set-version --bump patch
+
+# get the version
+# xargs strips quotations
+VERSION=$(cargo metadata --format-version=1 --no-deps | jq '.packages[0].version' | xargs)
+echo "Bumped workspace version to $VERSION"
+
+# Ensure auto-generated code gets new version
+echo "Autogenerating new code"
+anchor build --idl idl --program-name jito_tip_distribution
+anchor build --idl idl --program-name jito_tip_payment
+git add Cargo.lock Cargo.toml programs
+git commit -m "Bump version to v$VERSION"
+git tag -a "v$VERSION" -m "v$VERSION"
+git push origin master
+git push origin tags/v"$VERSION"

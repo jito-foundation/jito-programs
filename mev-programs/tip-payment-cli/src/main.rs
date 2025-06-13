@@ -25,6 +25,7 @@ struct Cli {
     command: Commands,
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Subcommand)]
 enum Commands {
     /// Get the config account information
