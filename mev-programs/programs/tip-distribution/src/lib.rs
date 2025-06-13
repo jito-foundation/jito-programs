@@ -28,6 +28,7 @@ declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
 #[program]
 pub mod jito_tip_distribution {
+    use anchor_lang::solana_program;
     use jito_programs_vote_state::VoteState;
 
     use super::*;
@@ -109,8 +110,9 @@ pub mod jito_tip_distribution {
         Ok(())
     }
 
-    /// Uploads a merkle root to the provided [TipDistributionAccount]. This instruction may be
-    /// invoked many times as long as the account is at least one epoch old and not expired; and
+    /// Uploads a merkle root to the provided [TipDistributionAccount].
+    ///
+    /// This instruction may be invoked many times as long as the account is at least one epoch old and not expired; and
     /// no funds have already been claimed. Only the `merkle_root_upload_authority` has the
     /// authority to invoke.
     pub fn upload_merkle_root(
