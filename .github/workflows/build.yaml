@@ -108,6 +108,14 @@ jobs:
       - name: Check for diff
         run: git diff --exit-code
 
+      - name: List directory contents
+        working-directory: ./mev-programs/target/sbf-solana-solana/release
+        run: ls -la
+      
+
+      - name: Print $(pwd)
+        run: pwd
+
       - name: Run cargo test
         working-directory: ./mev-programs
         run: SBF_OUT_PATH=$(pwd)/target/sbf-solana-solana/release cargo nextest run
