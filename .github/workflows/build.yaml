@@ -20,15 +20,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ./mev-programs/target/
-          key: cargo-${{ runner.os }}-anchor-${{ hashFiles('**/Cargo.lock') }}
-      - run: RUSTUP_TOOLCHAIN=1.76.0 cargo install --git https://github.com/coral-xyz/anchor --tag v0.30.1 anchor-cli --locked --force
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
@@ -41,6 +32,8 @@ jobs:
         working-directory: ./mev-programs
         run: cargo +nightly-2025-04-01 clippy
         shell: bash
+      - uses: actions/checkout@v4
+        with:
           submodules: recursive
       - name: Install cargo-audit from crates.io
         uses: baptiste0928/cargo-install@v3
@@ -111,7 +104,7 @@ jobs:
         run: RUSTUP_TOOLCHAIN=nightly-2025-04-01 anchor build --idl idl --program-name jito_tip_payment
       - name: Build jito_priority_fee_distribution
         working-directory: ./mev-programs
-        run: RUSTUP_TOOLCHAIN=nightly-2025-04-01  anchor build --idl idl --program-name jito_priority_fee_distribution
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-01 anchor build --idl idl --program-name jito_priority_fee_distribution
 
       # Test
       - name: Run Anchor test
@@ -141,9 +134,9 @@ jobs:
           submodules: recursive
       - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.1.11
       - uses: actions-rust-lang/setup-rust-toolchain@v1
-          with:
-            cache-workspaces:
-              ./mev-programs/
+        with:
+          cache-workspaces:
+            ./mev-programs/
       - name: Install Solana Verify
         run: |
           RUSTUP_TOOLCHAIN=nightly-2025-04-01 cargo install solana-verify@0.4.3

@@ -2,8 +2,8 @@
 members = [
     "priority-fee-distribution-cli",
     "programs/*",
-    "tip-payment-cli",
     "tip-distribution-cli",
+    "tip-payment-cli",
 ]
 resolver = "2"
 
