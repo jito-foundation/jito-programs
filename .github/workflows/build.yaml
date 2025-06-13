@@ -93,25 +93,16 @@ jobs:
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
-      # Fix for issue: https://solana.stackexchange.com/questions/21553/proc-macro2-source-file-method-not-found-in-span/21645#21645
-      - name: Override proc-macro2 version
-        working-directory: ./mev-programs
-        run: cargo update -p proc-macro2 --precise 1.0.94
       # Build
       - name: Build jito_tip_distribution
         working-directory: ./mev-programs
-        run: RUSTUP_TOOLCHAIN=nightly-2025-04-01 anchor build --idl idl --program-name jito_tip_distribution
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_tip_distribution
       - name: Build jito_tip_payment
         working-directory: ./mev-programs
-        run: RUSTUP_TOOLCHAIN=nightly-2025-04-01 anchor build --idl idl --program-name jito_tip_payment
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_tip_payment
       - name: Build jito_priority_fee_distribution
         working-directory: ./mev-programs
-        run: RUSTUP_TOOLCHAIN=nightly-2025-04-01 anchor build --idl idl --program-name jito_priority_fee_distribution
-
-      # Test
-      - name: Run Anchor test
-        working-directory: ./mev-programs
-        run: RUSTUP_TOOLCHAIN=nightly-2025-04-01 anchor test
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_priority_fee_distribution
 
       # Make sure no uncommitted changes
       - name: Check for diff
@@ -125,7 +116,7 @@ jobs:
       - run: solana-keygen new --no-bip39-passphrase # needed for tests
       - name: Run Anchor test
         working-directory: ./mev-programs
-        run: anchor test
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor test
 
   verified_build:
     name: verified_build

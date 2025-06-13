@@ -2,7 +2,7 @@
   "address": "Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3",
   "metadata": {
     "name": "jito_priority_fee_distribution",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "spec": "0.1.0",
     "description": "Priority fee distribution program, responsible for distributing funds to entitled parties."
   },
@@ -100,17 +100,13 @@
       ],
       "accounts": [
         {
-          "name": "config"
-        },
-        {
           "name": "claim_status",
           "writable": true
         },
         {
           "name": "claim_status_payer",
           "docs": [
-            "Receiver of the funds.",
-            ""
+            "Receiver of the funds."
           ],
           "writable": true
         }
@@ -761,6 +757,13 @@
       "type": {
         "kind": "struct",
         "fields": [
+          {
+            "name": "claim_status_payer",
+            "docs": [
+              "The account that pays the rent for this account"
+            ],
+            "type": "pubkey"
+          },
           {
             "name": "expires_at",
             "docs": [
