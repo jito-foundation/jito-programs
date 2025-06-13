@@ -95,6 +95,7 @@ jobs:
         run: yarn
       # Fix for issue: https://solana.stackexchange.com/questions/21553/proc-macro2-source-file-method-not-found-in-span/21645#21645
       - name: Override proc-macro2 version
+        working-directory: ./mev-programs
         run: cargo update -p proc-macro2 --precise 1.0.94
       # Build
       - name: Build jito_tip_distribution
