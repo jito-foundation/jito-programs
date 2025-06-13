@@ -12,7 +12,7 @@ const CONFIG_ACCOUNT_SEED = "CONFIG_ACCOUNT";
 const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_SEED = "PF_DISTRIBUTION_ACCOUNT";
 const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_LEN = 176;
 const CLAIM_STATUS_SEED = "CLAIM_STATUS";
-const CLAIM_STATUS_LEN = 16;
+const CLAIM_STATUS_LEN = 48;
 const ROOT_UPLOAD_CONFIG_SEED = "ROOT_UPLOAD_CONFIG";
 const JITO_MERKLE_UPLOAD_AUTHORITY = new anchor.web3.PublicKey(
   "GZctHpWXmsZC1YHACTGGcHhYxjdRqQvTpYkb9LMvxDib"
@@ -390,15 +390,14 @@ describe("tests priority_fee_distribution", () => {
       await priorityFeeDistribution.methods
         .closeClaimStatus()
         .accounts({
-          config: configAccount,
           claimStatus,
-          claimStatusPayer: user1.publicKey, //wrong user, causes constraint check to fail
+          claimStatusPayer: acct.publicKey, //wrong user, causes constraint check to fail
         })
         .rpc();
       assert.fail("expected exception to be thrown");
     } catch (e) {
       const err: AnchorError = e;
-      assert.equal(err.error.errorCode.code, "ConstraintAddress");
+      assert.equal(err.error.errorCode.code, "ConstraintRaw");
     }
   });
 
@@ -489,9 +488,8 @@ describe("tests priority_fee_distribution", () => {
       await priorityFeeDistribution.methods
         .closeClaimStatus()
         .accounts({
-          config: configAccount,
           claimStatus,
-          claimStatusPayer: expiredFundsAccount.publicKey,
+          claimStatusPayer: user1.publicKey
         })
         .rpc();
       assert.fail("expected exception to be thrown");
@@ -588,9 +586,8 @@ describe("tests priority_fee_distribution", () => {
     await priorityFeeDistribution.methods
       .closeClaimStatus()
       .accounts({
-        config: configAccount,
         claimStatus,
-        claimStatusPayer: expiredFundsAccount.publicKey,
+        claimStatusPayer: user1.publicKey
       })
       .rpc();
 
@@ -703,19 +700,18 @@ describe("tests priority_fee_distribution", () => {
     await sleepForEpochs(4); // wait for TDA to expire
 
     const balStart = await provider.connection.getBalance(
-      expiredFundsAccount.publicKey
+      user1.publicKey
     );
     await priorityFeeDistribution.methods
       .closeClaimStatus()
       .accounts({
-        config: configAccount,
         claimStatus,
-        claimStatusPayer: validatorVoteAccount.publicKey
+        claimStatusPayer: user1.publicKey
       })
       .rpc();
 
     const balEnd = await provider.connection.getBalance(
-      validatorVoteAccount.publicKey
+      user1.publicKey
     );
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
@@ -827,18 +823,17 @@ describe("tests priority_fee_distribution", () => {
       .rpc();
 
     const balStart = await provider.connection.getBalance(
-      expiredFundsAccount.publicKey
+      user1.publicKey
     );
     await priorityFeeDistribution.methods
       .closeClaimStatus()
       .accounts({
-        config: configAccount,
         claimStatus,
-        claimStatusPayer: expiredFundsAccount.publicKey,
+        claimStatusPayer: user1.publicKey
       })
       .rpc();
     const balEnd = await provider.connection.getBalance(
-      expiredFundsAccount.publicKey
+      user1.publicKey
     );
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
