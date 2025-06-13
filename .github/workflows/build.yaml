@@ -110,7 +110,7 @@ jobs:
 
       - name: Run cargo test
         working-directory: ./mev-programs
-        run: SBF_OUT_DIR=$(pwd)/target/sbf-solana-solana/release cargo nextest run
+        run: SBF_OUT_PATH=$(pwd)/target/sbf-solana-solana/release cargo nextest run
 
       # Slow anchor tests
       - run: solana-keygen new --no-bip39-passphrase # needed for tests

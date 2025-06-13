@@ -710,12 +710,12 @@ describe("tests priority_fee_distribution", () => {
       .accounts({
         config: configAccount,
         claimStatus,
-        claimStatusPayer: expiredFundsAccount.publicKey,
+        claimStatusPayer: validatorVoteAccount.publicKey
       })
       .rpc();
 
     const balEnd = await provider.connection.getBalance(
-      expiredFundsAccount.publicKey
+      validatorVoteAccount.publicKey
     );
     const minRentExempt =
       await provider.connection.getMinimumBalanceForRentExemption(
@@ -1211,7 +1211,7 @@ describe("tests priority_fee_distribution", () => {
     // Validate no lamports were transferred
     assert.equal(
       distributionAccountInfoAfter.lamports -
-        distributionAccountInfoBefore.lamports,
+      distributionAccountInfoBefore.lamports,
       0
     );
 
@@ -1300,7 +1300,7 @@ describe("tests priority_fee_distribution", () => {
         );
       assert.equal(
         distributionAccountInfoAfter.lamports -
-          distributionAccountInfoBefore.lamports,
+        distributionAccountInfoBefore.lamports,
         lamportsToTransfer
       );
     });
