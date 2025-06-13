@@ -1,9 +1,5 @@
 [workspace]
-members = [
-    "programs/*",
-    "tip-distribution-cli",
-    "tip-payment-cli",
-]
+members = ["programs/*", "tip-distribution-cli", "tip-payment-cli"]
 resolver = "2"
 
 [workspace.package]
