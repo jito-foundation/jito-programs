@@ -1085,7 +1085,7 @@ describe("tests priority_fee_distribution", () => {
           priorityFeeDistributionAccount: priorityFeeDistributionAccount,
           merkleRootUploadConfig: merkleRootUploadConfigKey,
         })
-        .rpc({ skipPreflight: true });
+        .rpc();
       assert.fail("expected exception to be thrown");
     } catch (e) {
       const err: AnchorError = e;
@@ -1151,7 +1151,7 @@ describe("tests priority_fee_distribution", () => {
           priorityFeeDistributionAccount: priorityFeeDistributionAccount,
           merkleRootUploadConfig: merkleRootUploadConfigKey,
         })
-        .rpc({ skipPreflight: true });
+        .rpc();
       assert.fail("expected exception to be thrown");
     } catch (e) {
       const err: AnchorError = e;
