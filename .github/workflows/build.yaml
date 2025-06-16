@@ -22,6 +22,18 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Install yarn dependencies
+        working-directory: ./mev-programs
+        run: yarn
+      - name: Install latest stable
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly-2025-04-01-x86_64-unknown-linux-gnu
+          components: rustfmt, clippy
+      - name: clippy
+        working-directory: ./mev-programs
+        run: cargo +nightly-2025-04-01 clippy
+        shell: bash
       - name: Install cargo-audit from crates.io
         uses: baptiste0928/cargo-install@v3
         with:
@@ -64,7 +76,7 @@ jobs:
           cache-workspaces:
             ./mev-programs/
       - name: install solana toolsuite
-        run: sh -c "$(curl -sSfL https://release.anza.xyz/v2.1.11/install)"
+        run: sh -c "$(curl -sSfL https://release.anza.xyz/v2.2.13/install)"
       - name: add to path
         run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       - name: Install anchor
@@ -81,14 +93,16 @@ jobs:
       - name: Install yarn dependencies
         working-directory: ./mev-programs
         run: yarn
-
       # Build
       - name: Build jito_tip_distribution
         working-directory: ./mev-programs
-        run: anchor build --idl idl --program-name jito_tip_distribution
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_tip_distribution
       - name: Build jito_tip_payment
         working-directory: ./mev-programs
-        run: anchor build --idl idl --program-name jito_tip_payment
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_tip_payment
+      - name: Build jito_priority_fee_distribution
+        working-directory: ./mev-programs
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_priority_fee_distribution
 
       # Make sure no uncommitted changes
       - name: Check for diff
@@ -96,13 +110,13 @@ jobs:
 
       - name: Run cargo test
         working-directory: ./mev-programs
-        run: SBF_OUT_DIR=$(pwd)/target/sbf-solana-solana/release cargo nextest run
+        run: SBF_OUT_DIR=$(pwd)/target/deploy cargo nextest run
 
       # Slow anchor tests
       - run: solana-keygen new --no-bip39-passphrase # needed for tests
       - name: Run Anchor test
         working-directory: ./mev-programs
-        run: anchor test
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor test
 
   verified_build:
     name: verified_build
@@ -111,21 +125,24 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.1.11
+      - run: docker pull --platform linux/amd64 solanafoundation/solana-verifiable-build:2.2.13
       - uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           cache-workspaces:
             ./mev-programs/
-      - name: Install solana-verify from crates.io
-        uses: baptiste0928/cargo-install@v3
-        with:
-          crate: solana-verify
-      - name: Build verified jito_tip_distribution
+      - name: Install Solana Verify
+        run: |
+          RUSTUP_TOOLCHAIN=nightly-2025-04-01 cargo install solana-verify@0.4.3
+          solana-verify --version
+
+      - name: Verifiable Build
         working-directory: ./mev-programs
-        run: solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.1.11
-      - name: Build verified jito_tip_payment
-        working-directory: ./mev-programs
-        run: solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.1.11
+        run: |
+          solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13
+          solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.2.13
+          solana-verify build --library-name jito_priority_fee_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13
+
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -133,8 +150,10 @@ jobs:
           path: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_priority_fee_distribution.so
             mev-programs/programs/tip-distribution/idl/jito_tip_distribution.json
             mev-programs/programs/tip-payment/idl/jito_tip_payment.json
+            mev-programs/programs/priority-fee-distribution/idl/jito_priority_fee_distribution.json
       - name: Cleanup rust cache un-cacheable files
         run: |
           sudo rm ./mev-programs/target/deploy/jito_tip_distribution-keypair.json
@@ -148,8 +167,10 @@ jobs:
           files: |
             mev-programs/target/deploy/jito_tip_distribution.so
             mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_priority_fee_distribution.so
             mev-programs/target/idl/jito_tip_distribution.json
             mev-programs/target/idl/jito_tip_payment.json
+            mev-programs/target/idl/jito_priority_fee_distribution.json
       # Push to anchor repository
       - name: Anchor Login
         if: startsWith(github.ref, 'refs/tags/')
@@ -163,3 +184,7 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         working-directory: ./mev-programs
         run: yes 'yes' | anchor publish jito_tip_distribution --skip-build --provider.cluster mainnet
+      - name: Publish priority-fee-distribution source code
+        if: startsWith(github.ref, 'refs/tags/')
+        working-directory: ./mev-programs
+        run: yes 'yes' | anchor publish jito_priority_fee_distribution --skip-build --provider.cluster mainnet

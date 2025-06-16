@@ -2339,6 +2339,24 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
+name = "jito-priority-fee-distribution"
+version = "0.1.6"
+dependencies = [
+ "anchor-lang",
+ "jito-programs-vote-state",
+ "solana-program",
+ "solana-security-txt",
+]
+
+[[package]]
+name = "jito-priority-fee-distribution-sdk"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "jito-priority-fee-distribution",
+]
+
+[[package]]
 name = "jito-programs-vote-state"
 version = "0.1.6"
 dependencies = [
@@ -3160,6 +3178,20 @@ checksum = "72dd2d6d381dfb73a193c7fca536518d7caee39fc8503f74e7dc0be0531b425c"
 dependencies = [
  "predicates-core",
  "termtree",
+]
+
+[[package]]
+name = "priority-fee-distribution-cli"
+version = "0.1.0"
+dependencies = [
+ "anchor-lang",
+ "anyhow",
+ "bs58",
+ "clap",
+ "jito-priority-fee-distribution",
+ "jito-priority-fee-distribution-sdk",
+ "solana-client",
+ "solana-sdk",
 ]
 
 [[package]]
