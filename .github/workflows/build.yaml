@@ -108,15 +108,9 @@ jobs:
       - name: Check for diff
         run: git diff --exit-code
 
-      - name: List directory contents
-        run: ls -la ./mev-programs/target/sbf-solana-solana/release
-
-      - name: List directory contents 2
-        run: ls -la ./mev-programs/target/deploy
-
       - name: Run cargo test
         working-directory: ./mev-programs
-        run: SBF_OUT_DIR=$(pwd)/target/sbf-solana-solana/release cargo nextest run
+        run: SBF_OUT_DIR=$(pwd)/target/deploy cargo nextest run
 
       # Slow anchor tests
       - run: solana-keygen new --no-bip39-passphrase # needed for tests
