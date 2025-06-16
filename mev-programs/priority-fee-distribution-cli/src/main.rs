@@ -106,6 +106,10 @@ enum Commands {
 
     /// Update the config account information
     UpdateConfig {
+        /// Path to the authority keypair file
+        #[arg(long)]
+        authority_keypair_path: String,
+
         /// Authority pubkey
         #[arg(long)]
         authority: String,
@@ -121,10 +125,6 @@ enum Commands {
         /// Max validator commission BPS
         #[arg(long)]
         max_validator_commission_bps: u16,
-
-        /// Bump
-        #[arg(long)]
-        bump: u8,
 
         /// The go_live_epoch for actual priority fee transfers (see
         ///  _transfer_priority_fee_tips_ instruction)
@@ -248,11 +248,15 @@ fn main() -> anyhow::Result<()> {
             expired_funds_account,
             num_epochs_valid,
             max_validator_commission_bps,
-            bump,
             go_live_epoch,
+            authority_keypair_path,
         } => {
+            let authority_keypair = read_keypair_file(authority_keypair_path)
+                .expect("Failed to read authority keypair file");
             let authority_pubkey = Pubkey::from_str(&authority)?;
             let expired_funds_account_pubkey = Pubkey::from_str(&expired_funds_account)?;
+
+            let (config_pda, bump) = derive_config_account_address(&program_id);
 
             let config = Config {
                 authority: authority_pubkey,
@@ -262,8 +266,6 @@ fn main() -> anyhow::Result<()> {
                 bump,
                 go_live_epoch,
             };
-
-            let (config_pda, _) = derive_config_account_address(&program_id);
 
             let instruction = Instruction {
                 program_id,
@@ -278,9 +280,13 @@ fn main() -> anyhow::Result<()> {
                 .to_account_metas(None),
             };
 
-            let serialized_data = instruction.data;
+            /*let serialized_data = instruction.data;
             let base58_data = bs58::encode(serialized_data).into_string();
-            println!("Base58 Serialized Data: {}", base58_data);
+            println!("Base58 Serialized Data: {}", base58_data);*/
+            let mut transaction =
+                solana_sdk::transaction::Transaction::new_with_payer(&[instruction], None);
+            transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
+            let signature = client.send_and_confirm_transaction_with_spinner(&transaction)?;
         }
 
         Commands::Initialize {
