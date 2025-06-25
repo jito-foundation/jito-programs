@@ -1,5 +1,8 @@
 use anchor_lang::prelude::Pubkey;
-use jito_priority_fee_distribution::state::{Config, PriorityFeeDistributionAccount};
+use jito_priority_fee_distribution::state::Config;
+
+pub type PriorityFeeDistributionAccount =
+    jito_priority_fee_distribution::state::PriorityFeeDistributionAccount;
 
 pub fn derive_priority_fee_distribution_account_address(
     priority_fee_distribution_program_id: &Pubkey,
