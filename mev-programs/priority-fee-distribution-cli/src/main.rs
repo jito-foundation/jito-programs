@@ -10,14 +10,10 @@ use jito_priority_fee_distribution_sdk::{
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{
     compute_budget::ComputeBudgetInstruction,
-    
     instruction::Instruction,
-   
     pubkey::Pubkey,
-   
-    signer::{{keypair::read_keypair_file, Signer},
+    signer::{keypair::read_keypair_file, Signer},
     transaction::Transaction,
-, Signer},
 };
 
 #[derive(Parser)]
@@ -292,7 +288,7 @@ fn main() -> anyhow::Result<()> {
             bump,
             go_live_epoch,
         } => {
-            let authority_pubkey = authority_keypair.pubkey();
+            let authority_pubkey = Pubkey::from_str(&authority)?;
             let expired_funds_account_pubkey = Pubkey::from_str(&expired_funds_account)?;
 
             let config = Config {
@@ -321,12 +317,7 @@ fn main() -> anyhow::Result<()> {
 
             let serialized_data = instruction.data;
             let base58_data = bs58::encode(serialized_data).into_string();
-            println!("Base58 Serialized Data: {}", base58_data);*/
-            let mut transaction =
-                solana_sdk::transaction::Transaction::new_with_payer(&[instruction], None);
-            transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
-            let signature = client.send_and_confirm_transaction_with_spinner(&transaction)?;
-            println!("Transaction Signature: {}", signature);
+            println!("Base58 Serialized Data: {}", base58_data);
         }
 
         Commands::Initialize {
