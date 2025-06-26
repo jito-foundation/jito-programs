@@ -1,6 +1,7 @@
 use std::{path::PathBuf, str::FromStr};
 
 use anchor_lang::{system_program, AccountDeserialize, InstructionData, ToAccountMetas};
+use bs58;
 use clap::{Parser, Subcommand};
 use jito_priority_fee_distribution::state::{ClaimStatus, Config, PriorityFeeDistributionAccount};
 use jito_priority_fee_distribution_sdk::{
@@ -9,10 +10,14 @@ use jito_priority_fee_distribution_sdk::{
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
 use solana_sdk::{
     compute_budget::ComputeBudgetInstruction,
+    
     instruction::Instruction,
+   
     pubkey::Pubkey,
-    signer::{keypair::read_keypair_file, Signer},
+   
+    signer::{{keypair::read_keypair_file, Signer},
     transaction::Transaction,
+, Signer},
 };
 
 #[derive(Parser)]
@@ -156,6 +161,17 @@ enum Commands {
         #[arg(long)]
         lamports: u64,
     },
+
+    /// Update the merkle root upload config account
+    UpdateMerkleRootUploadConfig {
+        /// Authority pubkey
+        #[arg(long)]
+        authority: String,
+
+        /// Original authority pubkey
+        #[arg(long)]
+        original_authority: String,
+    },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -276,11 +292,11 @@ fn main() -> anyhow::Result<()> {
             bump,
             go_live_epoch,
         } => {
-            let authority_pubkey = Pubkey::from_str(&authority)?;
+            let authority_pubkey = authority_keypair.pubkey();
             let expired_funds_account_pubkey = Pubkey::from_str(&expired_funds_account)?;
 
             let config = Config {
-                authority: authority_pubkey,
+                authority: Pubkey::from_str(&authority)?,
                 expired_funds_account: expired_funds_account_pubkey,
                 num_epochs_valid,
                 max_validator_commission_bps,
@@ -305,7 +321,12 @@ fn main() -> anyhow::Result<()> {
 
             let serialized_data = instruction.data;
             let base58_data = bs58::encode(serialized_data).into_string();
-            println!("Base58 Serialized Data: {}", base58_data);
+            println!("Base58 Serialized Data: {}", base58_data);*/
+            let mut transaction =
+                solana_sdk::transaction::Transaction::new_with_payer(&[instruction], None);
+            transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
+            let signature = client.send_and_confirm_transaction_with_spinner(&transaction)?;
+            println!("Transaction Signature: {}", signature);
         }
 
         Commands::Initialize {
@@ -412,6 +433,56 @@ fn main() -> anyhow::Result<()> {
             println!("  Original Authority: {}", config.original_upload_authority);
             println!("  Override Authority: {}", config.override_authority);
             println!("  Bump: {}", config.bump);
+        }
+
+        Commands::UpdateMerkleRootUploadConfig {
+            authority,
+            original_authority,
+        } => {
+            let authority_pubkey = Pubkey::from_str(&authority)?;
+            let original_authority_pubkey = Pubkey::from_str(&original_authority)?;
+
+            let (config_pda, _) = derive_config_account_address(&program_id);
+            let (merkle_root_upload_config, _) =
+                Pubkey::find_program_address(&[b"ROOT_UPLOAD_CONFIG"], &program_id);
+
+            let instruction = Instruction {
+                program_id,
+                data: jito_priority_fee_distribution::instruction::UpdateMerkleRootUploadConfig {
+                    authority: authority_pubkey,
+                    original_authority: original_authority_pubkey,
+                }
+                .data(),
+                accounts: jito_priority_fee_distribution::accounts::UpdateMerkleRootUploadConfig {
+                    config: config_pda,
+                    merkle_root_upload_config,
+                    authority: authority_pubkey,
+                    system_program: solana_sdk::system_program::ID,
+                }
+                .to_account_metas(None),
+            };
+
+            let serialized_data = instruction.data;
+            let base58_data = bs58::encode(serialized_data).into_string();
+            println!("Base58 Serialized Data: {}", base58_data);
+
+            println!("\nAccounts:");
+            for (i, account_meta) in instruction.accounts.iter().enumerate() {
+                let writable_status = if account_meta.is_writable {
+                    "writable"
+                } else {
+                    "readonly"
+                };
+                let signer_status = if account_meta.is_signer {
+                    "signer"
+                } else {
+                    "non-signer"
+                };
+                println!(
+                    "  {}: {} ({}, {})",
+                    i, account_meta.pubkey, writable_status, signer_status
+                );
+            }
         }
 
         Commands::TransferPriorityFeeTips {
