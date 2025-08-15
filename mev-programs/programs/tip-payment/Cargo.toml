@@ -1,10 +1,12 @@
 [package]
 name = "jito-tip-payment"
-version = "0.1.5"
 description = "Tip Payment Program"
-edition = "2021"
-license = "Apache-2.0"
-authors = ["Jito Foundation <team@jito.network>"]
+version = { workspace = true }
+authors = { workspace = true }
+repository = { workspace = true }
+homepage = { workspace = true }
+license = { workspace = true }
+edition = { workspace = true }
 
 [lib]
 crate-type = ["cdylib", "lib"]
@@ -15,9 +17,21 @@ no-entrypoint = []
 no-idl = []
 no-log-ix-name = []
 cpi = ["no-entrypoint"]
+custom-heap = []
+custom-panic = []
 default = []
 idl-build = ["anchor-lang/idl-build"]
+anchor-debug = ["anchor-lang/anchor-debug"]
 
 [dependencies]
-anchor-lang = "0.30.1"
-solana-security-txt = "1.1.1"
+anchor-lang = { workspace = true }
+solana-program = { workspace = true }
+solana-sdk-ids = { workspace = true }
+solana-security-txt = { workspace = true }
+
+[dev-dependencies]
+agave-feature-set = { workspace = true }
+jito-tip-distribution = { workspace = true }
+solana-program-test = { workspace = true }
+solana-sdk = { workspace = true }
+tokio = { workspace = true }

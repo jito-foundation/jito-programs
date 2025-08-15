@@ -2,9 +2,10 @@
   "address": "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt",
   "metadata": {
     "name": "jito_tip_payment",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "spec": "0.1.0",
-    "description": "Tip Payment Program"
+    "description": "Tip Payment Program",
+    "repository": "https://github.com/jito-foundation/jito-programs"
   },
   "instructions": [
     {
@@ -172,74 +173,6 @@
       "args": []
     },
     {
-      "name": "claim_tips",
-      "discriminator": [
-        247,
-        28,
-        193,
-        228,
-        55,
-        238,
-        31,
-        113
-      ],
-      "accounts": [
-        {
-          "name": "config",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_0",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_1",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_2",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_3",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_4",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_5",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_6",
-          "writable": true
-        },
-        {
-          "name": "tip_payment_account_7",
-          "writable": true
-        },
-        {
-          "name": "tip_receiver",
-          "docs": [
-            "can be an account with a private key to a PDA owned by some other program."
-          ],
-          "writable": true
-        },
-        {
-          "name": "block_builder",
-          "writable": true
-        },
-        {
-          "name": "signer",
-          "writable": true,
-          "signer": true
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "initialize",
       "discriminator": [
         175,
@@ -363,6 +296,14 @@
     {
       "code": 6001,
       "name": "InvalidFee"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidTipReceiver"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidBlockBuilder"
     }
   ],
   "types": [

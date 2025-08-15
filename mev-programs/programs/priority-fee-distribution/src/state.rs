@@ -22,14 +22,17 @@ pub struct Config {
     /// The maximum commission a validator can set on their distribution account.
     pub max_validator_commission_bps: u16,
 
+    /// The epoch where lamports are transferred to the priority fee distribution account.
+    pub go_live_epoch: u64,
+
     /// The bump used to generate this account
     pub bump: u8,
 }
 
-/// The account that validators register as **tip_receiver** with the tip-payment program.
+/// The account that validators send priority fees to
 #[account]
 #[derive(Default)]
-pub struct TipDistributionAccount {
+pub struct PriorityFeeDistributionAccount {
     /// The validator's vote account, also the recipient of remaining lamports after
     /// upon closing this account.
     pub validator_vote_account: Pubkey,
@@ -40,7 +43,7 @@ pub struct TipDistributionAccount {
     /// The merkle root used to verify user claims from this account.
     pub merkle_root: Option<MerkleRoot>,
 
-    /// Epoch for which this account was created.  
+    /// Epoch for which this account was created.
     pub epoch_created_at: u64,
 
     /// The commission basis points this validator charges.
@@ -48,6 +51,9 @@ pub struct TipDistributionAccount {
 
     /// The epoch (upto and including) that tip funds can be claimed.
     pub expires_at: u64,
+
+    /// The total lamports transferred to this account.
+    pub total_lamports_transferred: u64,
 
     /// The bump used to generate this account
     pub bump: u8,
@@ -98,8 +104,8 @@ impl Config {
     }
 }
 
-impl TipDistributionAccount {
-    pub const SEED: &'static [u8] = b"TIP_DISTRIBUTION_ACCOUNT";
+impl PriorityFeeDistributionAccount {
+    pub const SEED: &'static [u8] = b"PF_DISTRIBUTION_ACCOUNT";
 
     pub const SIZE: usize = HEADER_SIZE + size_of::<Self>();
 
@@ -131,6 +137,15 @@ impl TipDistributionAccount {
         Self::transfer_lamports(from, to, amount)
     }
 
+    pub fn increment_total_lamports_transferred(&mut self, amount: u64) -> Result<()> {
+        let old_balance = self.total_lamports_transferred;
+        let new_balance = old_balance.checked_add(amount).ok_or(ArithmeticError)?;
+
+        self.total_lamports_transferred = new_balance;
+
+        Ok(())
+    }
+
     fn transfer_lamports(from: AccountInfo, to: AccountInfo, amount: u64) -> Result<()> {
         // debit lamports
         **from.try_borrow_mut_lamports()? =
@@ -143,31 +158,18 @@ impl TipDistributionAccount {
     }
 }
 
-/// Gives us an audit trail of who and what was claimed; also enforces and only-once claim by any party.
+/// A PDA uniquely derived by the PriorityFeeDistributionAccount and claimant, which enforces an only-
+/// once claim by each claimant.
+/// @dev **this is very different than TipDistributor's ClaimStatus structure**
 #[account]
 #[derive(Default)]
 pub struct ClaimStatus {
-    /// If true, the tokens have been claimed.
-    pub is_claimed: bool,
-
-    /// Authority that claimed the tokens. Allows for delegated rewards claiming.
-    pub claimant: Pubkey,
-
-    /// The payer who created the claim.
+    /// The account that pays the rent for this account
     pub claim_status_payer: Pubkey,
-
-    /// When the funds were claimed.
-    pub slot_claimed_at: u64,
-
-    /// Amount of funds claimed.
-    pub amount: u64,
 
     /// The epoch (upto and including) that tip funds can be claimed.
     /// Copied since TDA can be closed, need to track to avoid making multiple claims
     pub expires_at: u64,
-
-    /// The bump used to generate this account
-    pub bump: u8,
 }
 
 impl ClaimStatus {
@@ -180,7 +182,7 @@ impl ClaimStatus {
 #[account]
 #[derive(Default)]
 pub struct MerkleRootUploadConfig {
-    /// The authority that overrides the TipDistributionAccount merkle_root_upload_authority
+    /// The authority that overrides the PriorityFeeDistributionAccount merkle_root_upload_authority
     pub override_authority: Pubkey,
 
     /// The original merkle root upload authority that can be changed to the new overrided

@@ -3,14 +3,16 @@ use anchor_lang::{prelude::*, solana_program::clock::Clock};
 use solana_security_txt::security_txt;
 
 use crate::{
-    state::{ClaimStatus, Config, MerkleRoot, MerkleRootUploadConfig, TipDistributionAccount},
+    state::{
+        ClaimStatus, Config, MerkleRoot, MerkleRootUploadConfig, PriorityFeeDistributionAccount,
+    },
     ErrorCode::Unauthorized,
 };
 
 #[cfg(not(feature = "no-entrypoint"))]
 security_txt! {
     // Required fields
-    name: "Jito Tip Distribution Program",
+    name: "Jito Priority Fee Program",
     project_url: "https://jito.network/",
     contacts: "email:support@jito.network",
     policy: "https://github.com/jito-foundation/jito-programs",
@@ -24,12 +26,12 @@ security_txt! {
 pub mod merkle_proof;
 pub mod state;
 
-declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+declare_id!("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
 
 #[program]
-pub mod jito_tip_distribution {
-    use anchor_lang::solana_program;
+pub mod jito_priority_fee_distribution {
     use jito_programs_vote_state::VoteState;
+    use solana_program::native_token::lamports_to_sol;
 
     use super::*;
     use crate::ErrorCode::*;
@@ -48,16 +50,17 @@ pub mod jito_tip_distribution {
         cfg.expired_funds_account = expired_funds_account;
         cfg.num_epochs_valid = num_epochs_valid;
         cfg.max_validator_commission_bps = max_validator_commission_bps;
+        cfg.go_live_epoch = u64::MAX;
         cfg.bump = bump;
         cfg.validate()?;
 
         Ok(())
     }
 
-    /// Initialize a new [TipDistributionAccount] associated with the given validator vote key
+    /// Initialize a new [PriorityFeeDistributionAccount] associated with the given validator vote key
     /// and current epoch.
-    pub fn initialize_tip_distribution_account(
-        ctx: Context<InitializeTipDistributionAccount>,
+    pub fn initialize_priority_fee_distribution_account(
+        ctx: Context<InitializePriorityFeeDistributionAccount>,
         merkle_root_upload_authority: Pubkey,
         validator_commission_bps: u16,
         bump: u8,
@@ -73,7 +76,7 @@ pub mod jito_tip_distribution {
 
         let current_epoch = Clock::get()?.epoch;
 
-        let distribution_acc = &mut ctx.accounts.tip_distribution_account;
+        let distribution_acc = &mut ctx.accounts.priority_fee_distribution_account;
         distribution_acc.validator_vote_account = ctx.accounts.validator_vote_account.key();
         distribution_acc.epoch_created_at = current_epoch;
         distribution_acc.validator_commission_bps = validator_commission_bps;
@@ -85,8 +88,8 @@ pub mod jito_tip_distribution {
         distribution_acc.bump = bump;
         distribution_acc.validate()?;
 
-        emit!(TipDistributionAccountInitializedEvent {
-            tip_distribution_account: distribution_acc.key(),
+        emit!(PriorityFeeDistributionAccountInitializedEvent {
+            priority_fee_distribution_account: distribution_acc.key(),
         });
 
         Ok(())
@@ -101,6 +104,7 @@ pub mod jito_tip_distribution {
         config.expired_funds_account = new_config.expired_funds_account;
         config.num_epochs_valid = new_config.num_epochs_valid;
         config.max_validator_commission_bps = new_config.max_validator_commission_bps;
+        config.go_live_epoch = new_config.go_live_epoch;
         config.validate()?;
 
         emit!(ConfigUpdatedEvent {
@@ -110,9 +114,8 @@ pub mod jito_tip_distribution {
         Ok(())
     }
 
-    /// Uploads a merkle root to the provided [TipDistributionAccount].
-    ///
-    /// This instruction may be invoked many times as long as the account is at least one epoch old and not expired; and
+    /// Uploads a merkle root to the provided [PriorityFeeDistributionAccount]. This instruction may be
+    /// invoked many times as long as the account is at least one epoch old and not expired; and
     /// no funds have already been claimed. Only the `merkle_root_upload_authority` has the
     /// authority to invoke.
     pub fn upload_merkle_root(
@@ -124,7 +127,7 @@ pub mod jito_tip_distribution {
         UploadMerkleRoot::auth(&ctx)?;
 
         let current_epoch = Clock::get()?.epoch;
-        let distribution_acc = &mut ctx.accounts.tip_distribution_account;
+        let distribution_acc = &mut ctx.accounts.priority_fee_distribution_account;
 
         if let Some(merkle_root) = &distribution_acc.merkle_root {
             if merkle_root.num_nodes_claimed > 0 {
@@ -136,7 +139,7 @@ pub mod jito_tip_distribution {
         }
 
         if current_epoch > distribution_acc.expires_at {
-            return Err(ExpiredTipDistributionAccount.into());
+            return Err(ExpiredPriorityFeeDistributionAccount.into());
         }
 
         distribution_acc.merkle_root = Some(MerkleRoot {
@@ -150,13 +153,13 @@ pub mod jito_tip_distribution {
 
         emit!(MerkleRootUploadedEvent {
             merkle_root_upload_authority: ctx.accounts.merkle_root_upload_authority.key(),
-            tip_distribution_account: distribution_acc.key(),
+            priority_fee_distribution_account: distribution_acc.key(),
         });
 
         Ok(())
     }
 
-    /// Anyone can invoke this only after the [TipDistributionAccount] has expired.
+    /// Anyone can invoke this only after the [PriorityFeeDistributionAccount] has expired.
     /// This instruction will return any rent back to `claimant` and close the account
     pub fn close_claim_status(ctx: Context<CloseClaimStatus>) -> Result<()> {
         let claim_status = &ctx.accounts.claim_status;
@@ -174,59 +177,53 @@ pub mod jito_tip_distribution {
         Ok(())
     }
 
-    /// Anyone can invoke this only after the [TipDistributionAccount] has expired.
+    /// Anyone can invoke this only after the [PriorityFeeDistributionAccount] has expired.
     /// This instruction will send any unclaimed funds to the designated `expired_funds_account`
     /// before closing and returning the rent exempt funds to the validator.
-    pub fn close_tip_distribution_account(
-        ctx: Context<CloseTipDistributionAccount>,
+    pub fn close_priority_fee_distribution_account(
+        ctx: Context<ClosePriorityFeeDistributionAccount>,
         _epoch: u64,
     ) -> Result<()> {
-        CloseTipDistributionAccount::auth(&ctx)?;
+        ClosePriorityFeeDistributionAccount::auth(&ctx)?;
 
-        let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
+        let priority_fee_distribution_account = &mut ctx.accounts.priority_fee_distribution_account;
 
-        if Clock::get()?.epoch <= tip_distribution_account.expires_at {
-            return Err(PrematureCloseTipDistributionAccount.into());
+        if Clock::get()?.epoch <= priority_fee_distribution_account.expires_at {
+            return Err(PrematureClosePriorityFeeDistributionAccount.into());
         }
 
-        let expired_amount = TipDistributionAccount::claim_expired(
-            tip_distribution_account.to_account_info(),
+        let expired_amount = PriorityFeeDistributionAccount::claim_expired(
+            priority_fee_distribution_account.to_account_info(),
             ctx.accounts.expired_funds_account.to_account_info(),
         )?;
-        tip_distribution_account.validate()?;
+        priority_fee_distribution_account.validate()?;
 
-        emit!(TipDistributionAccountClosedEvent {
+        emit!(PriorityFeeDistributionAccountClosedEvent {
             expired_funds_account: ctx.accounts.expired_funds_account.key(),
-            tip_distribution_account: tip_distribution_account.key(),
+            priority_fee_distribution_account: priority_fee_distribution_account.key(),
             expired_amount,
         });
 
         Ok(())
     }
 
-    /// Claims tokens from the [TipDistributionAccount].
-    pub fn claim(ctx: Context<Claim>, bump: u8, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
+    /// Claims tokens from the [PriorityFeeDistributionAccount].
+    pub fn claim(ctx: Context<Claim>, _bump: u8, amount: u64, proof: Vec<[u8; 32]>) -> Result<()> {
         Claim::auth(&ctx)?;
 
         let claim_status = &mut ctx.accounts.claim_status;
-        claim_status.bump = bump;
 
         let claimant_account = &mut ctx.accounts.claimant;
-        let tip_distribution_account = &mut ctx.accounts.tip_distribution_account;
+        let priority_fee_distribution_account = &mut ctx.accounts.priority_fee_distribution_account;
 
         let clock = Clock::get()?;
-        if clock.epoch > tip_distribution_account.expires_at {
-            return Err(ExpiredTipDistributionAccount.into());
+        if clock.epoch > priority_fee_distribution_account.expires_at {
+            return Err(ExpiredPriorityFeeDistributionAccount.into());
         }
 
-        // Redundant check since we shouldn't be able to init a claim status account using the same seeds.
-        if claim_status.is_claimed {
-            return Err(FundsAlreadyClaimed.into());
-        }
-
-        let tip_distribution_info = tip_distribution_account.to_account_info();
-        let tip_distribution_epoch_expires_at = tip_distribution_account.expires_at;
-        let merkle_root = tip_distribution_account
+        let tip_distribution_info = priority_fee_distribution_account.to_account_info();
+        let tip_distribution_epoch_expires_at = priority_fee_distribution_account.expires_at;
+        let merkle_root = priority_fee_distribution_account
             .merkle_root
             .as_mut()
             .ok_or(RootNotUploaded)?;
@@ -245,17 +242,13 @@ pub mod jito_tip_distribution {
             return Err(InvalidProof.into());
         }
 
-        TipDistributionAccount::claim(
+        PriorityFeeDistributionAccount::claim(
             tip_distribution_info,
             claimant_account.to_account_info(),
             amount,
         )?;
 
         // Mark it claimed.
-        claim_status.amount = amount;
-        claim_status.is_claimed = true;
-        claim_status.slot_claimed_at = clock.slot;
-        claim_status.claimant = claimant_account.key();
         claim_status.claim_status_payer = ctx.accounts.payer.key();
         claim_status.expires_at = tip_distribution_epoch_expires_at;
 
@@ -276,13 +269,13 @@ pub mod jito_tip_distribution {
         }
 
         emit!(ClaimedEvent {
-            tip_distribution_account: tip_distribution_account.key(),
+            priority_fee_distribution_account: priority_fee_distribution_account.key(),
             payer: ctx.accounts.payer.key(),
             claimant: claimant_account.key(),
             amount
         });
 
-        tip_distribution_account.validate()?;
+        priority_fee_distribution_account.validate()?;
 
         Ok(())
     }
@@ -322,7 +315,7 @@ pub mod jito_tip_distribution {
     pub fn migrate_tda_merkle_root_upload_authority(
         ctx: Context<MigrateTdaMerkleRootUploadAuthority>,
     ) -> Result<()> {
-        let distribution_account = &mut ctx.accounts.tip_distribution_account;
+        let distribution_account = &mut ctx.accounts.priority_fee_distribution_account;
         // Validate TDA has no MerkleRoot uploaded to it
         if distribution_account.merkle_root.is_some() {
             return Err(InvalidTdaForMigration.into());
@@ -343,6 +336,54 @@ pub mod jito_tip_distribution {
 
         Ok(())
     }
+
+    pub fn transfer_priority_fee_tips(
+        ctx: Context<TransferPriorityFeeTips>,
+        lamports: u64,
+    ) -> Result<()> {
+        let epoch = Clock::get()?.epoch;
+        // Valdiate the PFDA is in the current epoch
+        require!(
+            ctx.accounts
+                .priority_fee_distribution_account
+                .epoch_created_at
+                == epoch,
+            ErrorCode::AccountValidationFailure
+        );
+
+        ctx.accounts
+            .priority_fee_distribution_account
+            .increment_total_lamports_transferred(lamports)?;
+
+        let go_live_epoch = ctx.accounts.config.go_live_epoch;
+        if go_live_epoch > epoch {
+            msg!(
+                "Priority fee transfer is not live yet. {}/{} - ({:.5})",
+                epoch,
+                go_live_epoch,
+                lamports_to_sol(lamports)
+            );
+
+            return Ok(());
+        }
+
+        // Transfer requested lamports from From to PFDA
+        let ix = solana_program::system_instruction::transfer(
+            ctx.accounts.from.key,
+            &ctx.accounts.priority_fee_distribution_account.key(),
+            lamports,
+        );
+        solana_program::program::invoke(
+            &ix,
+            &[
+                ctx.accounts.from.to_account_info(),
+                ctx.accounts
+                    .priority_fee_distribution_account
+                    .to_account_info(),
+            ],
+        )
+        .map_err(Into::into)
+    }
 }
 
 #[error_code]
@@ -359,10 +400,10 @@ pub enum ErrorCode {
     #[msg("The maximum number of claims has been exceeded.")]
     ExceedsMaxNumNodes,
 
-    #[msg("The given TipDistributionAccount has expired.")]
-    ExpiredTipDistributionAccount,
+    #[msg("The given PriorityFeeDistributionAccount has expired.")]
+    ExpiredPriorityFeeDistributionAccount,
 
-    #[msg("The funds for the given index and TipDistributionAccount have already been claimed.")]
+    #[msg("The funds for the given index and PriorityFeeDistributionAccount have already been claimed.")]
     FundsAlreadyClaimed,
 
     #[msg("Supplied invalid parameters.")]
@@ -377,8 +418,8 @@ pub enum ErrorCode {
     #[msg("Validator's commission basis points must be less than or equal to the Config account's max_validator_commission_bps.")]
     MaxValidatorCommissionFeeBpsExceeded,
 
-    #[msg("The given TipDistributionAccount is not ready to be closed.")]
-    PrematureCloseTipDistributionAccount,
+    #[msg("The given PriorityFeeDistributionAccount is not ready to be closed.")]
+    PrematureClosePriorityFeeDistributionAccount,
 
     #[msg("The given ClaimStatus account is not ready to be closed.")]
     PrematureCloseClaimStatus,
@@ -386,7 +427,7 @@ pub enum ErrorCode {
     #[msg("Must wait till at least one epoch after the tip distribution account was created to upload the merkle root.")]
     PrematureMerkleRootUpload,
 
-    #[msg("No merkle root has been uploaded to the given TipDistributionAccount.")]
+    #[msg("No merkle root has been uploaded to the given PriorityFeeDistributionAccount.")]
     RootNotUploaded,
 
     #[msg("Unauthorized signer.")]
@@ -398,9 +439,6 @@ pub enum ErrorCode {
 
 #[derive(Accounts)]
 pub struct CloseClaimStatus<'info> {
-    #[account(seeds = [Config::SEED], bump)]
-    pub config: Account<'info, Config>,
-
     // bypass seed check since owner check prevents attacker from passing in invalid data
     // account can only be transferred to us if it is zeroed, failing the deserialization check
     #[account(
@@ -440,22 +478,22 @@ pub struct Initialize<'info> {
     _validator_commission_bps: u16,
     _bump: u8
 )]
-pub struct InitializeTipDistributionAccount<'info> {
+pub struct InitializePriorityFeeDistributionAccount<'info> {
     pub config: Account<'info, Config>,
 
     #[account(
         init,
         seeds = [
-            TipDistributionAccount::SEED,
+            PriorityFeeDistributionAccount::SEED,
             validator_vote_account.key().as_ref(),
             Clock::get().unwrap().epoch.to_le_bytes().as_ref(),
         ],
         bump,
         payer = signer,
-        space = TipDistributionAccount::SIZE,
+        space = PriorityFeeDistributionAccount::SIZE,
         rent_exempt = enforce
     )]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+    pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
 
     /// CHECK: Safe because we check the vote program is the owner before deserialization.
     /// The validator's vote account is used to check this transaction's signer is also the authorized withdrawer.
@@ -489,7 +527,7 @@ impl UpdateConfig<'_> {
 
 #[derive(Accounts)]
 #[instruction(epoch: u64)]
-pub struct CloseTipDistributionAccount<'info> {
+pub struct ClosePriorityFeeDistributionAccount<'info> {
     pub config: Account<'info, Config>,
 
     /// CHECK: safe see auth fn
@@ -500,13 +538,13 @@ pub struct CloseTipDistributionAccount<'info> {
         mut,
         close = validator_vote_account,
         seeds = [
-            TipDistributionAccount::SEED,
+            PriorityFeeDistributionAccount::SEED,
             validator_vote_account.key().as_ref(),
             epoch.to_le_bytes().as_ref(),
         ],
-        bump = tip_distribution_account.bump,
+        bump = priority_fee_distribution_account.bump,
     )]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+    pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
 
     /// CHECK: safe see auth fn
     #[account(mut)]
@@ -517,8 +555,8 @@ pub struct CloseTipDistributionAccount<'info> {
     pub signer: Signer<'info>,
 }
 
-impl CloseTipDistributionAccount<'_> {
-    fn auth(ctx: &Context<CloseTipDistributionAccount>) -> Result<()> {
+impl ClosePriorityFeeDistributionAccount<'_> {
+    fn auth(ctx: &Context<ClosePriorityFeeDistributionAccount>) -> Result<()> {
         if ctx.accounts.config.expired_funds_account != ctx.accounts.expired_funds_account.key() {
             Err(Unauthorized.into())
         } else {
@@ -533,7 +571,7 @@ pub struct Claim<'info> {
     pub config: Account<'info, Config>,
 
     #[account(mut, rent_exempt = enforce)]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+    pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
 
     pub merkle_root_upload_authority: Signer<'info>,
 
@@ -544,7 +582,7 @@ pub struct Claim<'info> {
         seeds = [
             ClaimStatus::SEED,
             claimant.key().as_ref(),
-            tip_distribution_account.key().as_ref()
+            priority_fee_distribution_account.key().as_ref()
         ],
         bump,
         space = ClaimStatus::SIZE,
@@ -568,7 +606,7 @@ impl Claim<'_> {
         if ctx.accounts.merkle_root_upload_authority.key()
             != ctx
                 .accounts
-                .tip_distribution_account
+                .priority_fee_distribution_account
                 .merkle_root_upload_authority
         {
             Err(Unauthorized.into())
@@ -583,7 +621,7 @@ pub struct UploadMerkleRoot<'info> {
     pub config: Account<'info, Config>,
 
     #[account(mut, rent_exempt = enforce)]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+    pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
 
     #[account(mut)]
     pub merkle_root_upload_authority: Signer<'info>,
@@ -594,7 +632,7 @@ impl UploadMerkleRoot<'_> {
         if ctx.accounts.merkle_root_upload_authority.key()
             != ctx
                 .accounts
-                .tip_distribution_account
+                .priority_fee_distribution_account
                 .merkle_root_upload_authority
         {
             Err(Unauthorized.into())
@@ -670,7 +708,7 @@ impl UpdateMerkleRootUploadConfig<'_> {
 #[derive(Accounts)]
 pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
     #[account(mut, rent_exempt = enforce)]
-    pub tip_distribution_account: Account<'info, TipDistributionAccount>,
+    pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
 
     #[account(
         seeds = [MerkleRootUploadConfig::SEED],
@@ -680,16 +718,32 @@ pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
     pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
 }
 
+#[derive(Accounts)]
+pub struct TransferPriorityFeeTips<'info> {
+    #[account(rent_exempt = enforce)]
+    pub config: Account<'info, Config>,
+
+    #[account(
+        mut,
+        rent_exempt = enforce
+    )]
+    pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
+
+    #[account(mut)]
+    pub from: Signer<'info>,
+    pub system_program: Program<'info, System>,
+}
+
 // Events
 
 #[event]
-pub struct TipDistributionAccountInitializedEvent {
-    pub tip_distribution_account: Pubkey,
+pub struct PriorityFeeDistributionAccountInitializedEvent {
+    pub priority_fee_distribution_account: Pubkey,
 }
 
 #[event]
 pub struct ValidatorCommissionBpsUpdatedEvent {
-    pub tip_distribution_account: Pubkey,
+    pub priority_fee_distribution_account: Pubkey,
     pub old_commission_bps: u16,
     pub new_commission_bps: u16,
 }
@@ -708,8 +762,8 @@ pub struct ConfigUpdatedEvent {
 
 #[event]
 pub struct ClaimedEvent {
-    /// [TipDistributionAccount] claimed from.
-    pub tip_distribution_account: Pubkey,
+    /// [PriorityFeeDistributionAccount] claimed from.
+    pub priority_fee_distribution_account: Pubkey,
 
     /// User that paid for the claim, may or may not be the same as claimant.
     pub payer: Pubkey,
@@ -727,16 +781,16 @@ pub struct MerkleRootUploadedEvent {
     pub merkle_root_upload_authority: Pubkey,
 
     /// Where the root was uploaded to.
-    pub tip_distribution_account: Pubkey,
+    pub priority_fee_distribution_account: Pubkey,
 }
 
 #[event]
-pub struct TipDistributionAccountClosedEvent {
+pub struct PriorityFeeDistributionAccountClosedEvent {
     /// Account where unclaimed funds were transferred to.
     pub expired_funds_account: Pubkey,
 
-    /// [TipDistributionAccount] closed.
-    pub tip_distribution_account: Pubkey,
+    /// [PriorityFeeDistributionAccount] closed.
+    pub priority_fee_distribution_account: Pubkey,
 
     /// Unclaimed amount transferred.
     pub expired_amount: u64,

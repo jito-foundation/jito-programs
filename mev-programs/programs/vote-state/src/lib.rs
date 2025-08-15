@@ -8,6 +8,7 @@ use std::collections::{BTreeMap, VecDeque};
 use anchor_lang::{
     error::ErrorCode::{AccountDidNotDeserialize, ConstraintOwner},
     prelude::*,
+    solana_program,
 };
 use bincode::deserialize;
 use serde_derive::Deserialize;
@@ -61,7 +62,7 @@ pub enum VoteStateVersions {
 impl VoteStateVersions {
     pub fn convert_to_current(self) -> Box<VoteState> {
         match self {
-            VoteStateVersions::V0_23_5(state) => {
+            Self::V0_23_5(state) => {
                 let authorized_voters =
                     AuthorizedVoters::new(state.authorized_voter_epoch, state.authorized_voter);
 
@@ -85,7 +86,7 @@ impl VoteStateVersions {
                     last_timestamp: state.last_timestamp.clone(),
                 })
             }
-            VoteStateVersions::V1_14_11(state) => Box::new(VoteState {
+            Self::V1_14_11(state) => Box::new(VoteState {
                 node_pubkey: state.node_pubkey,
                 authorized_withdrawer: state.authorized_withdrawer,
                 commission: state.commission,
@@ -102,7 +103,7 @@ impl VoteStateVersions {
 
                 last_timestamp: state.last_timestamp,
             }),
-            VoteStateVersions::Current(state) => state,
+            Self::Current(state) => state,
         }
     }
 
@@ -242,11 +243,11 @@ pub struct LandedVote {
 }
 
 impl LandedVote {
-    pub fn slot(&self) -> Slot {
+    pub const fn slot(&self) -> Slot {
         self.lockout.slot
     }
 
-    pub fn confirmation_count(&self) -> u32 {
+    pub const fn confirmation_count(&self) -> u32 {
         self.lockout.confirmation_count
     }
 }
