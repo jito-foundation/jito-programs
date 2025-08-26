@@ -53,6 +53,12 @@ enum Commands {
         #[arg(value_parser = clap::value_parser!(u8).range(0..8))]
         index: u8,
     },
+
+    /// Change Tip Receiver
+    ChangeTipReceiver,
+
+    /// Change Block Builder
+    ChangeBlockBuilder { block_builder_commission: u64 },
 }
 
 fn main() -> anyhow::Result<()> {
@@ -63,27 +69,27 @@ fn main() -> anyhow::Result<()> {
 
     let keypair = read_keypair_file(cli.keypair_path).expect("Failed to read keypair");
 
+    let (config_pubkey, config_bump) =
+        Pubkey::find_program_address(&[CONFIG_ACCOUNT_SEED], &program_id);
+    let (tip_payment_account_0_pubkey, tip_payment_account_0_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_0], &program_id);
+    let (tip_payment_account_1_pubkey, tip_payment_account_1_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_1], &program_id);
+    let (tip_payment_account_2_pubkey, tip_payment_account_2_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_2], &program_id);
+    let (tip_payment_account_3_pubkey, tip_payment_account_3_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_3], &program_id);
+    let (tip_payment_account_4_pubkey, tip_payment_account_4_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_4], &program_id);
+    let (tip_payment_account_5_pubkey, tip_payment_account_5_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_5], &program_id);
+    let (tip_payment_account_6_pubkey, tip_payment_account_6_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_6], &program_id);
+    let (tip_payment_account_7_pubkey, tip_payment_account_7_bump) =
+        Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_7], &program_id);
+
     match cli.command {
         Commands::InitConfig => {
-            let (config_pubkey, config_bump) =
-                Pubkey::find_program_address(&[CONFIG_ACCOUNT_SEED], &program_id);
-            let (tip_payment_account_0_pubkey, tip_payment_account_0_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_0], &program_id);
-            let (tip_payment_account_1_pubkey, tip_payment_account_1_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_1], &program_id);
-            let (tip_payment_account_2_pubkey, tip_payment_account_2_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_2], &program_id);
-            let (tip_payment_account_3_pubkey, tip_payment_account_3_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_3], &program_id);
-            let (tip_payment_account_4_pubkey, tip_payment_account_4_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_4], &program_id);
-            let (tip_payment_account_5_pubkey, tip_payment_account_5_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_5], &program_id);
-            let (tip_payment_account_6_pubkey, tip_payment_account_6_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_6], &program_id);
-            let (tip_payment_account_7_pubkey, tip_payment_account_7_bump) =
-                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_7], &program_id);
-
             let ix = Instruction {
                 program_id,
                 data: jito_tip_payment::instruction::Initialize {
@@ -116,7 +122,7 @@ fn main() -> anyhow::Result<()> {
                 .to_account_metas(None),
             };
 
-            let blockhash = client.get_latest_blockhash().unwrap();
+            let blockhash = client.get_latest_blockhash()?;
             let tx = Transaction::new_signed_with_payer(
                 &[ix],
                 Some(&keypair.pubkey()),
@@ -124,7 +130,7 @@ fn main() -> anyhow::Result<()> {
                 blockhash,
             );
 
-            client.send_transaction(&tx).unwrap();
+            client.send_transaction(&tx)?;
         }
         Commands::GetConfig => {
             let config_pda =
@@ -190,6 +196,75 @@ fn main() -> anyhow::Result<()> {
             println!("Tip Payment Account {}:", index);
             println!("  Address: {}", tip_pda);
             println!("  Lamports: {}", lamports);
+        }
+        Commands::ChangeTipReceiver => {
+            let ix = Instruction {
+                program_id,
+                data: jito_tip_payment::instruction::ChangeTipReceiver {}.data(),
+                accounts: jito_tip_payment::accounts::ChangeTipReceiver {
+                    config: config_pubkey,
+                    old_tip_receiver: keypair.pubkey(),
+                    new_tip_receiver: keypair.pubkey(),
+                    block_builder: keypair.pubkey(),
+                    tip_payment_account_0: tip_payment_account_0_pubkey,
+                    tip_payment_account_1: tip_payment_account_1_pubkey,
+                    tip_payment_account_2: tip_payment_account_2_pubkey,
+                    tip_payment_account_3: tip_payment_account_3_pubkey,
+                    tip_payment_account_4: tip_payment_account_4_pubkey,
+                    tip_payment_account_5: tip_payment_account_5_pubkey,
+                    tip_payment_account_6: tip_payment_account_6_pubkey,
+                    tip_payment_account_7: tip_payment_account_7_pubkey,
+                    signer: keypair.pubkey(),
+                }
+                .to_account_metas(None),
+            };
+
+            let blockhash = client.get_latest_blockhash()?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&keypair.pubkey()),
+                &[keypair],
+                blockhash,
+            );
+
+            client.send_transaction(&tx)?;
+        }
+        Commands::ChangeBlockBuilder {
+            block_builder_commission,
+        } => {
+            let ix = Instruction {
+                program_id,
+                data: jito_tip_payment::instruction::ChangeBlockBuilder {
+                    block_builder_commission,
+                }
+                .data(),
+                accounts: jito_tip_payment::accounts::ChangeBlockBuilder {
+                    config: config_pubkey,
+                    tip_receiver: keypair.pubkey(),
+                    old_block_builder: keypair.pubkey(),
+                    new_block_builder: keypair.pubkey(),
+                    tip_payment_account_0: tip_payment_account_0_pubkey,
+                    tip_payment_account_1: tip_payment_account_1_pubkey,
+                    tip_payment_account_2: tip_payment_account_2_pubkey,
+                    tip_payment_account_3: tip_payment_account_3_pubkey,
+                    tip_payment_account_4: tip_payment_account_4_pubkey,
+                    tip_payment_account_5: tip_payment_account_5_pubkey,
+                    tip_payment_account_6: tip_payment_account_6_pubkey,
+                    tip_payment_account_7: tip_payment_account_7_pubkey,
+                    signer: keypair.pubkey(),
+                }
+                .to_account_metas(None),
+            };
+
+            let blockhash = client.get_latest_blockhash()?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&keypair.pubkey()),
+                &[keypair],
+                blockhash,
+            );
+
+            client.send_transaction(&tx)?;
         }
     }
 
