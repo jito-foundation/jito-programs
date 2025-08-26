@@ -1,10 +1,17 @@
 use std::str::FromStr;
 
-use anchor_lang::AccountDeserialize;
+use anchor_lang::{system_program, AccountDeserialize, InstructionData, ToAccountMetas};
 use clap::{Parser, Subcommand};
-use jito_tip_payment::Config;
+use jito_tip_payment::{
+    Config, InitBumps, CONFIG_ACCOUNT_SEED, TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1,
+    TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3, TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5,
+    TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7,
+};
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::pubkey::Pubkey;
+use solana_sdk::{
+    instruction::Instruction, pubkey::Pubkey, signature::read_keypair_file, signer::Signer,
+    transaction::Transaction,
+};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -21,6 +28,9 @@ struct Cli {
     )]
     program_id: String,
 
+    #[arg(short, long)]
+    keypair_path: String,
+
     #[command(subcommand)]
     command: Commands,
 }
@@ -28,6 +38,9 @@ struct Cli {
 #[allow(clippy::enum_variant_names)]
 #[derive(Subcommand)]
 enum Commands {
+    /// Initialize the config account information
+    InitConfig,
+
     /// Get the config account information
     GetConfig,
 
@@ -48,7 +61,71 @@ fn main() -> anyhow::Result<()> {
     let program_id = Pubkey::from_str(&cli.program_id)?;
     let client = RpcClient::new(cli.rpc_url);
 
+    let keypair = read_keypair_file(cli.keypair_path).expect("Failed to read keypair");
+
     match cli.command {
+        Commands::InitConfig => {
+            let (config_pubkey, config_bump) =
+                Pubkey::find_program_address(&[CONFIG_ACCOUNT_SEED], &program_id);
+            let (tip_payment_account_0_pubkey, tip_payment_account_0_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_0], &program_id);
+            let (tip_payment_account_1_pubkey, tip_payment_account_1_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_1], &program_id);
+            let (tip_payment_account_2_pubkey, tip_payment_account_2_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_2], &program_id);
+            let (tip_payment_account_3_pubkey, tip_payment_account_3_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_3], &program_id);
+            let (tip_payment_account_4_pubkey, tip_payment_account_4_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_4], &program_id);
+            let (tip_payment_account_5_pubkey, tip_payment_account_5_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_5], &program_id);
+            let (tip_payment_account_6_pubkey, tip_payment_account_6_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_6], &program_id);
+            let (tip_payment_account_7_pubkey, tip_payment_account_7_bump) =
+                Pubkey::find_program_address(&[TIP_ACCOUNT_SEED_7], &program_id);
+
+            let ix = Instruction {
+                program_id,
+                data: jito_tip_payment::instruction::Initialize {
+                    _bumps: InitBumps {
+                        config: config_bump,
+                        tip_payment_account_0: tip_payment_account_0_bump,
+                        tip_payment_account_1: tip_payment_account_1_bump,
+                        tip_payment_account_2: tip_payment_account_2_bump,
+                        tip_payment_account_3: tip_payment_account_3_bump,
+                        tip_payment_account_4: tip_payment_account_4_bump,
+                        tip_payment_account_5: tip_payment_account_5_bump,
+                        tip_payment_account_6: tip_payment_account_6_bump,
+                        tip_payment_account_7: tip_payment_account_7_bump,
+                    },
+                }
+                .data(),
+                accounts: jito_tip_payment::accounts::Initialize {
+                    config: config_pubkey,
+                    tip_payment_account_0: tip_payment_account_0_pubkey,
+                    tip_payment_account_1: tip_payment_account_1_pubkey,
+                    tip_payment_account_2: tip_payment_account_2_pubkey,
+                    tip_payment_account_3: tip_payment_account_3_pubkey,
+                    tip_payment_account_4: tip_payment_account_4_pubkey,
+                    tip_payment_account_5: tip_payment_account_5_pubkey,
+                    tip_payment_account_6: tip_payment_account_6_pubkey,
+                    tip_payment_account_7: tip_payment_account_7_pubkey,
+                    payer: keypair.pubkey(),
+                    system_program: system_program::ID,
+                }
+                .to_account_metas(None),
+            };
+
+            let blockhash = client.get_latest_blockhash().unwrap();
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&keypair.pubkey()),
+                &[keypair],
+                blockhash,
+            );
+
+            client.send_transaction(&tx).unwrap();
+        }
         Commands::GetConfig => {
             let config_pda =
                 Pubkey::find_program_address(&[jito_tip_payment::CONFIG_ACCOUNT_SEED], &program_id)
