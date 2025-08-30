@@ -61,10 +61,6 @@ enum Commands {
         #[arg(long)]
         vote_account: Pubkey,
 
-        /// Epoch for the tip distribution account
-        #[arg(long)]
-        epoch: u64,
-
         /// Merkle root upload authority
         #[arg(long)]
         merkle_root_upload_authority: Pubkey,
@@ -117,6 +113,14 @@ enum Commands {
         /// Max validator commission BPS
         #[arg(long)]
         max_validator_commission_bps: u16,
+    },
+
+    /// Upload merkle root
+    UploadMerkleRoot {
+        vote_account: Pubkey,
+        root: Vec<u8>,
+        max_total_claim: u64,
+        max_num_nodes: u64,
     },
 }
 
@@ -187,10 +191,10 @@ fn main() -> anyhow::Result<()> {
 
         Commands::InitializeTipDistributionAccount {
             vote_account,
-            epoch,
             merkle_root_upload_authority,
             validator_commission_bps,
         } => {
+            let epoch = client.get_epoch_info()?.epoch;
             let (tip_distribution_pubkey, tip_distribution_bump) =
                 derive_tip_distribution_account_address(&program_id, &vote_account, epoch);
 
@@ -343,6 +347,45 @@ fn main() -> anyhow::Result<()> {
             // let serialized_data = instruction.data;
             // let base58_data = bs58::encode(serialized_data).into_string();
             // println!("Base58 Serialized Data: {}", base58_data);
+        }
+        Commands::UploadMerkleRoot {
+            vote_account,
+            root,
+            max_total_claim,
+            max_num_nodes,
+        } => {
+            let mut source: [u8; 32] = [0; 32];
+            source.copy_from_slice(root.as_slice());
+
+            let epoch = client.get_epoch_info()?.epoch;
+            let (tip_distribution_pubkey, _tip_distribution_bump) =
+                derive_tip_distribution_account_address(&program_id, &vote_account, epoch);
+
+            let ix = Instruction {
+                program_id,
+                data: jito_tip_distribution::instruction::UploadMerkleRoot {
+                    root: source,
+                    max_total_claim,
+                    max_num_nodes,
+                }
+                .data(),
+                accounts: jito_tip_distribution::accounts::UploadMerkleRoot {
+                    config: config_pda,
+                    merkle_root_upload_authority: keypair.pubkey(),
+                    tip_distribution_account: tip_distribution_pubkey,
+                }
+                .to_account_metas(None),
+            };
+
+            let blockhash = client.get_latest_blockhash()?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&keypair.pubkey()),
+                &[keypair],
+                blockhash,
+            );
+
+            client.send_transaction(&tx)?;
         }
     }
 
