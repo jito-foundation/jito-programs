@@ -4,7 +4,8 @@ use anchor_lang::{system_program, AccountDeserialize, InstructionData, ToAccount
 use clap::{Parser, Subcommand};
 use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
 use jito_tip_distribution_sdk::{
-    derive_config_account_address, derive_tip_distribution_account_address,
+    derive_config_account_address, derive_merkle_root_upload_config_account_address,
+    derive_tip_distribution_account_address,
     instruction::{update_config_ix, UpdateConfigAccounts, UpdateConfigArgs},
 };
 use solana_client::rpc_client::RpcClient;
@@ -12,6 +13,20 @@ use solana_sdk::{
     instruction::Instruction, pubkey::Pubkey, signature::read_keypair_file, signer::Signer,
     transaction::Transaction,
 };
+
+fn parse_byte_array(s: &str) -> Result<[u8; 32], String> {
+    let bytes: Result<Vec<u8>, _> = s.split(',').map(|x| x.trim().parse::<u8>()).collect();
+
+    match bytes {
+        Ok(vec) if vec.len() == 32 => {
+            let mut array = [0u8; 32];
+            array.copy_from_slice(&vec);
+            Ok(array)
+        }
+        Ok(_) => Err("Must provide exactly 32 bytes".to_string()),
+        Err(e) => Err(format!("Invalid byte: {}", e)),
+    }
+}
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -117,10 +132,26 @@ enum Commands {
 
     /// Upload merkle root
     UploadMerkleRoot {
+        #[arg(long)]
         vote_account: Pubkey,
-        root: Vec<u8>,
+
+        #[arg(long, value_parser = parse_byte_array)]
+        root: [u8; 32],
+
+        #[arg(long)]
         max_total_claim: u64,
+
+        #[arg(long)]
         max_num_nodes: u64,
+    },
+
+    /// Initialize merkle root upload config
+    InitializeMerkleRootUploadConfig {
+        #[arg(long)]
+        authority: Pubkey,
+
+        #[arg(long)]
+        original_authority: Pubkey,
     },
 }
 
@@ -134,6 +165,8 @@ fn main() -> anyhow::Result<()> {
     let keypair = read_keypair_file(cli.keypair_path).expect("Failed to read keypair");
 
     let (config_pda, config_bump) = derive_config_account_address(&program_id);
+    let (merkle_root_upload_config_pda, _merkle_root_upload_config_bump) =
+        derive_merkle_root_upload_config_account_address(&program_id);
 
     match cli.command {
         Commands::InitConfig {
@@ -373,6 +406,37 @@ fn main() -> anyhow::Result<()> {
                     config: config_pda,
                     merkle_root_upload_authority: keypair.pubkey(),
                     tip_distribution_account: tip_distribution_pubkey,
+                }
+                .to_account_metas(None),
+            };
+
+            let blockhash = client.get_latest_blockhash()?;
+            let tx = Transaction::new_signed_with_payer(
+                &[ix],
+                Some(&keypair.pubkey()),
+                &[keypair],
+                blockhash,
+            );
+
+            client.send_transaction(&tx)?;
+        }
+        Commands::InitializeMerkleRootUploadConfig {
+            authority,
+            original_authority,
+        } => {
+            let ix = Instruction {
+                program_id,
+                data: jito_tip_distribution::instruction::InitializeMerkleRootUploadConfig {
+                    authority,
+                    original_authority,
+                }
+                .data(),
+                accounts: jito_tip_distribution::accounts::InitializeMerkleRootUploadConfig {
+                    config: config_pda,
+                    merkle_root_upload_config: merkle_root_upload_config_pda,
+                    authority: keypair.pubkey(),
+                    payer: keypair.pubkey(),
+                    system_program: system_program::ID,
                 }
                 .to_account_metas(None),
             };
