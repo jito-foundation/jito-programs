@@ -1,9 +1,9 @@
 #![allow(dead_code)]
 
-use anchor_lang::error::ErrorCode::{AccountDidNotDeserialize, ConstraintOwner};
-use anchor_lang::prelude::AccountInfo;
-use anchor_lang::prelude::Pubkey;
-use anchor_lang::prelude::Result;
+use anchor_lang::{
+    error::ErrorCode::{AccountDidNotDeserialize, ConstraintOwner},
+    prelude::{AccountInfo, Pubkey, Result},
+};
 use bincode::deserialize;
 
 pub struct VoteState;
