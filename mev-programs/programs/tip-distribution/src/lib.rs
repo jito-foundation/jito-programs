@@ -66,8 +66,9 @@ pub mod jito_tip_distribution {
             return Err(MaxValidatorCommissionFeeBpsExceeded.into());
         }
 
-        let validator_vote_state = VoteState::deserialize(&ctx.accounts.validator_vote_account)?;
-        if &validator_vote_state.node_pubkey != ctx.accounts.signer.key {
+        let vote_account_node_pubkey =
+            VoteState::deserialize_node_pubkey(&ctx.accounts.validator_vote_account)?;
+        if vote_account_node_pubkey != *ctx.accounts.signer.key {
             return Err(Unauthorized.into());
         }
 

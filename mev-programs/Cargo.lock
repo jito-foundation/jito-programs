@@ -2364,6 +2364,7 @@ dependencies = [
  "bincode",
  "serde",
  "serde_derive",
+ "solana-sdk-ids",
 ]
 
 [[package]]

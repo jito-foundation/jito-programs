@@ -13,3 +13,4 @@ anchor-lang = { workspace = true }
 bincode = { workspace = true }
 serde = { workspace = true }
 serde_derive = { workspace = true }
+solana-sdk-ids = { workspace = true }
