@@ -31,6 +31,7 @@ test = "yarn ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.{ts,js}"
 
 [test.validator]
 slots_per_epoch = "32"
+bind_address = "127.0.0.1"
 
 [features]
 resolution = false
