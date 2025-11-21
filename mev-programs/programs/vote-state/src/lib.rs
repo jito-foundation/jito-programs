@@ -16,8 +16,8 @@ impl VoteState {
             return Err(ConstraintOwner.into());
         }
 
-        // The first 32 bytes of the vote state are the node pubkey.
+        // The first 4 bytes are the enumeration type and the next 32 bytes of the vote state are the node pubkey.
         let data = account_info.data.borrow();
-        deserialize::<Pubkey>(&data[0..32]).map_err(|_| AccountDidNotDeserialize.into())
+        deserialize::<Pubkey>(&data[4..36]).map_err(|_| AccountDidNotDeserialize.into())
     }
 }
