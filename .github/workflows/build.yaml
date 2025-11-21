@@ -76,7 +76,7 @@ jobs:
           cache-workspaces:
             ./mev-programs/
       - name: install solana toolsuite
-        run: sh -c "$(curl -sSfL https://release.anza.xyz/v2.2.13/install)"
+        run: sh -c "$(curl -sSfL https://release.anza.xyz/v3.1.1/install)"
       - name: add to path
         run: echo "/home/runner/.local/share/solana/install/active_release/bin" >> $GITHUB_PATH
       - name: Install anchor
