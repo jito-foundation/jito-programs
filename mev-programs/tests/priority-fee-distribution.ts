@@ -1230,7 +1230,7 @@ describe("tests priority_fee_distribution", () => {
     );
   });
 
-  describe("After go_live_epoch", async () => {
+  describe("After go_live_epoch", () => {
     before(async () => {
       // Update Config.go_live_epoch to use current epoch
       const [currentConfig, epochInfo] = await Promise.all([
