@@ -3237,7 +3237,7 @@ dependencies = [
 
 [[package]]
 name = "priority-fee-distribution-cli"
-version = "0.1.0"
+version = "0.1.6"
 dependencies = [
  "anchor-lang",
  "anyhow",
