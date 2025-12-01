@@ -1,17 +1,18 @@
 [package]
 name = "tip-payment-cli"
 version = { workspace = true }
-authors = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Tip payment CLI"
 
 [dependencies]
-anchor-lang = "0.31.1"
-anyhow = "1.0"
-clap = { version = "=4.0", features = ["derive"] }
-jito-tip-payment = { path = "../programs/tip-payment", features = ["no-entrypoint"] }
-solana-client = "2.2"
-solana-sdk = "2.2"
+anchor-lang = { workspace = true }
+anyhow = { workspace = true }
+clap = { workspace = true }
+jito-tip-payment = { workspace = true, features = ["no-entrypoint"] }
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
  
