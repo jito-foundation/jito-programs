@@ -2,14 +2,26 @@
 This repository is home to Jito's on-chain programs that enable MEV collection and MEV sharing with SOL stakers; additionally
 we may host useful on-chain program reference implementations here.
 
-## Gitflow
-This repository is declared as a submodule in the `jito-solana` client. In order for that to work the `Solana`
-crates declared in this repo must point to the `jito-solana` declaring this as a submodule. The `Anchor` dependencies
-must also point to the local path where `anchor` resides as a submodule within `jito-solana`. This is due to dependency
-version issues. With that said, `jito-solana` declares a dependency on the `submodule` branch found in this repository.
-This gitflow for this repo is as follows:
-- Create a PR against `master`
-- Merge PR
-- `git cherry-pick` your new commits into `submodule`
-- push `submodule`
-- 
+## Version Management
+
+This project uses `cargo-release` for version management. The release process is configured to work with version branches (e.g., `v3.0.x`).
+
+### Prerequisites for Release
+
+1. **Install cargo-release** (if not already installed):
+   ```bash
+   cargo install cargo-release
+   ```
+
+### Release Process
+
+1. **Run the release command**:
+   ```bash
+   cargo release patch --execute
+   ```
+
+This will:
+- Bump the version number
+- Create a git tag
+- Push changes and tags
+- Follow the configuration in `release.toml`

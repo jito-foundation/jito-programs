@@ -1,0 +1,13 @@
+# Cargo Release Configuration
+
+allow-branch = ["master"]
+publish = false
+release = true
+sign-tag = true
+sign-commit = true
+tag = true
+push = true
+
+# Use workspace version and create single tag
+shared-version = true
+tag-name = "v{{version}}"
