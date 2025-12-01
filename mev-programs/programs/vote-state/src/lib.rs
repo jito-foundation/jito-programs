@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use anchor_lang::{
     error::ErrorCode::{AccountDidNotDeserialize, ConstraintOwner},
     prelude::{AccountInfo, Pubkey, Result},
