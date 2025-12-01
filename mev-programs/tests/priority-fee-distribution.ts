@@ -56,21 +56,21 @@ describe("tests priority_fee_distribution", () => {
 
     // then
     try {
-      await priorityFeeDistribution.methods
-        .initialize(
-          authority.publicKey,
-          expiredFundsAccount.publicKey,
-          numEpochsValid,
-          maxValidatorCommissionBps,
-          configBump
-        )
-        .accounts({
-          config: configAccount,
-          systemProgram: SystemProgram.programId,
-          initializer: initializer.publicKey,
-        })
-        .signers([initializer])
-        .rpc();
+      await priorityFeeDistribution.rpc.initialize(
+        authority.publicKey,
+        expiredFundsAccount.publicKey,
+        numEpochsValid,
+        maxValidatorCommissionBps,
+        configBump,
+        {
+          accounts: {
+            config: configAccount,
+            systemProgram: SystemProgram.programId,
+            initializer: initializer.publicKey,
+          },
+          signers: [initializer],
+        }
+      );
     } catch (e) {
       assert.fail("unexpected error: " + e);
     }
@@ -267,19 +267,19 @@ describe("tests priority_fee_distribution", () => {
 
     await sleepForEpochs(1);
     try {
-      await priorityFeeDistribution.methods
-        .uploadMerkleRoot(
-          root.toJSON().data,
-          maxTotalClaim,
-          maxNumNodes
-        )
-        .accounts({
-          priorityFeeDistributionAccount,
-          merkleRootUploadAuthority: validatorVoteAccount.publicKey,
-          config: configAccount,
-        })
-        .signers([validatorVoteAccount])
-        .rpc();
+      await priorityFeeDistribution.rpc.uploadMerkleRoot(
+        root.toJSON().data,
+        maxTotalClaim,
+        maxNumNodes,
+        {
+          accounts: {
+            priorityFeeDistributionAccount,
+            merkleRootUploadAuthority: validatorVoteAccount.publicKey,
+            config: configAccount,
+          },
+          signers: [validatorVoteAccount],
+        }
+      );
     } catch (e) {
       assert.fail("Unexpected error: " + e);
     }
@@ -1230,7 +1230,7 @@ describe("tests priority_fee_distribution", () => {
     );
   });
 
-  describe("After go_live_epoch", () => {
+  describe("After go_live_epoch", async () => {
     before(async () => {
       // Update Config.go_live_epoch to use current epoch
       const [currentConfig, epochInfo] = await Promise.all([
@@ -1516,21 +1516,21 @@ const call_initTipDistributionAccount = async ({
   priorityFeeDistributionAccount,
   bump,
 }) => {
-  return await priorityFeeDistribution.methods
-    .initializePriorityFeeDistributionAccount(
-      merkleRootUploadAuthority,
-      validatorCommissionBps,
-      bump
-    )
-    .accounts({
-      config,
-      systemProgram,
-      signer: validatorIdentityKeypair.publicKey,
-      validatorVoteAccount: validatorVoteAccount.publicKey,
-      priorityFeeDistributionAccount,
-    })
-    .signers([validatorIdentityKeypair])
-    .rpc();
+  return await priorityFeeDistribution.rpc.initializePriorityFeeDistributionAccount(
+    merkleRootUploadAuthority,
+    validatorCommissionBps,
+    bump,
+    {
+      accounts: {
+        config,
+        systemProgram,
+        signer: validatorIdentityKeypair.publicKey,
+        validatorVoteAccount: validatorVoteAccount.publicKey,
+        priorityFeeDistributionAccount,
+      },
+      signers: [validatorIdentityKeypair],
+    }
+  );
 };
 
 const setupWithUploadedMerkleRoot = async () => {
