@@ -1,12 +1,12 @@
 [package]
 name = "jito-tip-payment"
-description = "Tip Payment Program"
 version = { workspace = true }
-authors = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Tip Payment Program"
 
 [lib]
 crate-type = ["cdylib", "lib"]

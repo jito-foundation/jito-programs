@@ -4,7 +4,8 @@
     "name": "jito_priority_fee_distribution",
     "version": "0.1.6",
     "spec": "0.1.0",
-    "description": "Priority fee distribution program, responsible for distributing funds to entitled parties."
+    "description": "Priority fee distribution program, responsible for distributing funds to entitled parties.",
+    "repository": "https://github.com/jito-foundation/jito-programs"
   },
   "instructions": [
     {
