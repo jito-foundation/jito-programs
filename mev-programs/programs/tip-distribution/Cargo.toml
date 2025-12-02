@@ -1,12 +1,12 @@
 [package]
 name = "jito-tip-distribution"
-description = "Tip distribution program, responsible for distributing funds to entitled parties."
 version = { workspace = true }
-authors = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Tip distribution program, responsible for distributing funds to entitled parties."
 
 [lib]
 crate-type = ["cdylib", "lib"]
