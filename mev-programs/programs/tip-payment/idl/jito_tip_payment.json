@@ -2,7 +2,7 @@
   "address": "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt",
   "metadata": {
     "name": "jito_tip_payment",
-    "version": "0.1.9",
+    "version": "0.1.10",
     "spec": "0.1.0",
     "description": "Tip Payment Program",
     "repository": "https://github.com/jito-foundation/jito-programs"
