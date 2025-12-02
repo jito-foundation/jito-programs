@@ -2,7 +2,7 @@
   "address": "Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3",
   "metadata": {
     "name": "jito_priority_fee_distribution",
-    "version": "0.1.6",
+    "version": "0.1.10",
     "spec": "0.1.0",
     "description": "Priority fee distribution program, responsible for distributing funds to entitled parties.",
     "repository": "https://github.com/jito-foundation/jito-programs"
