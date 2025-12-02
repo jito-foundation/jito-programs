@@ -2,7 +2,7 @@
   "address": "4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7",
   "metadata": {
     "name": "jito_tip_distribution",
-    "version": "0.1.6",
+    "version": "0.1.9",
     "spec": "0.1.0",
     "description": "Tip distribution program, responsible for distributing funds to entitled parties.",
     "repository": "https://github.com/jito-foundation/jito-programs"
