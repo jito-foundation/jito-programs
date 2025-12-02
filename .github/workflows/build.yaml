@@ -172,6 +172,12 @@ jobs:
             mev-programs/target/idl/jito_tip_payment.json
             mev-programs/target/idl/jito_priority_fee_distribution.json
       # Push to anchor repository
+      - name: Install anchor for publishing
+        uses: baptiste0928/cargo-install@v3
+        with:
+          crate: anchor-cli
+          git: https://github.com/coral-xyz/anchor
+          tag: v0.31.1
       - name: Anchor Login
         if: startsWith(github.ref, 'refs/tags/')
         working-directory: ./mev-programs
