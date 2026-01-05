@@ -147,11 +147,11 @@ jobs:
         working-directory: ./mev-programs
         run: |
           solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13 -- --features jito-tip-distribution/mainnet
-          mv target/deploy/jito_tip_distribution.so target/deploy/jito_tip_distribution-mainnet.so
+          sudo mv target/deploy/jito_tip_distribution.so target/deploy/jito_tip_distribution-mainnet.so
           solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.2.13
           solana-verify build --library-name jito_priority_fee_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13
           solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13
-          mv target/deploy/jito_tip_distribution.so target/deploy/jito_tip_distribution-testnet.so
+          sudo mv target/deploy/jito_tip_distribution.so target/deploy/jito_tip_distribution-testnet.so
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
