@@ -138,7 +138,9 @@ jobs:
             ./mev-programs/
       - name: Install Solana Verify
         run: |
-          RUSTUP_TOOLCHAIN=nightly-2025-04-01 cargo install solana-verify@0.4.3
+          sudo apt-get update && sudo apt-get install -y libudev-dev
+          rustup install nightly-2025-11-01
+          RUSTUP_TOOLCHAIN=nightly-2025-11-01 cargo install solana-verify@0.4.11
           solana-verify --version
 
       - name: Verifiable Build
