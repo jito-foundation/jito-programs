@@ -7,7 +7,7 @@ jito_tip_distribution = "4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7"
 jito_tip_payment = "T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt"
 
 [programs.testnet]
-jito_tip_distribution = "F2Zu7QZiTYUhPd7u9ukRVwxh7B71oA3NMJcHuCHc29P2"
+jito_tip_distribution = "DzvGET57TAgEDxvm3ERUM4GNcsAJdqjDLCne9sdfY4wf"
 jito_tip_payment = "DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC"
 
 [programs.localnet]
