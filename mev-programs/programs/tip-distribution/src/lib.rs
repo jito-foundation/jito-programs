@@ -24,9 +24,6 @@ security_txt! {
 pub mod merkle_proof;
 pub mod state;
 
-#[cfg(all(feature = "mainnet", feature = "testnet"))]
-compile_error!("Cannot enable both 'mainnet' and 'testnet' features");
-
 #[cfg(feature = "mainnet")]
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
 
