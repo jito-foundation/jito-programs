@@ -24,7 +24,11 @@ security_txt! {
 pub mod merkle_proof;
 pub mod state;
 
+#[cfg(feature = "mainnet")]
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+
+#[cfg(not(feature = "mainnet"))]
+declare_id!("DzvGET57TAgEDxvm3ERUM4GNcsAJdqjDLCne9sdfY4wf");
 
 #[program]
 pub mod jito_tip_distribution {
