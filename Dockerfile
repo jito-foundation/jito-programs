@@ -23,8 +23,13 @@ WORKDIR /jito-programs
 COPY . .
 RUN mkdir -p ./container-out
 
-# Uses docker buildkite to cache the image.
 RUN solana --version
 RUN --mount=type=cache,mode=0777,target=/jito-programs/target \
     --mount=type=cache,mode=0777,target=/usr/local/cargo/registry \
       cd ./mev-programs && anchor build && cp target/deploy/* ../container-out;
+
+FROM debian:bullseye-slim
+
+COPY --from=builder /jito-programs/container-out /jito-programs/container-out
+
+WORKDIR /jito-programs
