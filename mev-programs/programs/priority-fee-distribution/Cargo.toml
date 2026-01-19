@@ -28,3 +28,8 @@ anchor-lang = { workspace = true }
 jito-programs-vote-state = { workspace = true }
 solana-program = { workspace = true }
 solana-security-txt = { workspace = true }
+
+[dev-dependencies]
+solana-program-test = { workspace = true }
+solana-sdk = { workspace = true }
+tokio = { workspace = true }
