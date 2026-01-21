@@ -2,7 +2,9 @@ use std::str::FromStr;
 
 use anchor_lang::AccountDeserialize;
 use clap::{Parser, Subcommand};
-use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
+use jito_tip_distribution::state::{
+    ClaimStatus, Config, MerkleRootUploadConfig, TipDistributionAccount,
+};
 use jito_tip_distribution_sdk::{
     derive_config_account_address, derive_tip_distribution_account_address,
     instruction::{update_config_ix, UpdateConfigAccounts, UpdateConfigArgs},
@@ -59,6 +61,9 @@ enum Commands {
         #[arg(long)]
         claimant: String,
     },
+
+    /// Get the merkle root upload config account information
+    GetMerkleRootUploadConfig,
 
     /// Update the config account information
     UpdateConfig {
@@ -187,6 +192,27 @@ fn main() -> anyhow::Result<()> {
             println!("  Amount: {}", claim_status.amount);
             println!("  Expires At: {}", claim_status.expires_at);
             println!("  Bump: {}", claim_status.bump);
+        }
+
+        Commands::GetMerkleRootUploadConfig => {
+            let (merkle_root_upload_config_pda, _) =
+                Pubkey::find_program_address(&[MerkleRootUploadConfig::SEED], &program_id);
+            println!(
+                "Merkle Root Upload Config Account Address: {}",
+                merkle_root_upload_config_pda
+            );
+
+            let account_data = client.get_account(&merkle_root_upload_config_pda)?.data;
+            let config: MerkleRootUploadConfig =
+                MerkleRootUploadConfig::try_deserialize(&mut account_data.as_slice())?;
+
+            println!("Merkle Root Upload Config Account Data:");
+            println!("  Override Authority: {}", config.override_authority);
+            println!(
+                "  Original Upload Authority: {}",
+                config.original_upload_authority
+            );
+            println!("  Bump: {}", config.bump);
         }
 
         Commands::UpdateConfig {
