@@ -316,6 +316,11 @@ pub mod jito_priority_fee_distribution {
     pub fn migrate_tda_merkle_root_upload_authority(
         ctx: Context<MigrateTdaMerkleRootUploadAuthority>,
     ) -> Result<()> {
+        // SECURITY FIX: Verify that only the config authority can perform migration
+        if ctx.accounts.config.authority != ctx.accounts.authority.key() {
+            return Err(Unauthorized.into());
+        }
+
         let distribution_account = &mut ctx.accounts.priority_fee_distribution_account;
         // Validate TDA has no MerkleRoot uploaded to it
         if distribution_account.merkle_root.is_some() {
@@ -708,6 +713,9 @@ impl UpdateMerkleRootUploadConfig<'_> {
 
 #[derive(Accounts)]
 pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
+    #[account(seeds = [Config::SEED], bump)]
+    pub config: Account<'info, Config>,
+
     #[account(mut, rent_exempt = enforce)]
     pub priority_fee_distribution_account: Account<'info, PriorityFeeDistributionAccount>,
 
@@ -717,6 +725,8 @@ pub struct MigrateTdaMerkleRootUploadAuthority<'info> {
         rent_exempt = enforce,
     )]
     pub merkle_root_upload_config: Account<'info, MerkleRootUploadConfig>,
+
+    pub authority: Signer<'info>,
 }
 
 #[derive(Accounts)]
