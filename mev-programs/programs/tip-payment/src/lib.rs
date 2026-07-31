@@ -23,7 +23,11 @@ security_txt! {
     source_release: std::env!("GIT_REF_NAME")
 }
 
+#[cfg(feature = "mainnet")]
 declare_id!("T1pyyaTNZsKv2WcRAB8oVnk93mLJw2XzjtVYqCsaHqt");
+
+#[cfg(not(feature = "mainnet"))]
+declare_id!("DCN82qDxJAQuSqHhv2BJuAgi41SPeKZB5ioBCTMNDrCC");
 
 /// We've decided to hardcode the seeds, effectively meaning the following PDAs owned by this program are singleton.
 ///

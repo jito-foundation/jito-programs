@@ -98,7 +98,7 @@ jobs:
         run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_tip_distribution -- --features jito-tip-distribution/mainnet
       - name: Build jito_tip_payment
         working-directory: ./mev-programs
-        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_tip_payment
+        run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_tip_payment -- --features jito-tip-payment/mainnet
       - name: Build jito_priority_fee_distribution
         working-directory: ./mev-programs
         run: RUSTUP_TOOLCHAIN=nightly-2025-04-16 anchor build --idl idl --program-name jito_priority_fee_distribution
@@ -148,10 +148,13 @@ jobs:
         run: |
           solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13 -- --features jito-tip-distribution/mainnet
           sudo mv target/deploy/jito_tip_distribution.so target/deploy/jito_tip_distribution-mainnet.so
-          solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.2.13
+          solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.2.13 -- --features jito-tip-payment/mainnet
+          sudo mv target/deploy/jito_tip_payment.so target/deploy/jito_tip_payment-mainnet.so
           solana-verify build --library-name jito_priority_fee_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13
           solana-verify build --library-name jito_tip_distribution --base-image solanafoundation/solana-verifiable-build:2.2.13
           sudo mv target/deploy/jito_tip_distribution.so target/deploy/jito_tip_distribution-testnet.so
+          solana-verify build --library-name jito_tip_payment --base-image solanafoundation/solana-verifiable-build:2.2.13
+          sudo mv target/deploy/jito_tip_payment.so target/deploy/jito_tip_payment-testnet.so
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
@@ -160,7 +163,8 @@ jobs:
           path: |
             mev-programs/target/deploy/jito_tip_distribution-mainnet.so
             mev-programs/target/deploy/jito_tip_distribution-testnet.so
-            mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_tip_payment-mainnet.so
+            mev-programs/target/deploy/jito_tip_payment-testnet.so
             mev-programs/target/deploy/jito_priority_fee_distribution.so
             mev-programs/programs/tip-distribution/idl/jito_tip_distribution.json
             mev-programs/programs/tip-payment/idl/jito_tip_payment.json
@@ -177,7 +181,8 @@ jobs:
           files: |
             mev-programs/target/deploy/jito_tip_distribution-mainnet.so
             mev-programs/target/deploy/jito_tip_distribution-testnet.so
-            mev-programs/target/deploy/jito_tip_payment.so
+            mev-programs/target/deploy/jito_tip_payment-mainnet.so
+            mev-programs/target/deploy/jito_tip_payment-testnet.so
             mev-programs/target/deploy/jito_priority_fee_distribution.so
             mev-programs/target/idl/jito_tip_distribution.json
             mev-programs/target/idl/jito_tip_payment.json
