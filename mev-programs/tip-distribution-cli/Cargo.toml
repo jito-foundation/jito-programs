@@ -1,18 +1,19 @@
 [package]
 name = "tip-distribution-cli"
 version = { workspace = true }
-authors = { workspace = true }
-repository = { workspace = true }
-homepage = { workspace = true }
-license = { workspace = true }
 edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Tip distribution CLI"
 
 [dependencies]
-anchor-lang = "0.31.1"
-anyhow = "1.0"
-bs58 = "0.5.1"
-clap = { version = "=4.0", features = ["derive"] }
-jito-tip-distribution = { path = "../programs/tip-distribution", features = ["no-entrypoint"] }
-jito-tip-distribution-sdk = { path = "../programs/sdk" }
-solana-client = "2.2"
-solana-sdk = "2.2"
+anchor-lang = { workspace = true }
+anyhow = { workspace = true }
+bs58 = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+jito-tip-distribution = { workspace = true, features = ["no-entrypoint"] }
+jito-tip-distribution-sdk = { workspace = true }
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }

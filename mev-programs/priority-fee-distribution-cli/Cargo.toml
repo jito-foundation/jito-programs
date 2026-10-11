@@ -1,16 +1,19 @@
 [package]
 name = "priority-fee-distribution-cli"
-version = "0.1.0"
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+version = { workspace = true }
+edition = { workspace = true }
+license = { workspace = true }
+authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
+description = "Priority fee distribution CLI"
 
 [dependencies]
-anchor-lang = "0.31.1"
-anyhow = "1.0"
-bs58 = "0.5.1"
-clap = { version = "=4.0", features = ["derive"] }
-jito-priority-fee-distribution = { path = "../programs/priority-fee-distribution", features = ["no-entrypoint"] }
-jito-priority-fee-distribution-sdk = { path = "../programs/priority-fee-distribution-sdk" }
-solana-client = "2.2"
-solana-sdk = "2.2"
+anchor-lang = { workspace = true }
+anyhow = { workspace = true }
+bs58 = { workspace = true }
+clap = { workspace = true }
+jito-priority-fee-distribution = { workspace = true, features = ["no-entrypoint"] }
+jito-priority-fee-distribution-sdk = { workspace = true }
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }

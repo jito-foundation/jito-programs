@@ -24,7 +24,11 @@ security_txt! {
 pub mod merkle_proof;
 pub mod state;
 
+#[cfg(feature = "mainnet")]
 declare_id!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+
+#[cfg(not(feature = "mainnet"))]
+declare_id!("DzvGET57TAgEDxvm3ERUM4GNcsAJdqjDLCne9sdfY4wf");
 
 #[program]
 pub mod jito_tip_distribution {
@@ -66,8 +70,9 @@ pub mod jito_tip_distribution {
             return Err(MaxValidatorCommissionFeeBpsExceeded.into());
         }
 
-        let validator_vote_state = VoteState::deserialize(&ctx.accounts.validator_vote_account)?;
-        if &validator_vote_state.node_pubkey != ctx.accounts.signer.key {
+        let validator_vote_account_node_pubkey =
+            VoteState::deserialize_node_pubkey(&ctx.accounts.validator_vote_account)?;
+        if validator_vote_account_node_pubkey != *ctx.accounts.signer.key {
             return Err(Unauthorized.into());
         }
 
