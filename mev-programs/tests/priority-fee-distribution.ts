@@ -6,7 +6,7 @@ import { PublicKey, VoteInit, VoteProgram } from "@solana/web3.js";
 import { convertBufProofToNumber, MerkleTree } from "./merkle-tree";
 import { JitoPriorityFeeDistribution } from "../target/types/jito_priority_fee_distribution";
 
-const { SystemProgram, sendAndConfirmTransaction, LAMPORTS_PER_SOL } =
+const { SystemProgram, LAMPORTS_PER_SOL } =
   anchor.web3;
 const CONFIG_ACCOUNT_SEED = "CONFIG_ACCOUNT";
 const PRIORITY_FEE_DISTRIBUTION_ACCOUNT_SEED = "PF_DISTRIBUTION_ACCOUNT";
@@ -1471,10 +1471,9 @@ const setup_initTipDistributionAccount = async () => {
   });
 
   try {
-    await sendAndConfirmTransaction(provider.connection, tx, [
+    await provider.sendAndConfirm(tx, [
       validatorIdentityKeypair,
       validatorVoteAccount,
-      validatorIdentityKeypair,
     ]);
   } catch (e) {
     console.log("error creating validator vote account", e);
@@ -1482,7 +1481,12 @@ const setup_initTipDistributionAccount = async () => {
   }
 
   // Fetch epoch info and derive TipDistributionAccount PDA.
-  const epochInfo = await provider.connection.getEpochInfo("confirmed");
+  // Skip the tail of the epoch so it can't roll over before the init tx lands.
+  let epochInfo = await provider.connection.getEpochInfo("confirmed");
+  while (epochInfo.slotsInEpoch - epochInfo.slotIndex < 10) {
+    await sleep(400);
+    epochInfo = await provider.connection.getEpochInfo("confirmed");
+  }
   const epoch = new anchor.BN(epochInfo.epoch).toArrayLike(Buffer, "le", 8);
   const [priorityFeeDistributionAccount, bump] =
     anchor.web3.PublicKey.findProgramAddressSync(

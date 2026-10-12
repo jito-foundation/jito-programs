@@ -1,9 +1,8 @@
 use std::result;
 
 use anchor_lang::{prelude::*, Discriminator};
-use solana_program::loader_v4;
 use solana_sdk_ids::{
-    bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, config, native_loader,
+    bpf_loader, bpf_loader_deprecated, bpf_loader_upgradeable, config, loader_v4, native_loader,
     secp256r1_program, sysvar,
 };
 #[cfg(not(feature = "no-entrypoint"))]
@@ -87,7 +86,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_0,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
         bumps.tip_payment_account_1 = TipPaymentAccount::initialize(
@@ -95,7 +93,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_1,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
         bumps.tip_payment_account_2 = TipPaymentAccount::initialize(
@@ -103,7 +100,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_2,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
         bumps.tip_payment_account_3 = TipPaymentAccount::initialize(
@@ -111,7 +107,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_3,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
         bumps.tip_payment_account_4 = TipPaymentAccount::initialize(
@@ -119,7 +114,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_4,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
         bumps.tip_payment_account_5 = TipPaymentAccount::initialize(
@@ -127,7 +121,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_5,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
         bumps.tip_payment_account_6 = TipPaymentAccount::initialize(
@@ -135,7 +128,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_6,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
         bumps.tip_payment_account_7 = TipPaymentAccount::initialize(
@@ -143,7 +135,6 @@ pub mod jito_tip_payment {
             ctx.program_id,
             &ctx.accounts.tip_payment_account_7,
             &ctx.accounts.payer,
-            &ctx.accounts.system_program,
             &rent,
         )?;
 
@@ -490,14 +481,14 @@ pub struct ClaimTips<'info> {
         mut,
         constraint = config.tip_receiver == tip_receiver.key(),
     )]
-    pub tip_receiver: AccountInfo<'info>,
+    pub tip_receiver: UncheckedAccount<'info>,
 
     /// CHECK: only the current block builder can get tips
     #[account(
         mut,
         constraint = config.block_builder == block_builder.key(),
     )]
-    pub block_builder: AccountInfo<'info>,
+    pub block_builder: UncheckedAccount<'info>,
 
     #[account(mut)]
     pub signer: Signer<'info>,
@@ -511,16 +502,16 @@ pub struct ChangeTipReceiver<'info> {
     /// CHECK: old_tip_receiver receives the funds in the TipPaymentAccount accounts, so
     /// ensure its the one that's expected
     #[account(mut, constraint = old_tip_receiver.key() == config.tip_receiver)]
-    pub old_tip_receiver: AccountInfo<'info>,
+    pub old_tip_receiver: UncheckedAccount<'info>,
 
     /// CHECK: any new, writable account is allowed as a tip receiver.
     #[account(mut)]
-    pub new_tip_receiver: AccountInfo<'info>,
+    pub new_tip_receiver: UncheckedAccount<'info>,
 
     /// CHECK: old_block_builder receives a % of funds in the TipPaymentAccount accounts, so
     /// ensure it's the account that's expected
     #[account(mut, constraint = block_builder.key() == config.block_builder)]
-    pub block_builder: AccountInfo<'info>,
+    pub block_builder: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -614,16 +605,16 @@ pub struct ChangeBlockBuilder<'info> {
     /// CHECK: old_tip_receiver receives the funds in the TipPaymentAccount accounts, so
     /// ensure its the one that's expected
     #[account(mut, constraint = tip_receiver.key() == config.tip_receiver)]
-    pub tip_receiver: AccountInfo<'info>,
+    pub tip_receiver: UncheckedAccount<'info>,
 
     /// CHECK: old_block_builder receives a % of funds in the TipPaymentAccount accounts, so
     /// ensure it's the account that's expected
     #[account(mut, constraint = old_block_builder.key() == config.block_builder)]
-    pub old_block_builder: AccountInfo<'info>,
+    pub old_block_builder: UncheckedAccount<'info>,
 
     /// CHECK: any new, writable account is allowed as block builder
     #[account(mut)]
-    pub new_block_builder: AccountInfo<'info>,
+    pub new_block_builder: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -772,7 +763,6 @@ impl TipPaymentAccount {
         program_id: &Pubkey,
         account_info: &AccountInfo<'info>,
         payer: &AccountInfo<'info>,
-        system_program: &AccountInfo<'info>,
         rent: &Rent,
     ) -> Result<u8> {
         let space = TipPaymentAccount::SIZE;
@@ -797,7 +787,7 @@ impl TipPaymentAccount {
             from: payer.to_account_info(),
             to: account_info.to_account_info(),
         };
-        let cpi_context = CpiContext::new(system_program.to_account_info(), cpi_accounts);
+        let cpi_context = CpiContext::new(system_program::ID, cpi_accounts);
         anchor_lang::system_program::create_account(
             cpi_context.with_signer(&[&[seeds, &[bump]]]),
             required_lamports,

@@ -16,4 +16,6 @@ clap = { workspace = true }
 jito-priority-fee-distribution = { workspace = true, features = ["no-entrypoint"] }
 jito-priority-fee-distribution-sdk = { workspace = true }
 solana-client = { workspace = true }
+solana-commitment-config = { workspace = true }
+solana-compute-budget-interface = { workspace = true }
 solana-sdk = { workspace = true }

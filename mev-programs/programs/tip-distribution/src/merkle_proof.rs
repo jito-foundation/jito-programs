@@ -2,8 +2,6 @@
 //!
 //! modified to include INTERMEDIATE_HASH prefix and sha256 hashing
 
-use anchor_lang::solana_program;
-
 /// This function deals with verification of Merkle trees (hash trees).
 ///
 /// Direct port of https://github.com/OpenZeppelin/openzeppelin-contracts/blob/v3.4.0/contracts/cryptography/MerkleProof.sol

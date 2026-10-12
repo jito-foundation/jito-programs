@@ -31,7 +31,7 @@ declare_id!("Priority6weCZ5HwDn29NxLFpb7TDp2iLZ6XKc5e8d3");
 #[program]
 pub mod jito_priority_fee_distribution {
     use jito_programs_vote_state::VoteState;
-    use solana_program::native_token::lamports_to_sol;
+    use solana_program::native_token::Sol;
 
     use super::*;
     use crate::ErrorCode::*;
@@ -362,14 +362,14 @@ pub mod jito_priority_fee_distribution {
                 "Priority fee transfer is not live yet. {}/{} - ({:.5})",
                 epoch,
                 go_live_epoch,
-                lamports_to_sol(lamports)
+                Sol(lamports)
             );
 
             return Ok(());
         }
 
         // Transfer requested lamports from From to PFDA
-        let ix = solana_program::system_instruction::transfer(
+        let ix = anchor_lang::solana_program::system_instruction::transfer(
             ctx.accounts.from.key,
             &ctx.accounts.priority_fee_distribution_account.key(),
             lamports,
@@ -498,7 +498,7 @@ pub struct InitializePriorityFeeDistributionAccount<'info> {
 
     /// CHECK: Safe because we check the vote program is the owner before deserialization.
     /// The validator's vote account is used to check this transaction's signer is also the authorized withdrawer.
-    pub validator_vote_account: AccountInfo<'info>,
+    pub validator_vote_account: UncheckedAccount<'info>,
 
     /// Must be equal to the supplied validator vote account's authorized withdrawer.
     #[account(mut)]
@@ -533,7 +533,7 @@ pub struct ClosePriorityFeeDistributionAccount<'info> {
 
     /// CHECK: safe see auth fn
     #[account(mut)]
-    pub expired_funds_account: AccountInfo<'info>,
+    pub expired_funds_account: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -549,7 +549,7 @@ pub struct ClosePriorityFeeDistributionAccount<'info> {
 
     /// CHECK: safe see auth fn
     #[account(mut)]
-    pub validator_vote_account: AccountInfo<'info>,
+    pub validator_vote_account: UncheckedAccount<'info>,
 
     /// Anyone can crank this instruction.
     #[account(mut)]
@@ -594,7 +594,7 @@ pub struct Claim<'info> {
     /// CHECK: This is safe.
     /// Receiver of the funds.
     #[account(mut)]
-    pub claimant: AccountInfo<'info>,
+    pub claimant: UncheckedAccount<'info>,
 
     /// Who is paying for the claim.
     #[account(mut)]
