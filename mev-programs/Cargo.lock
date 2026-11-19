@@ -2428,7 +2428,10 @@ dependencies = [
  "anchor-lang",
  "jito-programs-vote-state",
  "solana-program",
+ "solana-program-test",
+ "solana-sdk",
  "solana-security-txt",
+ "tokio",
 ]
 
 [[package]]
