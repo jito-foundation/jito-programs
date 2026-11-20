@@ -22,9 +22,11 @@ custom-panic = []
 default = []
 idl-build = ["anchor-lang/idl-build"]
 anchor-debug = ["anchor-lang/anchor-debug"]
+mainnet = []
 
 [dependencies]
 anchor-lang = { workspace = true }
+jito-programs-vote-state = { workspace = true }
 solana-program = { workspace = true }
 solana-sdk-ids = { workspace = true }
 solana-security-txt = { workspace = true }

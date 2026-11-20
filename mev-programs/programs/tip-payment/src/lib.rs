@@ -42,6 +42,19 @@ pub const TIP_ACCOUNT_SEED_7: &[u8] = b"TIP_ACCOUNT_7";
 
 pub const HEADER: usize = 8;
 
+/// The `tip-distribution` program's id and the seed it uses to derive a validator's
+/// `TipDistributionAccount` PDA for a given epoch. Copied here (rather than depending on the
+/// `jito-tip-distribution` crate directly) to avoid pulling that program's full dependency
+/// tree and BPF footprint into `tip-payment`. A dev-dependency test asserts these stay in sync
+/// with the sibling crate's actual constants.
+#[cfg(feature = "mainnet")]
+pub const TIP_DISTRIBUTION_PROGRAM_ID: Pubkey = pubkey!("4R3gSG8BpU4t19KYj8CfnbtRpnT8gtk4dvTHxVRwc2r7");
+
+#[cfg(not(feature = "mainnet"))]
+pub const TIP_DISTRIBUTION_PROGRAM_ID: Pubkey = pubkey!("DzvGET57TAgEDxvm3ERUM4GNcsAJdqjDLCne9sdfY4wf");
+
+pub const TIP_DISTRIBUTION_ACCOUNT_SEED: &[u8] = b"TIP_DISTRIBUTION_ACCOUNT";
+
 struct Fees {
     block_builder_fee_lamports: u64,
     tip_receiver_fee_lamports: u64,
@@ -72,6 +85,8 @@ impl Fees {
 
 #[program]
 pub mod jito_tip_payment {
+    use jito_programs_vote_state::VoteState;
+
     use super::*;
 
     pub fn initialize(ctx: Context<Initialize>, _bumps: InitBumps) -> Result<()> {
@@ -156,6 +171,35 @@ pub mod jito_tip_payment {
     /// Validator should invoke this instruction before executing any transactions that contain tips.
     /// Validator should also ensure it calls it if there's a fork detected.
     pub fn change_tip_receiver(ctx: Context<ChangeTipReceiver>) -> Result<()> {
+        // `signer` must be the node identity currently recorded on-chain for
+        // `validator_vote_account`, so only that validator can rotate its own tip receiver.
+        let node_pubkey = VoteState::deserialize_node_pubkey(&ctx.accounts.validator_vote_account)?;
+        require_keys_eq!(
+            node_pubkey,
+            ctx.accounts.signer.key(),
+            TipPaymentError::InvalidValidatorVoteAccount
+        );
+
+        // `new_tip_receiver` must be exactly this vote account's TipDistributionAccount PDA for
+        // the current epoch. The TDA is allowed to not yet exist on-chain, so this can only be
+        // an address-derivation check, not an owner/existence check (see plan doc for why an
+        // owner-based check is unsafe: owner can be forged for free via the System program's
+        // `Assign` instruction).
+        let epoch = Clock::get()?.epoch;
+        let (expected_tip_receiver, _bump) = Pubkey::find_program_address(
+            &[
+                TIP_DISTRIBUTION_ACCOUNT_SEED,
+                ctx.accounts.validator_vote_account.key.as_ref(),
+                epoch.to_le_bytes().as_ref(),
+            ],
+            &TIP_DISTRIBUTION_PROGRAM_ID,
+        );
+        require_keys_eq!(
+            ctx.accounts.new_tip_receiver.key(),
+            expected_tip_receiver,
+            TipPaymentError::TipReceiverPdaMismatch
+        );
+
         if is_program(&ctx.accounts.new_tip_receiver)
             || is_sysvar(&ctx.accounts.new_tip_receiver)
             || is_config(&ctx.accounts.new_tip_receiver)
@@ -355,6 +399,11 @@ pub enum TipPaymentError {
     InvalidFee,
     InvalidTipReceiver,
     InvalidBlockBuilder,
+    /// signer is not the node identity recorded on `validator_vote_account`
+    InvalidValidatorVoteAccount,
+    /// `new_tip_receiver` does not match the TipDistributionAccount PDA derived from
+    /// `validator_vote_account` and the current epoch
+    TipReceiverPdaMismatch,
 }
 
 /// Bumps used during initialization
@@ -588,6 +637,15 @@ pub struct ChangeTipReceiver<'info> {
 
     #[account(mut)]
     pub signer: Signer<'info>,
+
+    /// CHECK: must be a vote-program-owned account; identity (node_pubkey) is read out of the
+    /// raw vote state bytes via `VoteState::deserialize_node_pubkey` and compared against
+    /// `signer`. Only an existence-independent check is performed here — this account is not,
+    /// and must not be, required to have any stake (see plan doc's residual-risk section).
+    /// Appended at the end of the account list (not inserted in the middle) so that old clients
+    /// which don't yet supply it fall into `remaining_accounts` against the upgraded program
+    /// rather than erroring, enabling a two-phase client-then-program rollout.
+    pub validator_vote_account: AccountInfo<'info>,
 }
 
 impl<'info> ChangeTipReceiver<'info> {

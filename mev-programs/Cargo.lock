@@ -2445,6 +2445,7 @@ version = "0.1.10"
 dependencies = [
  "agave-feature-set",
  "anchor-lang",
+ "jito-programs-vote-state",
  "jito-tip-distribution",
  "solana-program",
  "solana-program-test",
