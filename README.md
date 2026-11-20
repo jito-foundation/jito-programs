@@ -16,3 +16,7 @@ This will:
 - Rebuild the IDLs
 - Create a git tag
 - Push changes and tags
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
