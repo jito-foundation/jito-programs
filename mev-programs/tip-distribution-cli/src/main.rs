@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use anchor_lang::AccountDeserialize;
+use anchor_lang::{prelude::Pubkey, AccountDeserialize};
 use clap::{Parser, Subcommand};
 use jito_tip_distribution::state::{ClaimStatus, Config, TipDistributionAccount};
 use jito_tip_distribution_sdk::{
@@ -8,7 +8,6 @@ use jito_tip_distribution_sdk::{
     instruction::{update_config_ix, UpdateConfigAccounts, UpdateConfigArgs},
 };
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::pubkey::Pubkey;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

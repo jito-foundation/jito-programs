@@ -37,4 +37,4 @@ bind_address = "127.0.0.1"
 resolution = false
 
 [toolchain]
-anchor_version = "0.31.1"
+anchor_version = "1.2.1"

@@ -1,30 +1,29 @@
 #[cfg(test)]
 mod tests {
+    use agave_reserved_account_keys::ReservedAccountKeys;
     use anchor_lang::{
         error::{ErrorCode, ERROR_CODE_OFFSET},
-        solana_program::instruction::InstructionError,
-        AccountDeserialize, AnchorSerialize, Discriminator, InstructionData, ToAccountMetas,
+        prelude::borsh,
+        AccountDeserialize, Discriminator, InstructionData, ToAccountMetas,
     };
     use jito_tip_payment::{
         Config, InitBumps, TipPaymentAccount, TipPaymentError, CONFIG_ACCOUNT_SEED,
         TIP_ACCOUNT_SEED_0, TIP_ACCOUNT_SEED_1, TIP_ACCOUNT_SEED_2, TIP_ACCOUNT_SEED_3,
         TIP_ACCOUNT_SEED_4, TIP_ACCOUNT_SEED_5, TIP_ACCOUNT_SEED_6, TIP_ACCOUNT_SEED_7,
     };
+    use solana_commitment_config::CommitmentLevel;
     use solana_program_test::{BanksClient, ProgramTest, ProgramTestContext};
     use solana_sdk::{
         account::{Account, ReadableAccount},
-        bpf_loader_upgradeable,
-        commitment_config::CommitmentLevel,
         hash::Hash,
-        instruction::{AccountMeta, Instruction},
+        instruction::{AccountMeta, Instruction, InstructionError},
         pubkey::Pubkey,
         rent::Rent,
-        reserved_account_keys::ReservedAccountKeys,
         signature::{Keypair, Signer},
-        system_instruction::transfer,
-        system_program,
         transaction::{Transaction, TransactionError},
     };
+    use solana_sdk_ids::{bpf_loader_upgradeable, system_program};
+    use solana_system_interface::instruction::transfer;
 
     async fn get_test(initial_accounts: &[(Pubkey, Account)]) -> ProgramTestContext {
         let mut test = ProgramTest::default();
@@ -1361,7 +1360,7 @@ mod tests {
     }
 
     fn get_initial_accounts(config: Config) -> Vec<(Pubkey, Account)> {
-        let config_data = config.try_to_vec().unwrap();
+        let config_data = borsh::to_vec(&config).unwrap();
         let mut serialized_config = Vec::with_capacity(8 + config_data.len());
         serialized_config.extend_from_slice(&Config::DISCRIMINATOR);
         serialized_config.extend_from_slice(&config_data);
