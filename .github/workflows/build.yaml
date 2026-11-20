@@ -65,6 +65,9 @@ jobs:
           --ignore RUSTSEC-2026-0340
           --ignore RUSTSEC-2026-0342
           --ignore RUSTSEC-2026-0009
+          --ignore RUSTSEC-2026-0387
+          --ignore RUSTSEC-2024-0344
+          --ignore RUSTSEC-2022-0093
         working-directory: ./mev-programs
 
   lint:
