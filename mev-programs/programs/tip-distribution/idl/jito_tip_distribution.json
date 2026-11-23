@@ -290,13 +290,13 @@
         {
           "name": "validator_vote_account",
           "docs": [
-            "The validator's vote account is used to check this transaction's signer is also the authorized withdrawer."
+            "The validator's vote account is used to check this transaction's signer."
           ]
         },
         {
           "name": "signer",
           "docs": [
-            "Must be equal to the supplied validator vote account's authorized withdrawer."
+            "The vote account's node identity, or its authorized voter for this or the previous epoch."
           ],
           "writable": true,
           "signer": true
