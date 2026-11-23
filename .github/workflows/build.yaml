@@ -39,13 +39,7 @@ jobs:
         with:
           crate: cargo-audit
           version: "0.22.0"
-      # Off-chain (CLI / program-test) deps with no fix we can take:
-      # - h2 0.3, rustls 0.21, rustls-webpki 0.101, webpki-roots 0.24/0.25:
-      #   no patched release on the semver line solana 2.2 pins
-      # - quinn-proto: >=0.11.18 pulls serde/syn/rand major bumps
-      # - time: >=0.3.47 needs rustc 1.88, toolchain is 1.85
-      - run: >-
-          cargo audit
+      - run: cargo audit
         working-directory: ./mev-programs
 
   lint:
