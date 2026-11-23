@@ -8,9 +8,7 @@ pub struct VoteState;
 
 impl VoteState {
     pub fn deserialize_node_pubkey(account_info: &AccountInfo) -> Result<Pubkey> {
-        if Pubkey::from(account_info.owner.to_bytes())
-            != Pubkey::from(solana_sdk_ids::vote::id().to_bytes())
-        {
+        if *account_info.owner != solana_sdk_ids::vote::id() {
             return Err(ConstraintOwner.into());
         }
 
