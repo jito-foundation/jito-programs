@@ -70,13 +70,20 @@ pub mod jito_tip_distribution {
             return Err(MaxValidatorCommissionFeeBpsExceeded.into());
         }
 
-        let validator_vote_account_node_pubkey =
-            VoteState::deserialize_node_pubkey(&ctx.accounts.validator_vote_account)?;
-        if validator_vote_account_node_pubkey != *ctx.accounts.signer.key {
-            return Err(Unauthorized.into());
-        }
-
         let current_epoch = Clock::get()?.epoch;
+        let vote_account = &ctx.accounts.validator_vote_account;
+        let signer = ctx.accounts.signer.key;
+        if VoteState::deserialize_node_pubkey(vote_account)? != *signer {
+            // After an identity change the old identity stays in the leader schedule for up to
+            // two epochs. Accept it while it is this or the previous epoch's authorized voter.
+            let voters = VoteState::deserialize_authorized_voters(vote_account)?;
+            let voter_for = |epoch| voters.range(..=epoch).next_back().map(|(_, voter)| voter);
+            if voter_for(current_epoch) != Some(signer)
+                && voter_for(current_epoch.saturating_sub(1)) != Some(signer)
+            {
+                return Err(Unauthorized.into());
+            }
+        }
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
         distribution_acc.validator_vote_account = ctx.accounts.validator_vote_account.key();
