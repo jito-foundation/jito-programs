@@ -1,4 +1,5 @@
 use anchor_lang::{prelude::*, solana_program::clock::Clock};
+use solana_program::hash;
 #[cfg(not(feature = "no-entrypoint"))]
 use solana_security_txt::security_txt;
 
@@ -32,7 +33,6 @@ declare_id!("DzvGET57TAgEDxvm3ERUM4GNcsAJdqjDLCne9sdfY4wf");
 
 #[program]
 pub mod jito_tip_distribution {
-    use anchor_lang::solana_program;
     use jito_programs_vote_state::VoteState;
 
     use super::*;
@@ -70,13 +70,20 @@ pub mod jito_tip_distribution {
             return Err(MaxValidatorCommissionFeeBpsExceeded.into());
         }
 
-        let validator_vote_account_node_pubkey =
-            VoteState::deserialize_node_pubkey(&ctx.accounts.validator_vote_account)?;
-        if validator_vote_account_node_pubkey != *ctx.accounts.signer.key {
-            return Err(Unauthorized.into());
-        }
-
         let current_epoch = Clock::get()?.epoch;
+        let vote_account = &ctx.accounts.validator_vote_account;
+        let signer = ctx.accounts.signer.key;
+        if VoteState::deserialize_node_pubkey(vote_account)? != *signer {
+            // After an identity change the old identity stays in the leader schedule for up to
+            // two epochs. Accept it while it is this or the previous epoch's authorized voter.
+            let voters = VoteState::deserialize_authorized_voters(vote_account)?;
+            let voter_for = |epoch| voters.range(..=epoch).next_back().map(|(_, voter)| voter);
+            if voter_for(current_epoch) != Some(signer)
+                && voter_for(current_epoch.saturating_sub(1)) != Some(signer)
+            {
+                return Err(Unauthorized.into());
+            }
+        }
 
         let distribution_acc = &mut ctx.accounts.tip_distribution_account;
         distribution_acc.validator_vote_account = ctx.accounts.validator_vote_account.key();
@@ -237,13 +244,9 @@ pub mod jito_tip_distribution {
             .ok_or(RootNotUploaded)?;
 
         // Verify the merkle proof.
-        let node = &solana_program::hash::hashv(&[
+        let node = &hash::hashv(&[
             &[0u8],
-            &solana_program::hash::hashv(&[
-                &claimant_account.key().to_bytes(),
-                &amount.to_le_bytes(),
-            ])
-            .to_bytes(),
+            &hash::hashv(&[&claimant_account.key().to_bytes(), &amount.to_le_bytes()]).to_bytes(),
         ]);
 
         if !merkle_proof::verify(proof, merkle_root.root, node.to_bytes()) {
@@ -464,7 +467,7 @@ pub struct InitializeTipDistributionAccount<'info> {
 
     /// CHECK: Safe because we check the vote program is the owner before deserialization.
     /// The validator's vote account is used to check this transaction's signer is also the authorized withdrawer.
-    pub validator_vote_account: AccountInfo<'info>,
+    pub validator_vote_account: UncheckedAccount<'info>,
 
     /// Must be equal to the supplied validator vote account's authorized withdrawer.
     #[account(mut)]
@@ -499,7 +502,7 @@ pub struct CloseTipDistributionAccount<'info> {
 
     /// CHECK: safe see auth fn
     #[account(mut)]
-    pub expired_funds_account: AccountInfo<'info>,
+    pub expired_funds_account: UncheckedAccount<'info>,
 
     #[account(
         mut,
@@ -515,7 +518,7 @@ pub struct CloseTipDistributionAccount<'info> {
 
     /// CHECK: safe see auth fn
     #[account(mut)]
-    pub validator_vote_account: AccountInfo<'info>,
+    pub validator_vote_account: UncheckedAccount<'info>,
 
     /// Anyone can crank this instruction.
     #[account(mut)]
@@ -560,7 +563,7 @@ pub struct Claim<'info> {
     /// CHECK: This is safe.
     /// Receiver of the funds.
     #[account(mut)]
-    pub claimant: AccountInfo<'info>,
+    pub claimant: UncheckedAccount<'info>,
 
     /// Who is paying for the claim.
     #[account(mut)]

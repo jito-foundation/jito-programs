@@ -7,8 +7,9 @@ use jito_priority_fee_distribution_sdk::{
     derive_config_account_address, derive_priority_fee_distribution_account_address,
 };
 use solana_client::{rpc_client::RpcClient, rpc_config::RpcSendTransactionConfig};
+use solana_commitment_config::CommitmentConfig;
+use solana_compute_budget_interface::ComputeBudgetInstruction;
 use solana_sdk::{
-    compute_budget::ComputeBudgetInstruction,
     instruction::Instruction,
     pubkey::Pubkey,
     signer::{keypair::read_keypair_file, Signer},
@@ -336,7 +337,7 @@ fn main() -> anyhow::Result<()> {
                 accounts: jito_priority_fee_distribution::accounts::Initialize {
                     initializer: authority_pubkey,
                     config: config_pda,
-                    system_program: solana_sdk::system_program::ID,
+                    system_program: system_program::ID,
                 }
                 .to_account_metas(Some(true)),
             };
@@ -376,7 +377,7 @@ fn main() -> anyhow::Result<()> {
                         authority: authority_pubkey,
                         payer: payer_pubkey,
                         merkle_root_upload_config,
-                        system_program: solana_sdk::system_program::ID,
+                        system_program: system_program::ID,
                     }
                     .to_account_metas(None),
             };
@@ -385,7 +386,7 @@ fn main() -> anyhow::Result<()> {
             transaction.sign(&[&authority_keypair], client.get_latest_blockhash()?);
             let signature = client.send_and_confirm_transaction_with_spinner_and_config(
                 &transaction,
-                solana_sdk::commitment_config::CommitmentConfig::confirmed(),
+                CommitmentConfig::confirmed(),
                 solana_client::rpc_config::RpcSendTransactionConfig {
                     skip_preflight: true,
                     ..Default::default()
